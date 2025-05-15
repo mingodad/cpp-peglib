@@ -1,0 +1,324 @@
+program <-
+	_ input_item* !.
+
+input_item <-
+	 statement_list
+	/ function
+
+statement_list <-
+	 statement+
+
+statement <-
+	 Warranty
+	/ Limits
+	/ expression
+	/ STRING
+	/ Break
+	/ Continue
+	/ Quit
+	/ Halt
+	/ Return expression?
+	/ For tk_lp expression? tk_semi expression? tk_semi expression? tk_rp NL? statement
+	/ If tk_lp expression tk_rp NL? statement opt_else?
+	/ While tk_lp expression tk_rp NL? statement
+	/ tk_lc statement_list? tk_rc
+	/ Print print_list
+	/ stmt_sep
+
+stmt_sep <-
+    tk_semi
+    / NL
+
+print_list <-
+	 print_element
+	/ print_element tk_comma print_list
+
+print_element <-
+	 STRING
+	/ expression
+
+opt_else <-
+	 Else NL? statement
+
+function <-
+	 Define Void? NAME tk_lp define_list? tk_rp NL? tk_lc NL* opt_auto_define_list? statement_list? tk_rc
+
+opt_auto_define_list <-
+	 Auto define_list NL
+	/ Auto define_list tk_semi
+
+define_list <-
+	 define_list_base (tk_comma define_list_base)*
+
+define_list_base <-
+	 NAME
+	/ NAME tk_lb tk_rb
+	/ tk_mul _ NAME tk_lb tk_rb
+	/ tk_amp NAME tk_lb tk_rb
+
+argument_list <-
+	 argument_list_base (tk_comma argument_list_base)*
+
+argument_list_base <-
+	 expression
+	/ NAME tk_lb tk_rb
+
+#%nonassoc IF_WITHOUT_ELSE
+#%nonassoc Else
+#%left /*1*/ OR
+#%left /*2*/ AND
+#%nonassoc /*3*/ NOT
+#%left /*4*/ REL_OP
+#%right /*5*/ ASSIGN_OP
+#%left /*6*/ '+' '-'
+#%left /*7*/ '*' '/' '%'
+#%right /*8*/ '^'
+#%nonassoc /*9*/ UNARY_MINUS
+#%nonassoc /*10*/ INCR_DECR
+
+expression <-
+	INFIX_EXPRESSION(atom, operator)
+
+operator <-
+	<
+	/ tk_eqeq
+	/ tk_eq
+	/ tk_pluseq
+	/ tk_minuseq
+	/ tk_muleq
+	/ tk_diveq
+	/ tk_modeq
+	/ tk_expeq
+	/ tk_neq
+	/ tk_lteq
+	/ tk_lt
+	/ tk_gteq
+	/ tk_gt
+	/ tk_and
+	/ tk_or
+	/ tk_plus
+	/ tk_minus
+	/ tk_mul
+	/ tk_div
+	/ tk_mod
+	/ tk_exp > _
+
+
+atom <-
+	 NUMBER
+	/ named_expression tk_inc
+	/ named_expression tk_dec
+	/ named_expression tk_lp argument_list? tk_rp
+	/ named_expression
+	/ tk_lp expression tk_rp
+	/ tk_inc named_expression
+	/ tk_dec named_expression
+	/ Length tk_lp expression tk_rp
+	/ Sqrt tk_lp expression tk_rp
+	/ Scale tk_lp expression tk_rp
+	/ Read tk_lp tk_rp
+	/ Random tk_lp tk_rp
+	/ tk_not expression
+	/ tk_minus expression #%prec UNARY_MINUS /*9N*/
+
+# Declare order of precedence
+INFIX_EXPRESSION(A, O) <-  A (O A)* {
+    precedence
+      L '||' # operators should be literal tokens
+      L '&&'
+      L '==' '!=' '<' '<=' '>=' '>'
+      R '=' '+=' '-=' '*=' '/=' '%=' '^='
+      L '+' '-'
+      L '*' '/' '%'
+      R '^'
+}
+
+#INFIX_EXPRESSION(A, O) <-  A (O A)* {
+#    precedence
+#      L tk_or
+#      L tk_and
+#      L tk_eqeq tk_neq tk_lt tk_lteq tk_gteq tk_gt
+#      R tk_eq tk_pluseq tk_minuseq tk_muleq tk_diveq tk_modeq tk_expeq
+#      L tk_plus tk_minus
+#      L tk_mul tk_div tk_mod
+#      R tok_exp
+#}
+
+named_expression <-
+	 NAME
+	/ NAME tk_lb expression tk_rb
+	/ Ibase
+	/ Obase
+	/ Scale
+	/ HistoryVar
+	/ Last
+
+#bc <-
+#	_ token* !.
+#
+#token <-
+#	  NL
+#	/ Define
+#	/ Break
+#	/ Quit
+#	/ Length
+#	/ Return
+#	/ For
+#	/ If
+#	/ While
+#	/ Sqrt
+#	/ Scale
+#	/ Ibase
+#	/ Obase
+#	/ Auto
+#	/ Else
+#	/ Read
+#	/ Random
+#	/ Halt
+#	/ Last
+#	/ Void
+#	/ Warranty
+#	/ Limits
+#	/ Continue
+#	/ Print
+#	/ HistoryVar
+#	/ tk_plus
+#	/ tk_minus
+#	/ tk_mul
+#	/ tk_div
+#	/ tk_mod
+#	/ tk_exp
+#	/ tk_semi
+#	/ tk_lp
+#	/ tk_rp
+#	/ tl_lc
+#	/ tk_rc
+#	/ tk_comma
+#	/ tk_lb
+#	/ tk_rb
+#	/ tk_amp
+#	/ tk_or
+#	/ tk_and
+#	/ tk_not
+#	/ tk_eqeq
+#	/ tk_neq
+#	/ tk_lt
+#	/ tk_lteq
+#	/ tk_gteq
+#	/ tk_gt
+#	/ tk_eq
+#	/ tk_pluseq
+#	/ tk_minuseq
+#	/ tk_muleq
+#	/ tk_diveq
+#	/ tk_modeq
+#	/ tk_expeq
+#	/ tk_inc
+#	/ tk_dec
+#	/ NAME
+#	/ STRING
+#	/ NUMBER
+
+
+NL <- "\n" _
+WS <- [ \t]+
+COMMENT <- "/*" (!"*/" .)* "*/"
+~_ <- (WS / COMMENT)*
+
+Define <- "define" !W _
+Break <- "break" !W _
+Quit <- "quit" !W _
+Length <- "length" !W _
+Return <- "return" !W _
+For <- "for" !W _
+If <- "if" !W _
+While <- "while" !W _
+Sqrt <- "sqrt" !W _
+Scale <- "scale" !W _
+Ibase <- "ibase" !W _
+Obase <- "obase" !W _
+Auto <- "auto" !W _
+Else <- "else" !W _
+Read <- "read" !W _
+Random <- "random" !W _
+Halt <- "halt" !W _
+Last <- "last" !W _
+Void <- "void" !W _
+
+Warranty <- "Warranty" !W _
+Limits <- "Limits" !W _
+Continue <- "Continue" !W _
+Print <- "Print" !W _
+HistoryVar <- "HistoryVar" !W _
+
+tk_plus <- "+"  #_
+tk_minus <- "-"  #_
+tk_mul <- "*"  #_
+tk_div <- "/"  #_
+tk_mod <- "%"  #_
+tk_exp <- "^"  #_
+tk_semi <- ";"  _
+tk_lp <- "("  _
+tk_rp <- ")"  _
+tk_lc <- "{"  _
+tk_rc <- "}"  _
+tk_comma <- ","  _
+tk_lb <- "["  _
+tk_rb <- "]"  _
+tk_amp <- "&"  _
+
+tk_or <- "||" #_
+tk_and <- "&&" #_
+tk_not <- '!' _
+
+#==|<=|>=|!=|<|>	REL_OP
+tk_eqeq <- "==" #_
+tk_neq <- "!=" #_
+tk_lt <- "<" #_
+tk_lteq <- "<=" #_
+tk_gteq <- ">=" #_
+tk_gt <- ">" #_
+
+#=|\+=|\-=|\*=|\/=|%=|\^=	ASSIGN_OP
+tk_eq <- '=' #_
+tk_pluseq <- '+=' #_
+tk_minuseq <- '-=' #_
+tk_muleq <- '*=' #_
+tk_diveq <- '/=' #_
+tk_modeq <- '%=' #_
+tk_expeq <- '^=' #_
+
+tk_inc <- "++" #_
+tk_dec <- "--" #_
+
+W <- [A-Za-z_0-9]
+NAME <- !KW <[a-z_][a-z_0-9]*>	_
+STRING <- <'"' ('\\' . / [^"\n\r\\])* '"'> _
+NUMBER <- <([0-9A-F]+('.'[0-9A-F]*)? / '.'[0-9A-F]+)> _
+
+KW <- <(
+	  "define"
+	| "break"
+	| "quit"
+	| "length"
+	| "return"
+	| "for"
+	| "if"
+	| "while"
+	| "sqrt"
+	| "scale"
+	| "ibase"
+	| "obase"
+	| "auto"
+	| "else"
+	| "read"
+	| "random"
+	| "halt"
+	| "last"
+	| "void"
+	| "Warranty"
+	| "Limits"
+	| "Continue"
+	| "Print"
+	| "HistoryVar"
+	) !W>

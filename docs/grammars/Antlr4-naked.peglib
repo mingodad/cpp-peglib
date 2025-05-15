@@ -1,0 +1,323 @@
+syntax <-
+	grammarDecl prequelConstruct* rules modeSpec* _ ! .
+
+grammarDecl <-
+	 grammarType identifier _ ';'
+
+prequelConstruct <-
+	 optionsSpec
+	/ delegateGrammars
+	/ tokensSpec
+	/ channelsSpec
+	/ action
+
+rules <-
+	 ruleSpec*
+
+modeSpec <-
+	 _ 'mode' identifier _ ';' lexerRuleSpec*
+
+_ <-
+	 ( space / comment )*
+
+grammarType <-
+	_ ('lexer' / 'parser')? _ 'grammar'
+	/ 'xxx'
+
+identifier <-
+	 TOKEN_REF
+	/ RULE_REF
+
+optionsSpec <-
+	 _ 'options' _sp '{' ( option _ ';' )* _ '}'
+
+delegateGrammars <-
+	 _ 'import' delegateGrammar ( _ ',' delegateGrammar )* _ ';'
+
+tokensSpec <-
+	 _ 'tokens' _sp '{' idList? _ '}'
+
+channelsSpec <-
+	 _ 'channels' _sp '{' idList? _ '}'
+
+action <-
+	 '@' ( actionScopeName _ '::' )? identifier actionBlock
+
+ruleSpec <-
+	 &( ruleModifiers? RULE_REF ) parserRuleSpec
+	/ lexerRuleSpec
+
+lexerRuleSpec <-
+	 ( _ 'fragment' )? TOKEN_REF _ ':' lexerRuleBlock _ ';'
+
+space <-
+	 [ \t\f\r\n]
+
+comment <-
+	 line_comment
+	/ block_comment
+
+TOKEN_REF <-
+	 _ [A-Z] letter_or_digit* id_continue* [_]?
+
+RULE_REF <-
+	 _ [a-z_] letter_or_digit* id_continue* [_]?
+
+_sp <-
+	 space*
+
+option <-
+	 identifier _ '=' optionValue
+
+delegateGrammar <-
+	identifier ('=' identifier )?
+
+idList <-
+	 identifier ( _ ',' identifier )* ( _ ',' )?
+
+actionScopeName <-
+	 identifier
+	/ _ ('lexer' / 'parser' )
+
+actionBlock <-
+	 _ '{' ACTION_CONTENT _ '}'
+
+optionValue <-
+	 identifier ( _ '.' identifier )*
+	/ STRING_LITERAL
+	/ actionBlock
+	/ INT
+
+STRING_LITERAL <-
+	 _ ['] ( Escape / ( ! ['] . ) )* [']
+
+INT <-
+	 '0'
+	/ ( digit1_9 digit* )
+
+Escape <-
+	 '\\' ( SimpleEscape / UnicodeEscape )
+
+ACTION_CONTENT <-
+	 ( action_token* ! ( _ '}' ) )
+	/ action_token*
+
+digit1_9 <-
+	 [1-9]
+
+digit <-
+	 [0-9]
+
+action_token <-
+	 identifier
+	/ _ ('.' / '(' / ')' / ';' )
+
+argActionBlock <-
+	 _ '[' ARGUMENT_CONTENT _ ']'
+
+ARGUMENT_CONTENT <-
+	 'xxx'
+
+lexerRuleBlock <-
+	 lexerAltList
+
+ruleModifiers <-
+	 ruleModifier+
+
+parserRuleSpec <-
+	 ruleModifiers? RULE_REF argActionBlock? ruleReturns? throwsSpec? localsSpec? rulePrequel* _ ':' ruleBlock _ ';' exceptionGroup
+
+ruleModifier <-
+	_ ('public' / 'private' / 'protected' / 'fragment' )
+
+letter_or_digit <-
+	 letter
+	/ digit
+
+id_continue <-
+	 [-_] letter_or_digit+
+
+ruleReturns <-
+	 _ 'returns' argActionBlock
+
+throwsSpec <-
+	 _ 'throws' identifier ( _ ',' identifier )*
+
+localsSpec <-
+	 _ 'locals' argActionBlock
+
+rulePrequel <-
+	 optionsSpec
+	/ ruleAction
+
+ruleBlock <-
+	 ruleAltList
+
+exceptionGroup <-
+	 exceptionHandler* finallyClause?
+
+ruleAction <-
+	 _ '@' _ identifier actionBlock
+
+ruleAltList <-
+	 labeledAlt ( _ '|' labeledAlt )*
+
+exceptionHandler <-
+	 _ 'catch' argActionBlock actionBlock
+
+finallyClause <-
+	 _ 'finally' actionBlock
+
+labeledAlt <-
+	 alternative ( _ '#' identifier )?
+
+alternative <-
+	 ( elementOptions element+ )
+	/ element*
+
+elementOptions <-
+	 _ '<' elementOption ( _ ',' elementOption )* _ '>'
+
+element <-
+	 ( labeledElement ebnfSuffix )
+	/ ( atom ebnfSuffix )
+	/ ( block ebnfSuffix )
+	/ ( actionBlock ( _ '?' )? )
+
+lexerAltList <-
+	 lexerAlt ( _ '|' lexerAlt )*
+
+lexerAlt <-
+	 ( lexerElements lexerCommands? )?
+
+lexerElements <-
+	 lexerElement*
+
+lexerCommands <-
+	 _ '->' lexerCommand ( _ ',' lexerCommand )*
+
+lexerElement <-
+	 ( labeledLexerElement ebnfSuffix )
+	/ ( lexerAtom ebnfSuffix )
+	/ ( lexerBlock ebnfSuffix )
+	/ ( actionBlock ( _ '?' )? )
+
+lexerCommand <-
+	 ( lexerCommandName _ '(' lexerCommandExpr _ ')' )
+	/ lexerCommandName
+
+labeledLexerElement <-
+	 identifier _ ( '=' / '+=' ) ( lexerAtom / lexerBlock )
+
+ebnfSuffix <-
+	 ( _ '?' ( _ '?' )? )
+	/ ( _ '*' ( _ '?' )? )
+	/ ( _ '+' ( _ '?' )? )
+	/
+
+lexerAtom <-
+	 characterRange
+	/ terminal
+	/ notSet
+	/ LEXER_CHAR_SET
+	/ ( _ '.' ! ( _ '<' ) )
+	/ ( _ '.' elementOptions )
+
+lexerBlock <-
+	 _ '(' lexerAltList _ ')'
+
+characterRange <-
+	 STRING_LITERAL _ '..' STRING_LITERAL
+
+terminal <-
+	 ( TOKEN_REF elementOptions? )
+	/ ( STRING_LITERAL elementOptions? )
+
+notSet <-
+	 ( _ '~' setElement )
+	/ ( _ '~' blockSet )
+
+LEXER_CHAR_SET <-
+	 ( _ '[' '^' set_members ']' )
+	/ ( _ '[' set_members ']' )
+
+lexerCommandName <-
+	 identifier
+	/ ( _ 'mode' )
+
+lexerCommandExpr <-
+	 identifier
+	/ INT
+
+altList <-
+	 alternative ( _ '|' alternative )*
+
+elementOption <-
+	identifier  (_ '=' (identifier / STRING_LITERAL ))?
+
+labeledElement <-
+	 identifier '_' ( '=' / '+=' ) ( atom / block )
+
+atom <-
+	 terminal
+	/ ruleref
+	/ notSet
+	/ ( _ '.' ! ( _ '<' ) )
+	/ ( _ '.' elementOptions )
+
+block <-
+	 _ '(' ( optionsSpec? ruleAction* _ ':' )? altList _ ')'
+
+ruleref <-
+	 RULE_REF argActionBlock? elementOptions?
+
+setElement <-
+	 ( TOKEN_REF elementOptions? )
+	/ ( STRING_LITERAL elementOptions? )
+	/ characterRange
+	/ LEXER_CHAR_SET
+
+blockSet <-
+	 _ '(' set_elements _ ')'
+
+set_members <-
+	 SetMember+
+
+set_elements <-
+	 setElement ( _ '|' setElement )*
+
+letter <-
+	 [a-zA-Z]
+
+hex_digit <-
+	 [0-9a-fA-F]
+
+SimpleEscape <-
+	 [bfnrt"'\\]
+
+UnicodeEscape <-
+	 'u' ( hex_digit hex_digit? hex_digit? hex_digit? )
+
+SetMember <-
+	 SetRange
+	/ SetSingle
+
+SetRange <-
+	 SetSingle '-' SetSingle
+
+SetSingle <-
+	 SetEscape
+	/ ( ! ']' . )
+
+SetEscape <-
+	 ( '\\' SimpleSetEscape )
+	/ ( '\\' UnicodeEscape )
+
+SimpleSetEscape <-
+	 [btnfr"'\\\]]
+
+line_comment <-
+	 '//' ( ! [\r\n] . )*
+
+block_comment <-
+	 '/*' ( ! '*/' . )* '*/'

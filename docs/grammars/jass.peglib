@@ -1,0 +1,441 @@
+
+ Jass  <-
+	 (  Nl  /  Chunk  )  *  Sp
+
+ Chunk  <-
+	 (  Type  /  Globals  /  Native  /  Function  /  Action  )
+
+ Comment  <-
+	 '//' [^'\n'] *
+
+ ~Sp  <-
+	 (  Comment  /  (' ' / '\t' / '\r' / '\n')  )  *  #ExChar  ?
+
+ #ExChar  <-
+#	 &  EXCEPTION_CHAR
+
+ Nl  <-
+	 (  Sp  '\n'  )  +
+
+ Ignore  <-
+	[^'\n'] *
+
+ ~Cut  <-
+	 ! [a-zA-Z0-9_]
+
+ Ed  <-
+	 Sp  (  &  Nl  /  !  .  )
+
+ COMMA  <-
+	 Sp  ','
+
+ ASSIGN  <-
+	 Sp  '='
+
+ GLOBALS  <-
+	 Sp  'globals'  Cut
+
+ ENDGLOBALS  <-
+	 Sp  'endglobals'  Cut
+
+ CONSTANT  <-
+	 Sp  'constant'  Cut
+
+ NATIVE  <-
+	 Sp  'native'  Cut
+
+ ARRAY  <-
+	 Sp  'array'  Cut
+
+ AND  <-
+	 Sp  'and'  Cut
+
+ OR  <-
+	 Sp  'or'  Cut
+
+ NOT  <-
+	 Sp  'not'  Cut
+
+ TYPE  <-
+	 Sp  'type'  Cut
+
+ EXTENDS  <-
+	 Sp  'extends'  Cut
+
+ FUNCTION  <-
+	 Sp  'function'  Cut
+
+ ENDFUNCTION  <-
+	 Sp  'endfunction'  Cut
+
+ NOTHING  <-
+	 Sp  'nothing'  Cut
+
+ TAKES  <-
+	 Sp  'takes'  Cut
+
+ RETURNS  <-
+	 Sp  (  'returns'  /  'return'  )  Cut
+
+ CALL  <-
+	 Sp  (  'call'  /  'set'  )  Cut
+
+ SET  <-
+	 Sp  (  'set'  /  'call'  )  Cut
+
+ RETURN  <-
+	 Sp  'return'  Cut
+
+ IF  <-
+	 Sp  'if'  Cut
+
+ THEN  <-
+	 Sp  'then'  Cut
+
+ ENDIF  <-
+	 Sp  'endif'  Cut
+
+ ELSEIF  <-
+	 Sp  'elseif'  Cut
+
+ ELSE  <-
+	 Sp  'else'  Cut
+
+ LOOP  <-
+	 Sp  'loop'  Cut
+
+ ENDLOOP  <-
+	 Sp  'endloop'  Cut
+
+ EXITWHEN  <-
+	 Sp  'exitwhen'  Cut
+
+ LOCAL  <-
+	 Sp  'local'  Cut
+
+ TRUE  <-
+	 Sp  'true'  Cut
+
+ FALSE  <-
+	 Sp  'false'  Cut
+
+ DEBUG  <-
+	 Sp  'debug'  Cut
+
+ Esc  <-
+	 '\\'  EChar
+
+ EChar  <-
+	 'b'
+	/  't'
+	/  'r'
+	/  'n'
+	/  'f'
+	/  '"'
+	/  '\\'
+#	/  ERROR_ESC
+
+ Value  <-
+	 NULL
+	/  Boolean
+	/  String
+	/  Real
+	/  Integer
+
+ NULL  <-
+	 Sp  'null'  Cut
+
+ Boolean  <-
+	 TRUE
+	/  FALSE
+
+ String  <-
+	 Sp  <'"'  (  Esc  /  '\n'  / [^"] )  *  '"'>
+
+ Real  <-
+	 Sp  (  '-'  ?  Sp  (  '.' [0-9] +  / [0-9] +  '.' [0-9] *  )  )
+
+ Integer  <-
+	 Integer16
+	/  Integer8
+	/  Integer10
+	/  Integer256
+
+ Integer8  <-
+	 Sp  <  '-'  ?  Sp  '0' [0-7] *  >
+
+ Integer10  <-
+	 Sp <  '-'  ?  Sp  '0'  /  ( [1-9][0-9] *  )  >
+
+ Integer16  <-
+	 Sp  <  '-'  ?  Sp  (  '$'  /  '0x'  /  '0X'  )  Char16  >
+
+ Char16  <-
+	[a-fA-F0-9] +
+
+ Integer256  <-
+	 Sp <  '-'  ?  Sp  C256  >
+
+ C256  <-
+	 "'"  C256_1  "'"
+	/  "'"  C256_4  C256_4  C256_4  C256_4  "'"
+	/  "'"
+
+ C256_1  <-
+	 Esc
+	/  '\n'
+	/ [^']
+
+ C256_4  <-
+	 '\n'
+	/ [^']
+
+ Name  <-
+	 Sp <[a-zA-Z][a-zA-Z0-9_] *>
+
+ GT  <-
+	 '>'
+
+ GE  <-
+	 '>='
+
+ LT  <-
+	 '<'
+
+ LE  <-
+	 '<='
+
+ EQ  <-
+	 '=='
+
+ UE  <-
+	 '!='
+
+ ADD  <-
+	 '+'
+
+ SUB  <-
+	 '-'
+
+ MUL  <-
+	 '*'
+
+ DIV  <-
+	 '/'
+
+ MOD  <-
+	 '%'
+
+ PL  <-
+	 Sp  '('
+
+ PR  <-
+	 Sp  ')'
+
+ BL  <-
+	 Sp  '['
+
+ BR  <-
+	 Sp  ']'
+
+ Exp  <-
+	 ECheckAnd
+
+ ECheckAnd  <-
+	 (  ECheckOr  (  Sp  ESAnd  ECheckOr  )  *  )
+
+ ECheckOr  <-
+	 (  ECheckComp  (  Sp  ESOr  ECheckComp  )  *  )
+
+ ECheckComp  <-
+	 (  ECheckNot  (  Sp  ESComp  ECheckNot  )  *  )
+
+ ECheckNot  <-
+	 (  Sp  ESNot  +  ECheckAdd  )
+	/  ECheckAdd
+
+ ECheckAdd  <-
+	 (  ECheckMul  (  Sp  ESAddSub  ECheckMul  )  *  )
+
+ ECheckMul  <-
+	 (  EUnit  (  Sp  ESMulDiv  EUnit  )  *  )
+
+ ESAnd  <-
+	 AND
+
+ ESOr  <-
+	 OR
+
+ ESComp  <-
+	 UE
+	/  EQ
+	/  LE
+	/  LT
+	/  GE
+	/  GT
+	/  Sp  '='
+
+ ESNot  <-
+	 NOT
+
+ ESAddSub  <-
+	 ADD
+	/  SUB
+
+ ESMulDiv  <-
+	 MUL
+	/  DIV
+	/  MOD
+
+ EUnit  <-
+	 EParen
+	/  ECode
+	/  ECall
+	/  EValue
+	/  ENeg
+
+ EParen  <-
+	 PL  Exp  PR
+
+ ECode  <-
+	 (  FUNCTION  Name  (  PL  ECallArgs  ?  PR  )  ?  )
+
+ ECall  <-
+	 (  Name  PL  ECallArgs  ?  PR  )
+
+ ECallArgs  <-
+	 Exp  (  COMMA  Exp  )  *
+
+ EValue  <-
+	 Value
+	/  EVari
+	/  EVar
+
+ EVari  <-
+	 (  Name  BL  Exp  BR  )
+
+ EVar  <-
+	 Name
+
+ ENeg  <-
+	 Sp  SUB  EUnit
+
+ Type  <-
+	 (  TYPE  TChild  TExtends  TParent  )
+
+ TChild  <-
+	 Name
+
+ TExtends  <-
+	 EXTENDS
+
+ TParent  <-
+	 Name
+
+ Globals  <-
+	 GLOBALS  Nl  (  Nl  /  Global  )  *  (  ENDGLOBALS  Ed  )  ?
+
+ Global  <-
+	 !  GLOBALS  !  FUNCTION  !  NATIVE  (  CONSTANT  ?  Vtype?  ARRAY  ?  Name  (  ASSIGN  Exp  )  ?  )
+
+Vtype <-
+	Sp ('handle'
+	/ 'integer'
+	/ 'real'
+	/ 'boolean'
+	/ 'string'
+	/ 'code') Cut
+
+ Local  <-
+	 (  LocalDef  LocalExp  ?  )
+	/  TYPE  Ignore
+
+ LocalDef  <-
+	 (  (  CONSTANT  )  ?  LOCAL  Name  ARRAY  ?  Name  )
+
+ LocalExp  <-
+	 ASSIGN  Exp
+
+ Locals  <-
+	 (  Local  ?  Nl  )  +
+
+ Action  <-
+	 (  (  ACall  /  ASet  /  AReturn  /  AExit  /  ALogic  /  ALoop  /  AError  )  )
+
+ Actions  <-
+	 (  Nl  /  Action  )  *
+
+ ACall  <-
+	 (  DEBUG  ?  CALL  Name  PL  ACallArgs  ?  PR  )
+
+ ACallArgs  <-
+	 Exp  (  COMMA  Exp  )  *
+
+ ASet  <-
+	 (  SET  Name  (  BL  Exp  BR  )  ?  ASSIGN  Exp  )
+
+ AReturn  <-
+	 RETURN  (  ARExp  Ed  /  Sp  )
+
+ ARExp  <-
+	 Ed
+	/  Exp  Ed
+
+ AExit  <-
+	 EXITWHEN  Exp
+
+ ALogic  <-
+	 (  LIf  LElseif  *  LElse  ?  LEnd  )
+
+ LIf  <-
+	 (  IF  (  Exp  THEN  )  Nl  (  Actions  )  )
+
+ LElseif  <-
+	 (  ELSEIF  (  Exp  THEN  )  Nl  (  Actions  )  )
+
+ LElse  <-
+	 (  ELSE  Nl  (  Actions  )  )
+
+ LEnd  <-
+	 (  ENDIF  Ed  )  ?
+
+ ALoop  <-
+	 (  LOOP  Nl  Actions  (  ENDLOOP  Ed  )  ?  )
+
+ AError  <-
+	 LOCAL  Ignore
+	/  TYPE  Ignore
+
+ Native  <-
+	 (  CONSTANT  ?  NATIVE  Name  NTakes  NReturns  )
+
+ NTakes  <-
+	 TAKES  (  NOTHING  /  NArg  (  COMMA  NArg  )  *  )
+
+ NArg  <-
+	 Name  Name
+
+ NReturns  <-
+	 RETURNS  Name
+
+ Function  <-
+	 FDef  Nl  (  FLocals  Actions  )  FEnd
+
+ FDef  <-
+	 CONSTANT  ?  FUNCTION  (  Name  FTakes  FReturns  )
+
+ FTakes  <-
+	 TAKES  (  NOTHING  /  NArg  (  COMMA  NArg  )  *  /  Sp  )
+
+ FArg  <-
+	 Name  Name
+
+ FReturns  <-
+	 RETURNS  Name
+
+ FLocals  <-
+	 Locals
+	/
+
+ FEnd  <-
+	 (  ENDFUNCTION  Ed  )  ?

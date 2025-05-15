@@ -1,0 +1,251 @@
+ start <-
+	 stylesheet comment*
+
+ stylesheet <-
+	 ( CHARSET_SYM STRING ";" )? ( S / CDO / CDC )* ( import ( CDO S* / CDC S* )* )* ( ( ruleset / media / page ) ( CDO S* / CDC S* )* )*
+
+ import <-
+	 IMPORT_SYM S* ( STRING / URI ) S* media_list? ";" S*
+
+ media <-
+	 MEDIA_SYM S* media_list "{" S* ruleset* "}" S*
+
+ media_list <-
+	 medium ( "," S* medium )*
+
+ medium <-
+	 IDENT S*
+
+ page <-
+	 PAGE_SYM S* pseudo_page? "{" S* declaration? ( ";" S* declaration? )* "}" S*
+
+ pseudo_page <-
+	 ":" IDENT S*
+
+ operator <-
+	 "/" S* / "," S*
+
+ combinator <-
+	 "+" S* / ">" S*
+
+ property <-
+	 IDENT S*
+
+ ruleset <-
+	 selector ( "," S* selector )* "{" S* declaration? ( ";" S* declaration? )* "}" S*
+
+ selector <-
+	 simple_selector S* combinator selector / simple_selector S+ selector / simple_selector S*
+
+ simple_selector <-
+	 element_name ( id / class / attrib / pseudo )* / ( id / class / attrib / pseudo )+
+
+ id <-
+	 HASH
+
+ class <-
+	 "." IDENT
+
+ element_name <-
+	 IDENT / "*"
+
+ attrib <-
+	 "[" S* IDENT S* ( ( "=" / INCLUDES / DASHMATCH ) S* ( IDENT / STRING ) S* )? "]"
+
+ pseudo <-
+	 ":" ( FUNCTION S* ( IDENT S* )? ")" / IDENT )
+
+ declaration <-
+	 property ':' S* expr prio?
+
+ prio <-
+	 IMPORTANT_SYM S*
+
+ expr <-
+	 term ( operator? term )*
+
+ term <-
+	 <( PERCENTAGE / LENGTH / EMS / EXS / ANGLE / TIME / FREQ / NUMBER ) S* / STRING S* / URI S* / function / hexcolor / IDENT S*>
+
+ function <-
+	 FUNCTION S* expr ")" S*
+
+ hexcolor <-
+	 HASH S*
+
+ h <-
+	 [0-9a-fA-F]
+
+ nonascii <-
+	 [\x80-\uFFFF]
+
+ unicode <-
+	 "\\" ( h h? h? h? h? h? ) ( "\r\n" / [ \t\r\n\f] )?
+
+ escape <-
+	 unicode / "\\" [^\r\n\f0-9a-fA-F]
+
+ nmstart <-
+	 [_a-zA-Z] / nonascii / escape
+
+ nmchar <-
+	 [_a-zA-Z0-9-] / nonascii / escape
+
+ string1 <-
+	 '"' ( [^\n\r\f\\"] / "\\" nl / escape )* '"'
+
+ string2 <-
+	 "'" ( [^\n\r\f\\'] / "\\" nl / escape )* "'"
+
+ comment <-
+	 "/*" [^*]* "*"+ ( [^/*] [^*]* "*"+ )* "/"
+
+ ident <-
+	 <"-"? nmstart nmchar*>
+
+ name <-
+	 <nmchar+>
+
+ num <-
+	 <[+-]? ( [0-9]* "." [0-9]+ / [0-9]+ ) ( "e" [+-]? [0-9]+ )?>
+
+ string <-
+	 string1 / string2
+
+ url <-
+	 ( [!#$%&*-\[\]-~] / nonascii / escape )*
+
+ ~s <-
+	 [ \t\r\n\f]+
+
+ w <-
+	 s?
+
+ nl <-
+	 "\n" / "\r\n" / "\r" / "\f"
+
+ A <-
+	 "a"i / "\\" "0"? "0"? "0"? "0"? [\x41\x61] ( "\r\n" / [ \t\r\n\f] )?
+
+ C <-
+	 "c"i / "\\" "0"? "0"? "0"? "0"? [\x43\x63] ( "\r\n" / [ \t\r\n\f] )?
+
+ D <-
+	 "d"i / "\\" "0"? "0"? "0"? "0"? [\x44\x64] ( "\r\n" / [ \t\r\n\f] )?
+
+ E <-
+	 "e"i / "\\" "0"? "0"? "0"? "0"? [\x45\x65] ( "\r\n" / [ \t\r\n\f] )?
+
+ G <-
+	 "g"i / "\\" "0"? "0"? "0"? "0"? [\x47\x67] ( "\r\n" / [ \t\r\n\f] )? / "\\g"i
+
+ H <-
+	 "h"i / "\\" "0"? "0"? "0"? "0"? [\x48\x68] ( "\r\n" / [ \t\r\n\f] )? / "\\h"i
+
+ I <-
+	 "i"i / "\\" "0"? "0"? "0"? "0"? [\x49\x69] ( "\r\n" / [ \t\r\n\f] )? / "\\i"i
+
+ K <-
+	 "k"i / "\\" "0"? "0"? "0"? "0"? [\x4b\x6b] ( "\r\n" / [ \t\r\n\f] )? / "\\k"i
+
+ L <-
+	 "l"i / "\\" "0"? "0"? "0"? "0"? [\x4c\x6c] ( "\r\n" / [ \t\r\n\f] )? / "\\l"i
+
+ M <-
+	 "m"i / "\\" "0"? "0"? "0"? "0"? [\x4d\x6d] ( "\r\n" / [ \t\r\n\f] )? / "\\m"i
+
+ N <-
+	 "n"i / "\\" "0"? "0"? "0"? "0"? [\x4e\x6e] ( "\r\n" / [ \t\r\n\f] )? / "\\n"i
+
+ O <-
+	 "o"i / "\\" "0"? "0"? "0"? "0"? [\x4f\x6f] ( "\r\n" / [ \t\r\n\f] )? / "\\o"i
+
+ P <-
+	 "p"i / "\\" "0"? "0"? "0"? "0"? [\x50\x70] ( "\r\n" / [ \t\r\n\f] )? / "\\p"i
+
+ R <-
+	 "r"i / "\\" "0"? "0"? "0"? "0"? [\x52\x72] ( "\r\n" / [ \t\r\n\f] )? / "\\r"i
+
+ S_ <-
+	 "s"i / "\\" "0"? "0"? "0"? "0"? [\x53\x73] ( "\r\n" / [ \t\r\n\f] )? / "\\s"i
+
+ T <-
+	 "t"i / "\\" "0"? "0"? "0"? "0"? [\x54\x74] ( "\r\n" / [ \t\r\n\f] )? / "\\t"i
+
+ U <-
+	 "u"i / "\\" "0"? "0"? "0"? "0"? [\x55\x75] ( "\r\n" / [ \t\r\n\f] )? / "\\u"i
+
+ X <-
+	 "x"i / "\\" "0"? "0"? "0"? "0"? [\x58\x78] ( "\r\n" / [ \t\r\n\f] )? / "\\x"i
+
+ Z <-
+	 "z"i / "\\" "0"? "0"? "0"? "0"? [\x5a\x7a] ( "\r\n" / [ \t\r\n\f] )? / "\\z"i
+
+ ~S <-
+	 comment* s
+
+ CDO <-
+	 comment* "<!--"
+
+ CDC <-
+	 comment* "-->"
+
+ INCLUDES <-
+	 comment* "~="
+
+ DASHMATCH <-
+	 comment* "|="
+
+ STRING <-
+	 comment* string
+
+ IDENT <-
+	 comment* ident
+
+ HASH <-
+	 comment* "#" name
+
+ IMPORT_SYM <-
+	 comment* "@" I M P O R T
+
+ PAGE_SYM <-
+	 comment* "@" P A G E
+
+ MEDIA_SYM <-
+	 comment* "@" M E D I A
+
+ CHARSET_SYM <-
+	 comment* "@charset "
+
+ IMPORTANT_SYM <-
+	 comment* "!" ( s / comment )* I M P O R T A N T
+
+ EMS <-
+	 comment* num E M
+
+ EXS <-
+	 comment* num E X
+
+ LENGTH <-
+	 comment* num P X / comment* num C M / comment* num M M / comment* num I N / comment* num P T / comment* num P C
+
+ ANGLE <-
+	 comment* num D E G / comment* num R A D / comment* num G R A D
+
+ TIME <-
+	 comment* num M S_ / comment* num S_
+
+ FREQ <-
+	 comment* num H Z / comment* num K H Z
+
+ PERCENTAGE <-
+	 comment* num "%"
+
+ NUMBER <-
+	 comment* num
+
+ URI <-
+	 comment* U R L "("i w string w ")" / comment* U R L "("i w url w ")"
+
+ FUNCTION <-
+	 comment* ident "("

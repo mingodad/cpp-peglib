@@ -1,0 +1,186 @@
+Grammar <-
+	 Spacing Definition+ EndOfFile
+
+~Spacing <-
+	 ( Space / Comment )*
+
+Definition <-
+	 Identifier EQUAL modifier? opening_brace Expression closing_brace
+
+EndOfFile <-
+	 ! .
+
+Space <-
+	 " "
+	/ "\t"
+	/ EndOfLine
+
+Comment <-
+	 ( "//" ( ! EndOfLine . )* EndOfLine )
+	/ ( "/*" ( ! '*/' . )* "*/" )
+
+Identifier <-
+	 ! PUSH <IdentStart IdentCont*> Spacing
+
+EQUAL <-
+	 "=" Spacing
+
+modifier <-
+	 silent_modifier
+	/ atomic_modifier
+	/ compound_atomic_modifier
+	/ non_atomic_modifier
+
+opening_brace <-
+	 '{' Spacing
+
+Expression <-
+	 Sequence ( SLASH Sequence )*
+
+closing_brace <-
+	 '}' Spacing
+
+PUSH <-
+	 "PUSH" Spacing
+
+IdentStart <-
+	 [a-zA-Z_]
+
+IdentCont <-
+	 IdentStart
+	/ Digit
+
+Sequence <-
+	 Prefix ( TILDE Prefix )*
+
+SLASH <-
+	 "|" Spacing
+
+Prefix <-
+	 ( AND / NOT )? Suffix
+
+TILDE <-
+	 "~" Spacing
+
+AND <-
+	 "&" Spacing
+
+NOT <-
+	 "!" Spacing
+
+Suffix <-
+	 Primary ( QUESTION / STAR / PLUS / repeat_exact / repeat_min / repeat_max / repeat_min_max )?
+
+Primary <-
+	 ( Identifier COLON Prefix ! ( Literal? EQUAL ) )
+	/ ( Identifier ! ( Literal? EQUAL ) )
+	/ ( PUSH? OPEN Expression CLOSE )
+	/ Range
+	/ ( insensitive_operator? Literal )
+	/ DOT
+	/ peek_slice
+
+QUESTION <-
+	 "?" Spacing
+
+STAR <-
+	 "*" Spacing
+
+PLUS <-
+	 "+" Spacing
+
+repeat_exact <-
+	 opening_brace number closing_brace
+
+repeat_min <-
+	 opening_brace number comma closing_brace
+
+repeat_max <-
+	 opening_brace comma number closing_brace
+
+repeat_min_max <-
+	 opening_brace number comma number closing_brace
+
+COLON <-
+	 ":" Spacing
+
+Literal <-
+	 ( <['] ( ! ['] Char )* [']> Spacing )
+	/ ( <["] ( ! ["] Char )* ["]> Spacing )
+	/ ( <[`] ( ! [`] Char )* [`]> Spacing )
+
+OPEN <-
+	 "(" Spacing
+
+CLOSE <-
+	 ")" Spacing
+
+Range <-
+	 Literal range_operator Literal
+
+insensitive_operator <-
+	 "^"
+
+DOT <-
+	 "ANY" Spacing
+
+peek_slice <-
+	 PEEK opening_brack integer? range_operator integer? closing_brack
+
+Char <-
+	 ( "\\" [abefnrtv'"`\[\]\\] )
+	/ ( "\\" [0-3] OctalDigit OctalDigit )
+	/ ( "\\" OctalDigit OctalDigit? )
+	/ ( "\\x" HexDigit HexDigit )
+	/ ( "\\u" opening_brace HexDigit HexDigit HexDigit HexDigit closing_brace )
+	/ ( "\\" "-" )
+	/ ( ! "\\" . )
+
+Digit <-
+	 [0-9]
+
+OctalDigit <-
+	 [0-7]
+
+HexDigit <-
+	 [0-9a-fA-F]
+
+range_operator <-
+	 ".." Spacing
+
+EndOfLine <-
+	 "\r\n"
+	/ "\n\r"
+	/ "\n"
+	/ "\r"
+
+silent_modifier <-
+	 "_" Spacing
+
+atomic_modifier <-
+	 "@" Spacing
+
+compound_atomic_modifier <-
+	 "$" Spacing
+
+non_atomic_modifier <-
+	 "!" Spacing
+
+comma <-
+	 ',' Spacing
+
+number <-
+	 Digit+
+
+PEEK <-
+	 "PEEK" Spacing
+
+opening_brack <-
+	 '[' Spacing
+
+closing_brack <-
+	 ']' Spacing
+
+integer <-
+	 number
+	/ ( "-" "0"* '1' . . '9' number? )

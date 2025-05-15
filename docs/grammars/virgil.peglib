@@ -1,0 +1,115 @@
+# Adapted from https://github.com/titzer/virgil/blob/master/doc/virgil-grammar.ebnf
+
+Virgil <-  _ ToplevelDecl* !.
+ToplevelDecl <-  ClassDecl / ComponentDecl / VariantDecl / EnumDecl / ExportDecl / VarMember / DefMember
+
+ClassDecl <- "class" WB IdentParam ( "(" _ VarParamDecls? ")" _ )? ( "extends" WB TypeRef TupleExpr? )? "{" _ Member* "}" _
+ComponentDecl <- ("import" WB)? "component" WB IDENTIFIER "{" _ Member* "}" _
+VariantDecl <-  "type" WB IdentParam ( "(" _ ParamDecls? ")" _ )? "{" _ VariantMember* "}" _
+EnumDecl <-  "enum" WB IDENTIFIER ( "(" _ ParamDecls? ")" _ )? "{" _ EnumCases? "}" _
+
+Member <-  DefMember / NewMember / VarMember
+VariantMember <- DefMethod / VariantCase
+VarMember <-  ("private" WB)? "var" WB VarDecls ";" _
+DefMember <-  ("private" WB)? "def" WB ((("var" WB)? VarDecls ";" _) / IndexMethod / Method)
+NewMember <-  "new" WB "(" _ NewParamDecls? ")" _ ( (":" _)? "super" WB TupleExpr )? BlockStmt
+DefMethod <- ("private" WB)? "def" WB (IndexMethod / Method)
+VariantCase <-  "case" WB IDENTIFIER ( "(" _ ParamDecls? ")" _ )? ( ";" _ / "{" _ DefMethod* "}" _)
+EnumCase <-  IDENTIFIER ( "(" _ ( Expr ( "," _ Expr )* )? ")" _ )?
+EnumCases <- EnumCase ( "," _ EnumCase )* (',' _)?
+
+VarParamDecl <-  ("var" WB)? IDENTIFIER ":" _ TypeRef
+VarParamDecls <- VarParamDecl ("," _ VarParamDecl)*
+ParamDecl <-  IDENTIFIER ":" _ TypeRef
+ParamDecls <- ParamDecl ("," _ ParamDecl)*
+NewParamDecl <- IDENTIFIER (":" _ TypeRef)?
+NewParamDecls <- NewParamDecl ("," _ NewParamDecl)*
+IdentParam <-  (IDENTIFIERP TypeArgs ">" _) / IDENTIFIER
+TypeRef <-  ( "(" _ TypeArgs? ")" _ / IdentParam ( "." _ IdentParam )* ) ( "->" _ TypeRef )*
+TypeArgs <- TypeRef ("," _ TypeRef)*
+
+VarDecl <- IDENTIFIER ((":" _ TypeRef ("=" _ Expr)?) / ("=" _ Expr))?
+VarDecls <- VarDecl ( "," _ VarDecl )*
+IndexMethod <- IdentParam? "[" _ VarParamDecls? "]" _ ( "=" _ ParamDecl / "->" _ TypeRef ) MethodBody
+Method <-  IdentParam "(" _ VarParamDecls? ")" _ ( "->" _ ( "this" WB / TypeRef ) )? MethodBody
+
+MethodBody <- ";" _ / BlockStmt
+ExportDecl <-  "export" WB ( DefMethod / ( STRING / IDENTIFIER ) ( "=" _ SymbolParam )? ";" _ )
+Symbol <- IDENTIFIER ("." _ IDENTIFIER)*
+SymbolParam <- IdentParam ("." _ IdentParam)*
+
+BlockStmt <- "{" _ Stmt* "}" _
+Stmt <-  BlockStmt / EmptyStmt / IfStmt / WhileStmt / MatchStmt / VarStmt / DefStmt / BreakStmt / ContinueStmt / ReturnStmt / ForStmt / ExprStmt
+EmptyStmt <-  ";" _
+IfStmt <-  "if" WB "(" _ Expr ")" _ Stmt ( "else" WB Stmt )?
+WhileStmt <-  "while" WB "(" _ Expr ")" _ Stmt
+MatchStmt <-  "match" WB "(" _ Expr ")" _ "{" _ ( MatchCase MatchCase* )? "}" _ ( "else" WB Stmt )?
+MatchCase <-  ("_" _ / (MatchPattern ( "," _ MatchPattern )*)) "=>" _ Stmt
+MatchPattern <-  IdTypePattern / SymbolPattern / Const
+IdTypePattern <-  IDENTIFIER ":" _ TypeRef
+SymbolPattern <- Symbol ( "(" _ ( IDENTIFIER ( "," _ IDENTIFIER )* )? ")" _ )?
+VarStmt <-  "var" WB VarDecls ";" _
+DefStmt <-  "def" WB VarDecls ";" _
+BreakStmt <-  "break" WB ";" _
+ContinueStmt <-  "continue" WB ";" _
+ReturnStmt <-  "return" WB Expr? ";" _
+ForStmt <-  "for" WB "(" _ VarDecl ( "<" _ Expr / "in" WB Expr / ";" _ Expr ";" _ Expr ) ")" _ Stmt
+ExprStmt <-  Expr ";" _
+
+Expr <- SubExpr (Assign Expr)?
+SubExpr <- InExpr (Infix InExpr)*
+InExpr <- Term TermSuffix*
+TermSuffix <- (MemberSuffix / ApplySuffix / IndexSuffix / IncOrDec)
+MemberSuffix <-  "." _ ( IdentParam / INTEGER / Operator )
+ApplySuffix <- "(" _ ExprList? ")" _
+IndexSuffix <- "[" _ ExprList "]" _
+Term <- (IncOrDec / ("-" / "!" / "~") _)? (ParamExpr / Literal / ArrayExpr / TupleExpr / IfExpr)
+TupleExpr <-  "(" _ ExprList? ")" _
+ArrayExpr <-  "[" _ ExprList? "]" _
+ParamExpr <-  "_" _
+IfExpr <- "if" WB "(" _ Expr "," _ Expr ( "," _ Expr )? ")" _
+Literal <- Const / IdentParam / "this" WB
+Const <- CHAR / STRING / FLOAT / INTEGER / ("true" / "false" / "null") WB
+ExprList <- Expr ("," _ Expr)*
+
+IncOrDec <-  ("++" / "--") _
+Operator <- Infix / CastOrQuery / ("-" / "~" / "[]" / "[]=") _
+CastOrQuery <- ("!" / "?") _ ( "<" _ TypeArgs ">" _ )?
+Assign <- ("=" / "<<=" / ">>=" / "|=" / "&=" / "<<<=" / ">>>=" / "+=" / "-=" / "*=" / "/=" / "%=" / "^=") _
+Infix <-  ("==" / "!=" / "||" / "&&" / "<=" / ">=" / "|" / "&" / "<<<" / "<<" / "<" / ">>>" / ">>" / ">" / "+" / "-" / "*" / "/" / "%" / "^") _
+
+IDENT_START <- [a-zA-Z]
+IDENT_CONT <- [a-zA-Z0-9_]
+IDENTIFIER <- <IDENT_START IDENT_CONT*> WB
+IDENTIFIERP <- <IDENT_START IDENT_CONT*> "<" _
+CHAR <- <"'" (!"'" (HEXCHAR / ESCAPE / PRINTABLE / .))  "'"> _
+INTEGER <- <(("0"[xX] [a-fA-F0-9_]+ / "0b" [01]+ / [0] / [-]? ([1-9][0-9_]*)) [uU]? [lL]?)> WB
+FRACTIONAL <- '.' [0-9_]*
+EXPONENT <- [eE] [+-]? ([0] / [1-9][0-9]*)
+INTPART <- [0] / [1-9][0-9_]*
+FLOAT_SUFFIX <- [fFdD]
+FLOAT <- <([-]? (
+    INTPART FLOAT_SUFFIX
+    / INTPART EXPONENT FLOAT_SUFFIX?
+    / INTPART FRACTIONAL FLOAT_SUFFIX?
+    / INTPART FRACTIONAL EXPONENT FLOAT_SUFFIX?
+    ))> WB
+STRING <- <'"' (!'"' ( HEXCHAR / ESCAPE / PRINTABLE / . ))* '"'> _
+HEXCHAR <- "\\"[xX][0-9A-Fa-f][0-9A-Fa-f]
+PRINTABLE <- [A-Za-z0-9`~!@#$%^&*()-_=+\[{\]};:,<.>/?]
+ESCAPE <- [\\][rnbt'"\\]
+
+LINEBREAK <- '\n' '\r'? / '\r' '\n'?
+COMMENTS <-
+    "//" (!LINEBREAK .)* LINEBREAK?
+    / "/*" (!"*/" (LINEBREAK / .))* "*/"
+
+WS <- [ \t]+ / LINEBREAK
+
+# For chpeg we use {I} to ignore/hide on the AST
+#WB {I} <- !IDENT_CONT _
+#_ {I} <- (WS / COMMENTS)*
+
+# For cpp-peglib we use ~rule to ignore/hide on the AST
+~WB  <- !IDENT_CONT _
+~_  <- (WS / COMMENTS)*

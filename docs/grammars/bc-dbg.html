@@ -1,0 +1,1418 @@
+
+
+<html>
+<head>
+<title>pegdebug</title>
+<style>
+
+#tree {
+	float: left;
+	width: 50%;
+	height: 100%;
+	overflow: scroll;
+}
+#tree div{
+	display: block;
+	overflow: hidden;
+	color: #800000;
+	background-color:#ffbbaa;
+	font-weight: bold;
+	font-family: monospace;
+	font-size: 12pt;
+	padding: 1pt 1pt 1pt 3pt;
+	border: solid 1px grey;
+	margin: 1pt 1pt 1pt 6pt;
+	cursor: default;
+}
+#tree div.collapsed div{
+	background-color:red;
+	display: none;
+}
+#tree div.hasChildren{
+	cursor: pointer;
+}
+#tree div.hasChildren.collapsed::before{
+	content: "\25B6\00A0";
+}
+#tree div.hasChildren:not(.collapsed)::before{
+	content: "\25BC\00A0";
+}
+#tree div:not(.hasChildren)::before{
+	content: "\25B7\00A0";
+}
+#tree div.match{
+	color: #008080;
+	background-color:#ddffff;
+}
+#tree div span{
+	color: #808080;
+	pointer-events: none;
+	font-size: 10pt;
+	font-weight: normal;
+	font-style: italic;
+	white-space: nowrap;
+}
+#tree span.matchbox{
+	padding: 0pt 2pt 0pt 2pt;
+	color: #000000;
+	background-color:#80ff80;
+}
+#tree div.highlight{
+	background-color:#fafaff;
+	color:#0000ff;
+	border-color:#0000ff;
+}
+#tree div.highlight span.matchbox{
+	background-color:#fafaff;
+	background-color:#80e0ff;
+}
+
+#source {
+	float: left;
+	width: 50%;
+	height: 100%;
+	overflow: scroll;
+}
+#source div{
+	display:inline;
+	font-family:monospace;
+	padding: 0pt;
+	margin: 0pt;
+	font-size:14pt;
+	cursor:pointer;
+}
+#source i{
+	color:lightgray;
+	pointer-events: none;
+}
+#source div.highlight,
+#source div.highlight div,
+#source div.mark,
+#source div.mark div{
+	background-color:rgba(150,220,255,0.5);
+}
+
+#info{
+	display:block;
+	position:fixed;
+	top:30px;
+	right:30px;
+	border:solid 1px black;
+	background-color:#ffffaa;
+	font-size:14pt;
+	font-family:monospace;
+	padding:20pt;
+	visibility:hidden;
+}
+#info a{
+	cursor:pointer;
+}
+
+</style>
+</head>
+<body>
+
+<span id="tree">
+<div title="program" data-pos=0>
+  <div title="_" data-pos=0>
+    <div title="WS" data-pos=0>
+      <span data-match=-1></span>
+    </div>
+    <div title="COMMENT" data-pos=0>
+      <span data-match=-1></span>
+    </div>
+    <span data-match=0></span>
+  </div>
+  <div title="input_item" data-pos=0>
+    <div title="statement_list" data-pos=0>
+      <div title="statement" data-pos=0>
+        <div title="Warranty" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="Limits" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="expression" data-pos=0>
+          <div title="atom" data-pos=0>
+            <div title="NUMBER" data-pos=0>
+              <span data-match=-1></span>
+            </div>
+            <div title="named_expression" data-pos=0>
+              <div title="NAME" data-pos=0>
+                <div title="KW" data-pos=0>
+                  <div title="W" data-pos=5>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="NAME" data-pos=0>
+                <div title="KW" data-pos=0>
+                  <div title="W" data-pos=5>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="Ibase" data-pos=0>
+                <span data-match=-1></span>
+              </div>
+              <div title="Obase" data-pos=0>
+                <span data-match=-1></span>
+              </div>
+              <div title="Scale" data-pos=0>
+                <div title="W" data-pos=5>
+                  <span data-match=-1></span>
+                </div>
+                <div title="_" data-pos=5>
+                  <div title="WS" data-pos=5>
+                    <span data-match=1></span>
+                  </div>
+                  <div title="WS" data-pos=6>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="COMMENT" data-pos=6>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=1></span>
+                </div>
+                <span data-match=6></span>
+              </div>
+              <span data-match=6></span>
+            </div>
+            <div title="tk_inc" data-pos=6>
+              <span data-match=-1></span>
+            </div>
+            <div title="named_expression" data-pos=0>
+              <div title="NAME" data-pos=0>
+                <div title="KW" data-pos=0>
+                  <div title="W" data-pos=5>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="NAME" data-pos=0>
+                <div title="KW" data-pos=0>
+                  <div title="W" data-pos=5>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="Ibase" data-pos=0>
+                <span data-match=-1></span>
+              </div>
+              <div title="Obase" data-pos=0>
+                <span data-match=-1></span>
+              </div>
+              <div title="Scale" data-pos=0>
+                <div title="W" data-pos=5>
+                  <span data-match=-1></span>
+                </div>
+                <div title="_" data-pos=5>
+                  <div title="WS" data-pos=5>
+                    <span data-match=1></span>
+                  </div>
+                  <div title="WS" data-pos=6>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="COMMENT" data-pos=6>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=1></span>
+                </div>
+                <span data-match=6></span>
+              </div>
+              <span data-match=6></span>
+            </div>
+            <div title="tk_dec" data-pos=6>
+              <span data-match=-1></span>
+            </div>
+            <div title="NAME" data-pos=0>
+              <div title="KW" data-pos=0>
+                <div title="W" data-pos=5>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=5></span>
+              </div>
+              <span data-match=-1></span>
+            </div>
+            <div title="named_expression" data-pos=0>
+              <div title="NAME" data-pos=0>
+                <div title="KW" data-pos=0>
+                  <div title="W" data-pos=5>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="NAME" data-pos=0>
+                <div title="KW" data-pos=0>
+                  <div title="W" data-pos=5>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="Ibase" data-pos=0>
+                <span data-match=-1></span>
+              </div>
+              <div title="Obase" data-pos=0>
+                <span data-match=-1></span>
+              </div>
+              <div title="Scale" data-pos=0>
+                <div title="W" data-pos=5>
+                  <span data-match=-1></span>
+                </div>
+                <div title="_" data-pos=5>
+                  <div title="WS" data-pos=5>
+                    <span data-match=1></span>
+                  </div>
+                  <div title="WS" data-pos=6>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="COMMENT" data-pos=6>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=1></span>
+                </div>
+                <span data-match=6></span>
+              </div>
+              <span data-match=6></span>
+            </div>
+            <span data-match=6></span>
+          </div>
+          <div title="operator" data-pos=6>
+            <div title="tk_eqeq" data-pos=6>
+              <span data-match=-1></span>
+            </div>
+            <div title="tk_eq" data-pos=6>
+              <span data-match=1></span>
+            </div>
+            <div title="_" data-pos=7>
+              <div title="WS" data-pos=7>
+                <span data-match=1></span>
+              </div>
+              <div title="WS" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="COMMENT" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <span data-match=1></span>
+            </div>
+            <span data-match=2></span>
+          </div>
+          <div title="atom" data-pos=8>
+            <div title="NUMBER" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="named_expression" data-pos=8>
+              <div title="NAME" data-pos=8>
+                <div title="KW" data-pos=8>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="NAME" data-pos=8>
+                <div title="KW" data-pos=8>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="Ibase" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Obase" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Scale" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="HistoryVar" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Last" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <span data-match=-1></span>
+            </div>
+            <div title="named_expression" data-pos=8>
+              <div title="NAME" data-pos=8>
+                <div title="KW" data-pos=8>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="NAME" data-pos=8>
+                <div title="KW" data-pos=8>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="Ibase" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Obase" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Scale" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="HistoryVar" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Last" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <span data-match=-1></span>
+            </div>
+            <div title="NAME" data-pos=8>
+              <div title="KW" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <span data-match=-1></span>
+            </div>
+            <div title="named_expression" data-pos=8>
+              <div title="NAME" data-pos=8>
+                <div title="KW" data-pos=8>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="NAME" data-pos=8>
+                <div title="KW" data-pos=8>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="Ibase" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Obase" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Scale" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="HistoryVar" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <div title="Last" data-pos=8>
+                <span data-match=-1></span>
+              </div>
+              <span data-match=-1></span>
+            </div>
+            <div title="tk_lp" data-pos=8>
+              <div title="_" data-pos=9>
+                <div title="WS" data-pos=9>
+                  <span data-match=-1></span>
+                </div>
+                <div title="COMMENT" data-pos=9>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=0></span>
+              </div>
+              <span data-match=1></span>
+            </div>
+            <div title="expression" data-pos=9>
+              <div title="atom" data-pos=9>
+                <div title="NUMBER" data-pos=9>
+                  <span data-match=-1></span>
+                </div>
+                <div title="named_expression" data-pos=9>
+                  <div title="NAME" data-pos=9>
+                    <div title="KW" data-pos=9>
+                      <div title="W" data-pos=15>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=6></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="NAME" data-pos=9>
+                    <div title="KW" data-pos=9>
+                      <div title="W" data-pos=15>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=6></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Ibase" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Obase" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Scale" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="HistoryVar" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Last" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=-1></span>
+                </div>
+                <div title="named_expression" data-pos=9>
+                  <div title="NAME" data-pos=9>
+                    <div title="KW" data-pos=9>
+                      <div title="W" data-pos=15>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=6></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="NAME" data-pos=9>
+                    <div title="KW" data-pos=9>
+                      <div title="W" data-pos=15>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=6></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Ibase" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Obase" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Scale" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="HistoryVar" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Last" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=-1></span>
+                </div>
+                <div title="NAME" data-pos=9>
+                  <div title="KW" data-pos=9>
+                    <div title="W" data-pos=15>
+                      <span data-match=-1></span>
+                    </div>
+                    <span data-match=6></span>
+                  </div>
+                  <span data-match=-1></span>
+                </div>
+                <div title="named_expression" data-pos=9>
+                  <div title="NAME" data-pos=9>
+                    <div title="KW" data-pos=9>
+                      <div title="W" data-pos=15>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=6></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="NAME" data-pos=9>
+                    <div title="KW" data-pos=9>
+                      <div title="W" data-pos=15>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=6></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Ibase" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Obase" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Scale" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="HistoryVar" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Last" data-pos=9>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_lp" data-pos=9>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_inc" data-pos=9>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_dec" data-pos=9>
+                  <span data-match=-1></span>
+                </div>
+                <div title="Length" data-pos=9>
+                  <div title="W" data-pos=15>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="_" data-pos=15>
+                    <div title="WS" data-pos=15>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="COMMENT" data-pos=15>
+                      <span data-match=-1></span>
+                    </div>
+                    <span data-match=0></span>
+                  </div>
+                  <span data-match=6></span>
+                </div>
+                <div title="tk_lp" data-pos=15>
+                  <div title="_" data-pos=16>
+                    <div title="WS" data-pos=16>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="COMMENT" data-pos=16>
+                      <span data-match=-1></span>
+                    </div>
+                    <span data-match=0></span>
+                  </div>
+                  <span data-match=1></span>
+                </div>
+                <div title="expression" data-pos=16>
+                  <div title="atom" data-pos=16>
+                    <div title="NUMBER" data-pos=16>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="named_expression" data-pos=16>
+                      <div title="NAME" data-pos=16>
+                        <div title="KW" data-pos=16>
+                          <span data-match=-1></span>
+                        </div>
+                        <div title="_" data-pos=17>
+                          <div title="WS" data-pos=17>
+                            <span data-match=-1></span>
+                          </div>
+                          <div title="COMMENT" data-pos=17>
+                            <span data-match=-1></span>
+                          </div>
+                          <span data-match=0></span>
+                        </div>
+                        <span data-match=1></span>
+                      </div>
+                      <span data-match=1></span>
+                    </div>
+                    <div title="tk_inc" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="named_expression" data-pos=16>
+                      <div title="NAME" data-pos=16>
+                        <div title="KW" data-pos=16>
+                          <span data-match=-1></span>
+                        </div>
+                        <div title="_" data-pos=17>
+                          <div title="WS" data-pos=17>
+                            <span data-match=-1></span>
+                          </div>
+                          <div title="COMMENT" data-pos=17>
+                            <span data-match=-1></span>
+                          </div>
+                          <span data-match=0></span>
+                        </div>
+                        <span data-match=1></span>
+                      </div>
+                      <span data-match=1></span>
+                    </div>
+                    <div title="tk_dec" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="NAME" data-pos=16>
+                      <div title="KW" data-pos=16>
+                        <span data-match=-1></span>
+                      </div>
+                      <div title="_" data-pos=17>
+                        <div title="WS" data-pos=17>
+                          <span data-match=-1></span>
+                        </div>
+                        <div title="COMMENT" data-pos=17>
+                          <span data-match=-1></span>
+                        </div>
+                        <span data-match=0></span>
+                      </div>
+                      <span data-match=1></span>
+                    </div>
+                    <div title="tk_lp" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="named_expression" data-pos=16>
+                      <div title="NAME" data-pos=16>
+                        <div title="KW" data-pos=16>
+                          <span data-match=-1></span>
+                        </div>
+                        <div title="_" data-pos=17>
+                          <div title="WS" data-pos=17>
+                            <span data-match=-1></span>
+                          </div>
+                          <div title="COMMENT" data-pos=17>
+                            <span data-match=-1></span>
+                          </div>
+                          <span data-match=0></span>
+                        </div>
+                        <span data-match=1></span>
+                      </div>
+                      <span data-match=1></span>
+                    </div>
+                    <span data-match=1></span>
+                  </div>
+                  <div title="operator" data-pos=17>
+                    <div title="tk_eqeq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_eq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_pluseq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_minuseq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_muleq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_diveq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_modeq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_expeq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_neq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_lteq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_lt" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_gteq" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_gt" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_and" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_or" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_plus" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_minus" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_mul" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_div" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_mod" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="tk_exp" data-pos=17>
+                      <span data-match=-1></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=1></span>
+                </div>
+                <div title="tk_rp" data-pos=17>
+                  <div title="_" data-pos=18>
+                    <div title="WS" data-pos=18>
+                      <span data-match=1></span>
+                    </div>
+                    <div title="WS" data-pos=19>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="COMMENT" data-pos=19>
+                      <span data-match=-1></span>
+                    </div>
+                    <span data-match=1></span>
+                  </div>
+                  <span data-match=2></span>
+                </div>
+                <span data-match=10></span>
+              </div>
+              <div title="operator" data-pos=19>
+                <div title="tk_eqeq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_eq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_pluseq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_minuseq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_muleq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_diveq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_modeq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_expeq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_neq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_lteq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_lt" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_gteq" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_gt" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_and" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_or" data-pos=19>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_plus" data-pos=19>
+                  <span data-match=1></span>
+                </div>
+                <div title="_" data-pos=20>
+                  <div title="WS" data-pos=20>
+                    <span data-match=1></span>
+                  </div>
+                  <div title="WS" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="COMMENT" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <span data-match=1></span>
+                </div>
+                <span data-match=2></span>
+              </div>
+              <div title="atom" data-pos=21>
+                <div title="NUMBER" data-pos=21>
+                  <span data-match=-1></span>
+                </div>
+                <div title="named_expression" data-pos=21>
+                  <div title="NAME" data-pos=21>
+                    <div title="KW" data-pos=21>
+                      <div title="W" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=5></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="NAME" data-pos=21>
+                    <div title="KW" data-pos=21>
+                      <div title="W" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=5></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Ibase" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Obase" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Scale" data-pos=21>
+                    <div title="W" data-pos=26>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="_" data-pos=26>
+                      <div title="WS" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <div title="COMMENT" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=0></span>
+                    </div>
+                    <span data-match=5></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <div title="tk_inc" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="named_expression" data-pos=21>
+                  <div title="NAME" data-pos=21>
+                    <div title="KW" data-pos=21>
+                      <div title="W" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=5></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="NAME" data-pos=21>
+                    <div title="KW" data-pos=21>
+                      <div title="W" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=5></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Ibase" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Obase" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Scale" data-pos=21>
+                    <div title="W" data-pos=26>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="_" data-pos=26>
+                      <div title="WS" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <div title="COMMENT" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=0></span>
+                    </div>
+                    <span data-match=5></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <div title="tk_dec" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="NAME" data-pos=21>
+                  <div title="KW" data-pos=21>
+                    <div title="W" data-pos=26>
+                      <span data-match=-1></span>
+                    </div>
+                    <span data-match=5></span>
+                  </div>
+                  <span data-match=-1></span>
+                </div>
+                <div title="named_expression" data-pos=21>
+                  <div title="NAME" data-pos=21>
+                    <div title="KW" data-pos=21>
+                      <div title="W" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=5></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="NAME" data-pos=21>
+                    <div title="KW" data-pos=21>
+                      <div title="W" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=5></span>
+                    </div>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Ibase" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Obase" data-pos=21>
+                    <span data-match=-1></span>
+                  </div>
+                  <div title="Scale" data-pos=21>
+                    <div title="W" data-pos=26>
+                      <span data-match=-1></span>
+                    </div>
+                    <div title="_" data-pos=26>
+                      <div title="WS" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <div title="COMMENT" data-pos=26>
+                        <span data-match=-1></span>
+                      </div>
+                      <span data-match=0></span>
+                    </div>
+                    <span data-match=5></span>
+                  </div>
+                  <span data-match=5></span>
+                </div>
+                <span data-match=5></span>
+              </div>
+              <div title="operator" data-pos=26>
+                <div title="tk_eqeq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_eq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_pluseq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_minuseq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_muleq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_diveq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_modeq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_expeq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_neq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_lteq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_lt" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_gteq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_gt" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_and" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_or" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_plus" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_minus" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_mul" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_div" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_mod" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_exp" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <div title="operator" data-pos=26>
+                <div title="tk_eqeq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_eq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_pluseq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_minuseq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_muleq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_diveq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_modeq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_expeq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_neq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_lteq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_lt" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_gteq" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_gt" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_and" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_or" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_plus" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_minus" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_mul" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_div" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_mod" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <div title="tk_exp" data-pos=26>
+                  <span data-match=-1></span>
+                </div>
+                <span data-match=-1></span>
+              </div>
+              <span data-match=17></span>
+            </div>
+            <div title="tk_rp" data-pos=26>
+              <span data-match=-1></span>
+            </div>
+            <div title="tk_inc" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="tk_dec" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="Length" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="Sqrt" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="Scale" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="Read" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="Random" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="tk_not" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <div title="tk_minus" data-pos=8>
+              <span data-match=-1></span>
+            </div>
+            <span data-match=-1></span>
+          </div>
+          <span data-match=-1></span>
+        </div>
+        <div title="STRING" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="Break" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="Continue" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="Quit" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="Halt" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="Return" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="For" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="If" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="While" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="tk_lc" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="Print" data-pos=0>
+          <span data-match=-1></span>
+        </div>
+        <div title="stmt_sep" data-pos=0>
+          <div title="tk_semi" data-pos=0>
+            <span data-match=-1></span>
+          </div>
+          <div title="NL" data-pos=0>
+            <span data-match=-1></span>
+          </div>
+          <span data-match=-1></span>
+        </div>
+        <span data-match=-1></span>
+      </div>
+      <span data-match=-1></span>
+    </div>
+    <div title="function" data-pos=0>
+      <div title="Define" data-pos=0>
+        <span data-match=-1></span>
+      </div>
+      <span data-match=-1></span>
+    </div>
+    <span data-match=-1></span>
+  </div>
+  <span data-match=-1></span>
+</div>
+
+</span>
+
+<span id="source">
+
+</span>
+
+<span id="info"></span>
+<script>
+
+//////////////////
+// tree browser //
+//////////////////
+
+var text = "scale = (length(x) + scale(x))/2 + 1"
+var len = text.length
+var maxlen = 80
+
+// this has to be done for every line individually so positions aren't messed with
+function htmlsafe(text){
+	buf = text
+	buf = buf.replace(/&/g, "&amp;")
+	buf = buf.replace(/</g, "&lt;")
+	buf = buf.replace(/>/g, "&gt;")
+	buf = buf.replace(/ /g, "&#x2423;")
+	buf = buf.replace(/\t/g, "&rarr;")
+	buf = buf.replace(/\r\n/g, "&ldsh;")
+	buf = buf.replace(/\n/g, "&ldsh;")
+	return buf
+}
+
+var divs = document.getElementById("tree").getElementsByTagName("div")
+
+for(var i=0; i<divs.length; i++){
+	div = divs[i];
+	if(i>0){
+		div.classList.add("collapsed")
+	}
+
+	var nc = div.children.length;
+	if(nc > 1){
+		div.classList.add("hasChildren")
+	}
+
+	var pos = 1 * div.dataset.pos
+	var matched = 1 * div.children[nc-1].dataset.match
+
+	if(matched > maxlen){
+		matched = maxlen
+	}
+
+	var rest = len-pos-matched
+	var elli = ""
+
+	if(matched + rest > maxlen){
+		rest = maxlen - matched;
+		elli = "&hellip;"
+	}
+
+	if( matched >= 0){
+		div.classList.add("match")
+		div.innerHTML =
+			div.title +
+			" <span class='matchbox'>" +
+				htmlsafe(text.substr(pos, matched)) +
+			"</span><span>" +
+				htmlsafe(text.substr(pos+matched, rest)) + elli +
+			"</span>" + div.innerHTML
+	}
+	else{
+		div.innerHTML =
+			div.title +
+			" <span>" +
+				htmlsafe(text.substr(pos, rest)) + elli +
+			"</span>" + div.innerHTML
+	}
+
+	div.onclick = function(evt){
+		if(evt.target.classList.contains("collapsed")){
+			evt.target.classList.remove("collapsed")
+		}
+		else{
+			evt.target.classList.add("collapsed")
+		}
+		event.stopPropagation()
+	}
+}
+
+////////////////////
+// source browser //
+////////////////////
+
+var divs = document.getElementById("source").getElementsByTagName("div")
+var info = document.getElementById("info")
+info.onclick = function(evt){evt.stopPropagation()}
+var marked = null
+var highlighted = null
+
+function mark(dom){ // for onclick, supposed to stay marked
+	if(marked != null){
+		marked.classList.remove("mark")
+	}
+	marked = dom;
+	if(dom != null){
+		dom.classList.add("mark")
+	}
+}
+
+function highlight(dom){ // for hover effects
+	if(highlighted != null){
+		highlighted.classList.remove("highlight")
+	}
+	highlighted = dom;
+	if(dom != null){
+		dom.classList.add("highlight")
+	}
+}
+
+function showInfo(target){ // shows rule stack
+	info.innerHTML = ""
+	if(target == null){
+		info.style.visibility = "hidden"
+	}
+	else{
+		info.style.visibility = "visible"
+
+		parent = target
+		while(parent.id != "source"){
+			var a = document.createElement("a")
+			var t = document.createTextNode(parent.title)
+			a.appendChild(t)
+			a.dataset.link = parent.id
+			a.onmouseover = function(evt){
+				highlight(document.getElementById(evt.target.dataset.link))
+			}
+			a.onclick = function(evt){
+				target = document.getElementById(evt.target.dataset.link)
+				mark(target)
+				showInfo(target)
+				unfold(target)
+				evt.stopPropagation()
+			}
+			a.onmouseout = function(evt){
+				highlight(null)
+			}
+			if(info.childNodes.length == 0){
+				info.appendChild(a)
+			}
+			else{
+				info.insertBefore(document.createElement("br"), info.childNodes[0])
+				info.insertBefore(a, info.childNodes[0])
+			}
+
+			parent = parent.parentElement
+		}
+	}
+}
+
+function unfold(target){ // finds the element in the tree that matches the source part
+
+	// first collapse everything
+	var alldivs = document.getElementById("tree").getElementsByTagName("div")
+	for(var i=0; i<alldivs.length; i++){
+		alldivs[i].classList.add("collapsed")
+		alldivs[i].classList.remove("highlight")
+	}
+
+	// now find the node in the tree
+	var stack = []
+	var parent = target
+	while(parent.id != "source"){
+		stack.unshift(parent)
+		parent = parent.parentElement
+	}
+
+	var branch = document.getElementById("tree")
+	for(var i=0; i<stack.length; i++){
+		token = stack[i];
+
+		subbranches = branch.children
+		for(var j=0; j<subbranches.length; j++){
+			if(
+				subbranches[j].tagName == "DIV" &&
+				subbranches[j].dataset.pos == token.dataset.pos &&
+				subbranches[j].title == token.title &&
+				subbranches[j].classList.contains("match")
+			){
+				if(i < stack.length-1){ // just unfold, no highlight
+					subbranches[j].classList.remove("collapsed")
+				}
+				else{ // innermost element reached, highlight, don't unfold
+					subbranches[j].classList.add("highlight")
+					subbranches[j].scrollIntoView()
+				}
+				branch = subbranches[j]
+				break;
+			}
+		}
+	}
+}
+
+for(var i=0; i<divs.length; i++){
+	divs[i].id = "l" + i // leaf i
+	divs[i].onmouseover = function(evt){
+		highlight(evt.target)
+		if(marked == null){
+			showInfo(evt.target)
+		}
+	}
+	divs[i].onmouseout = function(evt){
+		highlight(null)
+		if(marked == null){
+			showInfo(null)
+		}
+	}
+	divs[i].onclick = function(evt){
+		mark(evt.target)
+		showInfo(evt.target)
+		unfold(evt.target)
+		evt.stopPropagation()
+	}
+}
+
+document.body.onclick = function(evt){
+	mark(null)
+	showInfo(null)
+}
+
+</script>
+</body>
+</html>
+

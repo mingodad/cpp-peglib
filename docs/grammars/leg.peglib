@@ -1,0 +1,149 @@
+# LEG from Piumarta on this fork https://github.com/mingodad/peg
+grammar <-
+	 _ ( declaration / definition )+ trailer? end_of_file
+
+~_  <-
+	 ( space / comment )*
+
+declaration  <-
+	 '%{' ( ! '%}'  . )* RPERCENT
+
+definition <-
+	 identifier EQUAL expression SEMICOLON?
+
+trailer  <-
+	 '%%' .*
+
+end_of_file <-
+	 ! .
+
+end_of_line <-
+	 ( [\n][\r]? / [\r][\n]? )
+
+RPERCENT <-
+	 '%}' _
+
+identifier  <-
+	 <[-a-zA-Z_] [-a-zA-Z_0-9]*> _
+
+EQUAL <-
+	 <'='> _
+
+expression <-
+	 sequence ( BAR sequence )*
+
+SEMICOLON <-
+	 <';'> _
+
+sequence <-
+	 error ( error )*
+
+BAR <-
+	 <'|'> _
+
+error <-
+	 prefix ( TILDE action )?
+
+prefix <-
+	 ( AT action )
+	/ ( AND action )
+	/ ( AND suffix )
+	/ ( NOT suffix )
+	/ suffix
+
+TILDE <-
+	 <'~'> _
+
+action  <-
+	 <'{' braces* '}'> _
+
+AT <-
+	 <'@'> _
+
+AND <-
+	 <'&'> _
+
+suffix <-
+	 primary ( ( QUESTION ) / ( STAR ) / ( PLUS ) )?
+
+NOT <-
+	 <'!'> _
+
+primary <-
+	 ( identifier COLON identifier ! EQUAL )
+	/ ( identifier ! EQUAL )
+	/ ( OPEN expression CLOSE )
+	/ ( ( ( literalSQ ) / ( literalDQ ) / ( literalBQ ) ) ( 'i' ! [-a-zA-Z_] )? _ )
+	/ ( class )
+	/ ( DOT )
+	/ ( action )
+	/ ( BEGIN )
+	/ ( END )
+
+QUESTION <-
+	 <'?'> _
+
+STAR <-
+	 <'*'> _
+
+PLUS <-
+	 <'+'> _
+
+COLON <-
+	 <':'> _
+
+OPEN <-
+	 <'('> _
+
+CLOSE <-
+	 <')'> _
+
+literalSQ  <-
+	 ['] <( ! ['] char )*> [']
+
+literalDQ  <-
+	 ["] <( ! ["] char )*> ["]
+
+literalBQ  <-
+	 [`] <( ! [`] char )*> [`]
+
+class  <-
+	 <'[' ( ! ']' range )* ']'> _
+
+DOT <-
+	 <'.'> _
+
+BEGIN <-
+	 <'<'> _
+
+END <-
+	 <'>'> _
+
+char <-
+	 ( '\\' [-abefnrtv'"\[\]\\] )
+	/ ( '\\' 'x' [0-9A-Fa-f] [0-9A-Fa-f] )
+	/ ( '\\' 'x' [0-9A-Fa-f] )
+	/ ( '\\' [0-3] [0-7] [0-7] )
+	/ ( '\\' [0-7] [0-7]? )
+	/ ( ! '\\' . )
+
+range <-
+	 ( char '-' ! ']' char )
+	/ char
+
+braces <-
+	 '{' braces* '}'
+	/ literalBraces
+	/ !'}' .
+
+literalBraces <-
+	 ( ['] ( ! ( ['] / end_of_line ) char )* ['] )
+	/ ( ["] ( ! ( ["] / end_of_line ) char )* ["] )
+
+space <-
+	 ' '
+	/ '\t'
+	/ end_of_line
+
+comment <-
+	 '#' ( ! end_of_line . )* end_of_line?

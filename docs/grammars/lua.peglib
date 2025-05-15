@@ -1,0 +1,353 @@
+# From https://github.com/edubart/lpegrex/blob/main/parsers/lua.lua
+
+chunk  <-
+	 SHEBANG  ?  SKIP  Block  (  !  .  )
+
+Block  <-
+	 (  Label  /  Return  /  Break  /  Goto  /  Do  /  While  /  Repeat  /  If  /  ForNum  /  ForIn  /  FuncDef  /  FuncDecl  /  VarDecl  /  Assign  /  call  /  ( ';' SKIP )  )  *
+
+Label  <-
+	 ( '::' SKIP )  NAME  ( '::' SKIP )
+
+Return  <-
+	 ( 'return' WB )  exprlist  ?
+
+Break  <-
+	 ( 'break' WB )
+
+Goto  <-
+	 ( 'goto' WB )  NAME
+
+Do  <-
+	 ( 'do' WB )  Block  ( 'end' WB )
+
+While  <-
+	 ( 'while' WB )  expr  ( 'do' WB )  Block  ( 'end' WB )
+
+Repeat  <-
+	 ( 'repeat' WB )  Block  ( 'until' WB )  expr
+
+If  <-
+	 ( 'if' WB )  expr  ( 'then' WB )  Block  (  ( 'elseif' WB )  expr  ( 'then' WB )  Block  )  *  (  ( 'else' WB )  Block  )  ?  ( 'end' WB )
+
+ForNum  <-
+	 ( 'for' WB )  Id  ( '=' SKIP )  expr  ( ',' SKIP )  expr  (  ( ',' SKIP )  expr  )  ?  ( 'do' WB )  Block  ( 'end' WB )
+
+ForIn  <-
+	 ( 'for' WB )  idlist  ( 'in' WB )  exprlist  ( 'do' WB )  Block  ( 'end' WB )
+
+FuncDef  <-
+	 ( 'function' WB )  funcname  funcbody
+
+FuncDecl  <-
+	 ( 'local' WB )  ( 'function' WB )  Id  funcbody
+
+VarDecl  <-
+	 ( 'local' WB )  iddecllist  (  ( '=' SKIP )  exprlist  )  ?
+
+Assign  <-
+	 varlist  ( '=' SKIP )  exprlist
+
+Number  <-
+	 NUMBER  SKIP
+
+String  <-
+	 STRING  SKIP
+
+Boolean  <-
+	 ( 'false' WB )
+	/  ( 'true' WB )
+
+Nil  <-
+	 ( 'nil' WB )
+
+Varargs  <-
+	 ( '...' SKIP )
+
+Id  <-
+	 NAME
+
+IdDecl  <-
+	 NAME  (  ( '<' SKIP )  NAME  ( '>' SKIP )  )  ?
+
+Function  <-
+	 ( 'function' WB )  funcbody
+
+Table  <-
+	 ( '{' SKIP )  (  field  (  fieldsep  field  )  *  fieldsep  ?  )  ?  ( '}' SKIP )
+
+Paren  <-
+	 ( '(' SKIP )  expr  ( ')' SKIP )
+
+Pair  <-
+	 ( '[' SKIP )  expr  ( ']' SKIP )  ( '=' SKIP )  expr
+	/  NAME  ( '=' SKIP )  expr
+
+Call  <-
+	 callargs
+
+CallMethod  <-
+	 ( ':' SKIP )  NAME  callargs
+
+DotIndex  <-
+	 ( '.' SKIP )  NAME
+
+ColonIndex  <-
+	 ( ':' SKIP )  NAME
+
+KeyIndex  <-
+	 ( '[' SKIP )  expr  ( ']' SKIP )
+
+indexsuffix  <-
+	 DotIndex
+	/  KeyIndex
+
+callsuffix  <-
+	 Call
+	/  CallMethod
+
+var  <-
+	 (  exprprimary  (  callsuffix  +  indexsuffix  /  indexsuffix  )  +  )
+	/  Id
+
+call  <-
+	 (  exprprimary  (  indexsuffix  +  callsuffix  /  callsuffix  )  +  )
+
+exprsuffixed  <-
+	 (  exprprimary  (  indexsuffix  /  callsuffix  )  *  )
+
+funcname  <-
+	 (  Id  DotIndex  *  ColonIndex  ?  )
+
+funcbody  <-
+	 ( '(' SKIP )  funcargs  ( ')' SKIP )  Block  ( 'end' WB )
+
+field  <-
+	 Pair
+	/  expr
+
+fieldsep  <-
+	 ( ',' SKIP )
+	/  ( ';' SKIP )
+
+callargs  <-
+	 ( '(' SKIP )  (  expr  (  ( ',' SKIP )  expr  )  *  )  ?  ( ')' SKIP )
+	/  Table
+	/  String
+
+idlist  <-
+	 Id  (  ( ',' SKIP )  Id  )  *
+
+iddecllist  <-
+	 IdDecl  (  ( ',' SKIP )  IdDecl  )  *
+
+funcargs  <-
+	 (  Id  (  ( ',' SKIP )  Id  )  *  (  ( ',' SKIP )  Varargs  )  ?  /  Varargs  )  ?
+
+exprlist  <-
+	 expr  (  ( ',' SKIP )  expr  )  *
+
+varlist  <-
+	 var  (  ( ',' SKIP )  var  )  *
+
+opor  <-
+	 ( 'or' WB )  exprand
+
+opand  <-
+	 ( 'and' WB )  exprcmp
+
+opcmp  <-
+	 (  ( '==' SKIP )  /  ( '~=' SKIP )  /  ( '<=' SKIP )  /  ( '>=' SKIP )  /  ( '<' SKIP )  /  ( '>' SKIP )  )  exprbor
+
+opbor  <-
+	 ( '|' SKIP )  exprbxor
+
+opbxor  <-
+	 ( '~' SKIP )  exprband
+
+opband  <-
+	 ( '&' SKIP )  exprbshift
+
+opbshift  <-
+	 (  ( '<<' SKIP )  /  ( '>>' SKIP )  )  exprconcat
+
+opconcat  <-
+	 ( '..' SKIP )  exprconcat
+
+oparit  <-
+	 (  ( '+' SKIP )  /  ( '-' SKIP )  )  exprfact
+
+opfact  <-
+	 (  ( '*' SKIP )  /  ( '//' SKIP )  /  ( '/' SKIP )  /  ( '%' SKIP )  )  exprunary
+
+oppow  <-
+	 ( '^' SKIP )  exprunary
+
+opunary  <-
+	 (  ( 'not' WB )  /  ( '#' SKIP )  /  ( '-' SKIP )  /  ( '~' SKIP )  )  exprunary
+
+expr  <-
+	 expror
+
+expror  <-
+	 (  exprand  opor  *  )
+
+exprand  <-
+	 (  exprcmp  opand  *  )
+
+exprcmp  <-
+	 (  exprbor  opcmp  *  )
+
+exprbor  <-
+	 (  exprbxor  opbor  *  )
+
+exprbxor  <-
+	 (  exprband  opbxor  *  )
+
+exprband  <-
+	 (  exprbshift  opband  *  )
+
+exprbshift  <-
+	 (  exprconcat  opbshift  *  )
+
+exprconcat  <-
+	 (  exprarit  opconcat  *  )
+
+exprarit  <-
+	 (  exprfact  oparit  *  )
+
+exprfact  <-
+	 (  exprunary  opfact  *  )
+
+exprunary  <-
+	 opunary
+	/  exprpow
+
+exprpow  <-
+	 (  exprsimple  oppow  *  )
+
+exprsimple  <-
+	 Nil
+	/  Boolean
+	/  Number
+	/  String
+	/  Varargs
+	/  Function
+	/  Table
+	/  exprsuffixed
+
+exprprimary  <-
+	 Id
+	/  Paren
+
+STRING  <-
+	 STRING_SHRT
+	/  STRING_LONG
+
+STRING_LONG  <-
+	  '[' $lsep<'='*> '[' LINEBREAK? <( ! (']' $lsep ']') . )*> ']' $lsep ']'
+
+STRING_SHRT  <-
+	 $quote<["']> <( ESCAPE_SEQ / ( ! ( $quote / LINEBREAK ) . ) )*> $quote
+
+ESCAPE_SEQ  <-
+	 '\\'  ESCAPE
+
+ESCAPE  <-
+	 [\\'"]
+	/ ( 'n' / 't' / 'r' / 'a' / 'b' / 'v' / 'f' )
+	/ < 'x' HEX_DIGIT HEX_DIGIT >
+	/ < 'u' '{' HEX_DIGIT HEX_DIGIT+ '}' >
+	/ ( 'z' SPACE* )
+	/ <DEC_DIGIT DEC_DIGIT !DEC_DIGIT / [012] DEC_DIGIT DEC_DIGIT>
+	/ LINEBREAK
+
+NUMBER  <-
+	 <HEX_NUMBER
+	/  DEC_NUMBER>
+
+HEX_NUMBER  <-
+	 '0' [xX] HEX_PREFIX  ( [pP] EXP_DIGITS  )  ?
+
+DEC_NUMBER  <-
+	 DEC_PREFIX  ( [eE] EXP_DIGITS  )  ?
+
+HEX_PREFIX  <-
+	 HEX_DIGIT  +  (  '.'  HEX_DIGIT  *  )  ?
+	/  '.'  HEX_DIGIT  +
+
+DEC_PREFIX  <-
+	 DEC_DIGIT  +  (  '.'  DEC_DIGIT  *  )  ?
+	/  '.'  DEC_DIGIT  +
+
+EXP_DIGITS  <-
+	[+-] ?  DEC_DIGIT  +
+
+COMMENT  <-
+	 '--'  (  STRING_LONG  /  COMMENT_SHRT  )
+
+COMMENT_SHRT  <-
+	 (  !  LINEBREAK  .  )  *
+
+NAME  <-
+	 !  KEYWORD  <NAME_PREFIX  NAME_SUFFIX?>  SKIP
+
+NAME_PREFIX  <-
+	[_a-zA-Z]
+
+NAME_SUFFIX  <-
+	[_a-zA-Z0-9] +
+
+SHEBANG  <-
+	 '#!'  (  !  LINEBREAK  .  )  *  LINEBREAK  ?
+
+~SKIP   <-
+	 (  SPACE  +  /  COMMENT  )  *
+
+~LINEBREAK  <-
+	 '\r\n'
+	/  '\n\r'
+	/  '\n'
+	/  '\r'
+
+SPACE  <-
+	 ' '
+	/  '\t'
+	/  LINEBREAK
+
+HEX_DIGIT  <-
+	[0-9a-fA-F]
+
+DEC_DIGIT  <-
+	[0-9]
+
+#EXTRA_TOKENS  <-
+#	 ( '[[' SKIP )  ( '[=' SKIP )
+#  unused rule, here just to force defining these tokens ( ' unused rule, here just to force defining these tokens' SKIP )
+
+~WB  <-
+	!NAME_SUFFIX SKIP
+
+KEYWORD <-
+	<('and'
+	| 'break'
+	| 'do'
+	| 'elseif'
+	| 'else'
+	| 'end'
+	| 'false'
+	| 'for'
+	| 'function'
+	| 'goto'
+	| 'if'
+	| 'in'
+	| 'local'
+	| 'nil'
+	| 'not'
+	| 'or'
+	| 'repeat'
+	| 'return'
+	| 'then'
+	| 'true'
+	| 'until'
+	| 'while') WB>

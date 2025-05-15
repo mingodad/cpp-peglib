@@ -1,0 +1,24 @@
+#From https://github.com/evoldoers/machineboss/blob/91e8179ef39ea1e2c301aa9e91b10fc0c7a553a9/src/grammars/expr.h
+Term       <- _ Factor (Add / Sub)*
+Add        <- '+' _ Factor
+Sub        <- '-' _ Factor
+Factor     <- Power (Mul / Div)*
+Mul        <- '*' _ Power
+Div        <- '/' _ Power
+Power      <- Primary '^' _ Primary / Primary
+Primary    <- (Parens / Function / NegateProb / Negative / Number / Variable) _
+Parens     <- '(' Term ')'
+Function   <- Exp / Log
+Exp        <- 'exp' _ '(' _ Term _ ')' / 'e' _ '^' _ Primary
+Log        <- 'log' _ '(' _ Term _ ')'
+NegateProb <- '!' _ Primary
+Negative   <- '-' _ Primary
+Sign       <- < [-+]? > _
+Number     <- Sign _ (Scientific / IntOrFloat)
+IntOrFloat <- Float / Integer
+Integer    <- ([0-9]+)
+Float      <- Integer '.' Integer / '.' Integer
+Scientific <- IntOrFloat ('e'/'E') Sign Integer
+Variable   <- '$' identifier
+identifier <- < [a-zA-Z] [a-zA-Z0-9]* >
+~_          <- [ \t\r\n]*

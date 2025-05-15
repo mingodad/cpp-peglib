@@ -1,0 +1,329 @@
+/**
+hello world!
+**/
+
+/**
+parentheses are data.
+**/
+Message(
+    x int = 0;
+    y int = 0;
+);
+
+/**
+post type declaration.
+strong type inference.
+**/
+msg Message;
+ms Message(1,2);
+m = msg;
+m = (3,4);
+
+/*
+untyped data
+*/
+ms Message;
+ms = (1,2);
+// syntactic sugar
+msg Message(1,2);
+msg Message = (1,2);
+msg = Message(1,2);
+msg(1,2) Message;
+
+/**
+curly brackets are code.
+declarations outside of class definition.
+forward declaration
+**/
+Message.swap;
+Message.sum int {
+    return x+y;
+}
+Message.diff {
+    return x-y;
+}
+
+/**
+pointers use prefix ^ for address operator
+and postfix for dereference operator.
+**/
+// msg is a pointer to a Message
+msg ^Message;
+// msg has value null
+msg = null;
+m12 = Message(1,2);
+m34 = m12.offset(2,2);
+// mp is a pointer to a message, mp has value address of m12
+mp = ^m12;
+// contents of mp (m12) are replaced with m34.
+mp^ = m34;
+
+/**
+anonymous classes
+**/
+(x int).negate {
+    return -x;
+}
+
+/**
+syntactic sugar
+**/
+Message.offset(a int, b int) {
+    x += a;
+    y += b;
+}
+(m^ Message, a int, b int).offset {
+    m^.x += a;
+    m^.y += b;
+}
+
+/**
+templates
+**/
+Passage:T(
+    x T = 0;
+    y T = 0;
+);
+Passage:T.offset(a T, b T) {
+    x += a;
+    y += b;
+}
+psg(1,2) Passage:int;
+pst(3.0, 4.0) Passage:float;
+
+/**
+type definitions
+the ^ operator binds to the type.
+which is after.
+**/
+alias MessagePtr ^Message;
+alias Msg MessagePtr^;
+
+/**
+type qualifiers
+follows template pattern.
+**/
+x int:32
+y int:16
+z int:64u
+
+/**
+implied operator: string concatenation
+can be applied to any class.
+**/
+comma_space = ", "
+cr = "\n"
+s = "hello" comma_space "world!" cr
+
+/**
+automatic type conversion
+**/
+x int = 10;
+s string = x;
+
+/**
+explicit type conversion
+**/
+Message.string {
+    s = "x=" x ", y=" y;
+    return "(" s ")";
+}
+msg = Message(1,2);
+s string = msg;
+
+/**
+header file:
+**/
+Message(
+    x int = 0;
+    y int = 0;
+);
+Message.clear;
+
+/**
+source file:
+**/
+include "message.h"
+// private function
+Message.set(a int, b int) {
+    x = a;
+    y = b;
+}
+Message.clear {
+    set(0,0);
+}
+
+/**
+extending classes.
+**/
+// header file:
+Message(
+    x int = 0;
+    y int = 0;
+);
+// implementation file
+include "message.h"
+Message+=(
+    // private fields
+    w int = 0;
+    z int = 0;
+);
+// consumer file
+include "message.h"
+msg Message;
+z = msg.z; // error, private field.
+
+/**
+if else switch loops etc.
+**/
+foo(x int) {
+    y int;
+    if x==0 {
+        y = 1;
+    } else if x==1 {
+        y = 0;
+    } else {
+        y = -1;
+    }
+    return y;
+}
+switch(x int) {
+    y int;
+    switch x {
+		// default clause.
+		// executed if all of the following
+		// comparison clauses fail.
+        y = 99
+    } ==3 {
+        y = 0
+    } ==4 {
+        y = 1
+    } <0 {
+        y = -1
+    };
+}
+
+/**
+for loops
+**/
+foo(x int) {
+    i = 0;
+    while i<x {
+        ++i;
+        continue;
+    }
+}
+bar(x int) {
+    for i=0; i<x; ++i {
+        break;
+    }
+}
+ney(x int) {
+    for i=0; i<x; ++i {
+        for k=0; k<x; ++k {
+            break 2;
+        }
+    }
+}
+
+/**
+goto (do not use)
+**/
+for(x int) {
+    if x=3 {
+        goto done;
+    }
+    std.out.print("Hello, World!\n");
+done:
+    std.out.print("Goodbye, World!\n");
+}
+
+/**
+exceptions are nigh invisible
+**/
+foo {
+    /*
+    if first() throws an exception...
+    x,y,z,w are a initialized to default values based on type.
+    usually some form of 0.
+    */
+    x = first();
+    y = second(x);
+    z = third(x,y);
+    w = fourth(x,y,z);
+    if std.exception {
+        std.err.print(std.exception);
+        if w {
+            std.exception.throw();
+        } else {
+            std.exception.clear();
+        }
+    }
+}
+first {
+    if pi==3 {
+        std.exception.throw("pi=" pi);
+    }
+    return pi;
+}
+// possible output to std error:
+srcfile:203:first: pi=3
+srcfile:192:foo:
+
+/**
+unary operator #
+**/
+operator#(x std:arg) string {
+	returns x.name "=" x.value;
+}
+foo int = 42;
+std.out.print(#foo);
+// prints:
+foo=42
+
+/**
+# operator syntactic sugar
+**/
+x = 42;
+std.out.print(#x);
+std.out.print(x.log());
+// prints:
+x=42
+Message.log {
+    return string();
+}
+msg Message(1,2);
+std.out.print(#msg);
+// prints:
+msg={x=1, y=2}
+
+/**
+virtual functions
+**/
+BaseStyle(
+	x int = 0;
+	y int = 0;
+);
+BaseStyle.print virtual {
+	std.out.print(#x ", " #y);
+}
+BracketStyle BaseStyle();
+BracketStyle.print virtual {
+	std.out.print("{" BaseStyle.print() "}");
+}
+BraceStyle BraceStyle();
+BraceStyle.print virtual {
+	std.out.print("[" BaseStyle.print() "");
+}
+JsonStyle BaseStyle();
+JsonStyle.print virtual {
+	std.out.print("{\"x\":" x ", \"y\":" y "}");
+}
+
+reserved keywords:
+int float string?
+if else switch for while goto?
+null
+namespace std?
+virtual
+new? delete?

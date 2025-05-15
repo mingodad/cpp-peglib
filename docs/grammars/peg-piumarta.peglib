@@ -1,0 +1,144 @@
+# PEG from Piumarta on this fork https://github.com/mingodad/peg
+Grammar <-
+	 Spacing Definition+ EndOfFile
+
+~Spacing  <-
+	 ( Space / Comment )*
+
+Definition <-
+	 Identifier LEFTARROW Expression
+
+EndOfFile <-
+	 ! .
+
+Identifier  <-
+	 <IdentStart IdentCont*> Spacing
+
+LEFTARROW <-
+	 '<-' Spacing
+
+Expression <-
+	 Sequence ( SLASH Sequence )*
+
+Sequence <-
+	 ( error ( error )* )
+
+SLASH <-
+	 '/' Spacing
+
+error <-
+	 Prefix ( TILDE Action )?
+
+Prefix <-
+	 ( AT Action )
+	/ ( AND Action )
+	/ ( AND Suffix )
+	/ ( NOT Suffix )
+	/ Suffix
+
+TILDE <-
+	 '~' Spacing
+
+Action  <-
+	 <'{' Braces* '}'> Spacing
+
+AT <-
+	 '@' Spacing
+
+AND <-
+	 '&' Spacing
+
+Suffix <-
+	 Primary ( ( QUESTION ) / ( STAR ) / ( PLUS ) )?
+
+NOT <-
+	 '!' Spacing
+
+Primary <-
+	 ( AT? ( ( Identifier COLON Identifier ! LEFTARROW ) / ( Identifier ! LEFTARROW ) ) )
+	/ ( OPEN Expression CLOSE )
+	/ ( AT? ( ( LiteralSQ ) / ( LiteralDQ ) / ( LiteralBQ ) ) ( 'i' ! IdentStart )? Spacing )
+	/ ( Class )
+	/ ( DOT )
+	/ ( Action )
+	/ ( BEGIN )
+	/ ( END )
+
+QUESTION <-
+	 '?' Spacing
+
+STAR <-
+	 '*' Spacing
+
+PLUS <-
+	 '+' Spacing
+
+COLON <-
+	 ':' Spacing
+
+OPEN <-
+	 '(' Spacing
+
+CLOSE <-
+	 ')' Spacing
+
+LiteralSQ  <-
+	 ['] <( ! ['] Char )*> [']
+
+LiteralDQ  <-
+	 ["] <( ! ["] Char )*> ["]
+
+LiteralBQ  <-
+	 [`] <( ! [`] Char )*> [`]
+
+IdentStart <-
+	 [a-zA-Z_]
+
+Class  <-
+	 <'[' ( ! ']' Range )* ']'> Spacing
+
+DOT <-
+	 '.' Spacing
+
+BEGIN <-
+	 '<' Spacing
+
+END <-
+	 '>' Spacing
+
+IdentCont <-
+	 IdentStart
+	/ [0-9]
+
+Char <-
+	 ( '\\' [abefnrtv'"\[\]\\] )
+	/ ( '\\' 'x' [0-9A-Fa-f] [0-9A-Fa-f]? )
+	/ ( '\\' [0-3] [0-7] [0-7] )
+	/ ( '\\' [0-7] [0-7]? )
+	/ ( '\\' '-' )
+	/ ( ! '\\' . )
+
+Range <-
+	 ( Char '-' ! ']' Char )
+	/ Char
+
+Space <-
+	 ' '
+	/ '\t'
+	/ EndOfLine
+
+Comment <-
+	 '#' ( ! EndOfLine . )* EndOfLine?
+
+EndOfLine <-
+	 [\n][\r]?
+	 / [\r][\n]?
+
+Braces <-
+	 ( '{' Braces* '}' )
+	/ LiteralBraces
+	/ ( ! '}' . )
+
+LiteralBraces <-
+	 ( ['] ( ! ( ['] / EndOfLine ) Char )* ['] )
+	/ ( ["] ( ! ( ["] / EndOfLine ) Char )* ["] )

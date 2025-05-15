@@ -1,0 +1,67 @@
+#From https://github.com/Ableton/aqt-stylesheets/blob/28897e3b80108399b5891c072e4120acd736df7e/src/CssParser.cpp
+STYLESHEET      <-  ~WS  (PROPSET /  FONTFACE_DECL)*  END_OF_FILE
+
+FONTFACE_DECL   <-  "@font-face"  ~WS
+		 '{'  ~WS  "src"  ~WS  ':'  ~WS
+		   "url"  ~WS  '('  ~WS  (IDENTIFIER /  STRING)  ~WS  ')'  ~WS
+		   (';')?  ~WS
+		 '}'  ~WS
+
+
+PROPSET         <-  SELECTORS  ~WS  '{'  ~WS  VALUE_PAIRS  ~WS  '}'  ~WS
+
+SELECTORS       <-  SELECTOR  (~WS  ','  ~WS  SELECTOR)*
+
+SELECTOR        <-  SEL_ID  (~WS  (CHILD_SEL /  SEL_ID))*
+
+CHILD_SEL       <-  '>'
+
+SEL_ID          <-  (DOT_IDENTIFIER /  IDENTIFIER)+
+
+
+VALUE_PAIRS     <-  VALUE_PAIR*
+
+VALUE_PAIR      <-  IDENTIFIER  ~WS  ':'  ~WS  VALUES  ~WS  ';'?  ~WS
+
+VALUES          <-  VALUE  (','  ~WS  VALUE)*
+
+VALUE           <-  (STRING_VAL /  NUMBER_VAL /  COLOR_VAL /  EXPRESSION /  SYMBOL_VAL)  ~WS
+STRING_VAL      <-  STRING
+
+NUMBER_VAL      <-  NUMBER
+
+COLOR_VAL       <-  COLOR
+
+SYMBOL_VAL      <-  IDENTIFIER
+
+EXPRESSION      <-  IDENTIFIER  ~WS  '('  ~WS  (ARGS)?  ~WS  ')'
+
+ARGS            <-  ATOM_VALUE  (','  ~WS  ATOM_VALUE)*
+
+ATOM_VALUE      <-  (STRING /  NUMBER /  COLOR /  IDENTIFIER)  ~WS
+
+DOT_IDENTIFIER  <-  <'.' IDENT_INIT_CHAR  IDENT_CHAR*>
+
+IDENTIFIER      <-  <IDENT_INIT_CHAR  IDENT_CHAR*>
+
+COLOR           <-  <'#' [0-9a-fA-F]+>
+
+NUMBER          <-  <'-'? [0-9]+ ('.' [0-9]+)? '%'?>
+
+STRING          <-  '\''  <(!'\'' . )*>  '\'' /
+		            '"'  <(!'"' . )*>  '"'
+
+
+IDENT_INIT_CHAR <-  [a-zA-Z_]
+IDENT_CHAR      <-  [-a-zA-Z0-9_]
+
+WS              <-  ([ \t] /  END_OF_LINE /  COMMENT)*
+END             <-  END_OF_LINE /  END_OF_FILE
+
+COMMENT         <-  BLOCK_COMMENT /  LINE_COMMENT
+BLOCK_COMMENT   <-  "/*"  (!"*/" . )*  "*/"
+LINE_COMMENT    <-  "//" (!END . )*  END
+
+END_OF_LINE     <-  "\r\n" /  '\n' /  '\r'
+
+END_OF_FILE     <-  !.

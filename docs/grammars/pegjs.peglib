@@ -1,0 +1,167 @@
+# A line comment inside code block gives parser error
+Grammar <-
+	 Spacing Action* Definition+ EndOfFile
+
+~Spacing <-
+	 ( Space / Comment )*
+
+Action <-
+	 <"{" Braces* "}"> Spacing
+
+Definition <-
+	 Identifier ( Literal )? EQUAL Expression SEMICOLON?
+
+EndOfFile <-
+	 ! .
+
+Space <-
+	 " "
+	/ "\t"
+	/ EndOfLine
+
+Comment <-
+	 #( "//" ( ! EndOfLine . )* EndOfLine ) #notice when the comment line is the last we need a '\n' after it
+	 ( "//" ( ! EndOfLine . )* )
+	/ ( "/*" ( ! '*/' . )* "*/" )
+
+Braces <-
+	 ( "{" Braces* "}" )
+	/ LiteralBraces
+	/ ( ! "}" ( EndOfLine / . ) )
+
+Identifier <-
+	 <IdentStart IdentCont*> Spacing
+
+Literal <-
+	 ( <['] ( ! ['] Char )* [']> Spacing )
+	/ ( <["] ( ! ["] Char )* ["]> Spacing )
+	/ ( <[`] ( ! [`] Char )* [`]> Spacing )
+
+EQUAL <-
+	 "=" Spacing
+
+Expression <-
+	 Sequence ( SLASH Sequence )*
+
+SEMICOLON <-
+	 ";" Spacing
+
+EndOfLine <-
+	 "\r\n"
+	/ "\n\r"
+	/ "\n"
+	/ "\r"
+
+IdentStart <-
+	 [a-zA-Z_]
+
+IdentCont <-
+	 IdentStart
+	/ Digit
+
+Char <-
+	 ( "\\" [abefnrtv'"`\[\]\\] )
+	/ ( "\\" [0-3] OctalDigit OctalDigit )
+	/ ( "\\" OctalDigit OctalDigit? )
+	/ ( "\\x" HexDigit HexDigit )
+	/ ( "\\u" HexDigit HexDigit HexDigit HexDigit )
+	/ ( "\\" "-" )
+	/ ( ! "\\" . )
+
+Sequence <-
+	 error error*
+
+SLASH <-
+	 "/" Spacing
+
+Digit <-
+	 [0-9]
+
+error <-
+	 Prefix ( TILDE Action )?
+
+Prefix <-
+	 Action
+	/ ( ( AND / NOT ) Action )
+	/ ( ( AND / NOT / AT / MATCH_TXT ) Suffix )
+	/ Suffix
+
+TILDE <-
+	 "~" Spacing
+
+AND <-
+	 "&" Spacing
+
+NOT <-
+	 "!" Spacing
+
+AT <-
+	 "@" Spacing
+
+MATCH_TXT <-
+	 "$" Spacing
+
+Suffix <-
+	 Primary ( QUESTION / STAR / PLUS )?
+
+Primary <-
+	 ( Identifier COLON Prefix ! ( Literal? EQUAL ) )
+	/ ( Identifier ! ( Literal? EQUAL ) )
+	/ ( OPEN Expression CLOSE )
+	/ ( Literal ( "i" ! IdentStart Spacing )? )
+	/ Class
+	/ DOT
+	/ Action
+	/ AstDirective
+
+QUESTION <-
+	 "?" Spacing
+
+STAR <-
+	 "*" Spacing
+
+PLUS <-
+	 "+" Spacing
+
+LiteralBraces <-
+	 ( ['] ( ! ['] Char )* ['] )
+	/ ( ["] ( ! ["] Char )* ["] )
+	/ ( [`] ( LiteralEmbedded / ! [`] Char )* [`] )
+	/ ('/' (! '/' .)* '/')
+
+LiteralEmbedded <-
+    '${' (LiteralEmbedded / ! '}' .)* '}'
+
+COLON <-
+	 ":" Spacing
+
+OPEN <-
+	 "(" Spacing
+
+CLOSE <-
+	 ")" Spacing
+
+Class <-
+	 <'[' ( ! "]" Range )* "]"> 'i'? Spacing
+
+DOT <-
+	 "." Spacing
+
+AstDirective <-
+	 BEGIN ( ! END . )* END
+
+Range <-
+	 ( Char "-" ! ']' Char )
+	/ Char
+
+BEGIN <-
+	 "<" Spacing
+
+END <-
+	 ">" Spacing
+
+OctalDigit <-
+	 [0-7]
+
+HexDigit <-
+	 [0-9a-fA-F]

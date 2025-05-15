@@ -1,0 +1,75 @@
+#From https://github.com/doganulus/reelay/blob/bc30e86f888e903e0521c90637147e21d6080dce/include/reelay/parser/regex.hpp
+Expression  <- Disjunctive
+Disjunctive <- Conjunctive (REG_OR Conjunctive)*
+Conjunctive <- SequenceExpr (REG_AND SequenceExpr)*
+SequenceExpr <- RegularUnary (REG_CAT? RegularUnary)*
+
+RegularUnary <- RegularStar / RegularPlus / RegularOption / RegularBounded /BooleanExpression / RegularGrouping
+RegularStar <- BooleanExpression STAR / LPARAM Expression RPARAM STAR
+RegularPlus <- BooleanExpression PLUS / LPARAM Expression RPARAM PLUS
+RegularOption <- BooleanExpression QMARK / LPARAM Expression RPARAM QMARK
+RegularBounded <- BooleanExpression TimeBound / LPARAM Expression RPARAM TimeBound
+RegularGrouping <- LPARAM Expression RPARAM
+
+BooleanExpression  <- BoolDisjunctive
+BoolDisjunctive <- BoolConjunctive (LOR BoolConjunctive)*
+BoolConjunctive <- BooleanUnary (LAND BooleanUnary)*
+
+BooleanUnary <- BoolNegative / BooleanAtom / LPARAM BooleanExpression RPARAM
+BoolNegative <- LNOT BooleanAtom / LNOT LPARAM BooleanExpression RPARAM
+BooleanAtom <- RecordProposition / AnyRecord
+AnyRecord <- LCURLY STAR RCURLY
+RecordProposition <- LCURLY NonEmptyKeyValuePairs RCURLY
+NonEmptyKeyValuePairs <- KeyValuePair (COMMA KeyValuePair)*
+FieldKey <- Name (DOT Name)*
+FieldValue <- Bool / SQString / DQString / Name / Number / VariableRef / AnyValue
+KeyValuePair <- KeyValuePairST / KeyValuePairEQ / KeyValuePairNE / KeyValuePairLT / KeyValuePairLE / KeyValuePairGT / KeyValuePairGE
+
+KeyValuePairST <- FieldKey ':' FieldValue
+KeyValuePairEQ <- FieldKey '==' Number
+KeyValuePairNE <- FieldKey '!=' Number
+KeyValuePairLT <- FieldKey '<' Number
+KeyValuePairLE <- FieldKey '<=' Number
+KeyValuePairGT <- FieldKey '>' Number
+KeyValuePairGE <- FieldKey '>=' Number
+
+AnyValue <- STAR
+VariableRef <- STAR Name
+TimeBound <- FullBound / LowerBound / UpperBound
+FullBound <-  "[" Number ":" Number "]"
+LowerBound <- "[" Number ":" 'inf'? "]"
+UpperBound <- "["        ":" Number "]"
+
+~REG_OR   <- < "|" / 'or'>
+~REG_AND  <- < "&" / 'and'>
+~REG_CAT  <- < ';' >
+
+~LOR      <- < "||" >
+~LAND     <- < "&&" >
+~LNOT     <- < "!" >
+#~LIMPLIES <- < "->" / 'implies' >
+~COMMA <- < ',' >
+~LPARAM <- < '(' >
+~RPARAM <- < ')' >
+#~LBRACE <- < '[' >
+#~RBRACE <- < ']' >
+~LCURLY <- < '{' >
+~RCURLY <- < '}' >
+
+~DOT <- < '.' >
+#~THREEDOT <- < '...' >
+~STAR <- < '*' >
+~PLUS <- < '+' >
+~QMARK <- < '?' >
+#~AMSAND <- < '&' >
+#~DOLLAR <- < '$' >
+#~SQUARE <- < '#' >
+
+Name   <- <[_a-zA-Z][_a-zA-Z0-9]*>
+SQString <- "'" < [^']* > "'"
+DQString <- '"' < [^"]* > '"'
+Number <- <'-'? [0-9]+ ('.' [0-9]+)?>
+Bool <- TRUE / FALSE
+~TRUE  <- < 'true'>
+~FALSE <- < 'false'>
+%whitespace <- [  \t\r\n]*

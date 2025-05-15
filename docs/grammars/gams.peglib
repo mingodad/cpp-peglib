@@ -1,0 +1,294 @@
+ #../../chpeg-dad/examples/chpeg_chpeg gamsToLatex2.chpeg gamsToLatex2.mod
+ start <-
+	 gamsCode+ !.
+
+ gamsCode <-
+	 _ gamsCodePart _
+
+ gamsCodePart <-
+	 executionStatement / definition / assignment / solveStatement / multiLineComment / dollarCommand / lonelySemicolon
+
+ dollarCommand <-
+	 inlineComStatement / offInlineComStatement / eolComStatement / offEolComStatement / genericDollarCommand
+
+ genericDollarCommand <-
+	 "$" (![\n] .)+
+
+ eolComStatement <-
+	 "$EOLCOM"i _ (![\n\t ] .)+ _
+
+ offEolComStatement <-
+	 "$offeolcom"i (![\n] .)*
+
+ inlineComStatement <-
+	 "$inlinecom"i _ (![\n\t ] .)+ _ (![\n\t ] .)+
+
+ offInlineComStatement <-
+	 "$offinlinecom"i (![\n] .)*
+
+ multiLineComment <-
+	 "$onecho"i ( ! "$offecho"i . )+ "$offecho"i / "$ontext"i ( ! "$offtext"i . )+ "$offtext"i
+
+ executionStatement <-
+	 optionStatement / solveStatement / abortStatement / controlStructureStatement / defaultStatement
+
+ abortStatement <-
+	 "abort"i ( _ dollarCondition / whiteSpacePart ) _ defaultArguments? _ ";"
+
+ controlStructureStatement <-
+	 ( "loop"i / "while"i / "if"i ) _ "(" _ set_or_setsInBrackets dollarCondition? _ "," gamsCode* ")" / forStatement / repeatStatement
+
+ repeatStatement <-
+	 "repeat"i _ "(" gamsCode* "," _ set_or_setsInBrackets dollarCondition? ")"
+
+ forStatement <-
+	 "for"i _ "(" _ set_or_setsInBrackets dollarCondition? _ "to"i _ set_or_setsInBrackets _ "," gamsCode* ")"
+
+ defaultStatement <-
+	 ( "display"i / "execute"i ) whiteSpacePart defaultArguments ";"
+
+ defaultArguments <-
+	 _ defaultArgument _ ( "," _ defaultArgument _ )* _
+
+ defaultArgument <-
+	 (![,;] .)+ _
+
+ solveStatement <-
+	 "solve"i _ ident _ solveStatement_secondPart ";"
+
+ solveStatement_secondPart <-
+	 modelTypeStatement _ objectiveStatement? / objectiveStatement _ modelTypeStatement
+
+ modelTypeStatement <-
+	 ( "using"i / "use"i ) _ ident _
+
+ objectiveStatement <-
+	 ( "minimizing"i / "maximizing"i / "min"i / "max"i ) _ ident _
+
+ lonelySemicolon <-
+	 ";"
+
+ assignment <-
+	 parameter _ "=" _ equationSide ";"
+
+ dollarCondition <-
+	 "$" _ "(" equationSide dollarCondition? _ ")" _ / "$" functionalPart
+
+ optionStatement <-
+	 "option"i (![;] .)+ ";"
+
+ definition <-
+	 multipleItemsDefinition / aliasDefinition / parameterDefinition / tableDefinition / equationDefinition / assignment
+
+ descriptionString <-
+	<noSetCharacter+>
+
+ noSetCharacter <-
+	 ! "set:"i (![/\n;|] .)
+
+ descriptionStringWithPipe <-
+	 (![/\n;] .)+
+
+ multipleItemsDefinition <-
+	 multipleItemTypes itemDefinition+ _ ";"
+
+ itemDefinition <-
+	 _ ident noNewLineWhiteSpace? setsOrNothing? noNewLineWhiteSpace? descriptionString? descriptionStringWithPipe? _ itemValueDefinition?
+
+ itemValueDefinition <-
+	 #"/" _ (![/] .)+ _ "/"
+	 "/" _ (data_element (data_sep data_element)*)? _ "/"
+
+ multipleItemTypes <-
+	 parameterType "s"i?
+
+ parameterDefinition <-
+	 parameterType itemDefinition _ ";"
+
+ parameterType <-
+	 "set"i / "parameter"i / "variable"i / "binary variable"i / "positive variable"i / "scalar"i / "equation"i / "model"i
+
+ tableDefinition <-
+	 "table"i _ ident _ setsOrNothing? _ descriptionString tableData
+
+#tableData <-
+#	(![;] .)+ ";"
+
+tableData <-
+    table_data_block (_ "+" table_data_block)*
+
+table_data_block <-
+    table_data_header table_data_row+
+
+table_data_header <-
+    _ (symbol_id / value)+ new_line
+
+table_data_row <-
+    _ symbol_id value+
+
+data_element <-
+	symbol_id value #-> data_value
+    / symbol_id descriptionString?
+	/ symbol_range
+	/ number_range
+	/ WORD_SYMBOL
+	/ value
+	#/ macro
+	#/ compiler_variable
+	#/ FLEX_ESCAPED_STRING
+    / symbol_index value
+    / symbol_id
+    / T_STRING
+
+symbol_id <-
+    literalString noNewLineWhiteSpace?
+
+value <-
+    '-'?(float / integer) noNewLineWhiteSpace?
+
+data_sep <-
+    ("," / new_line) _
+
+number_range <-
+    value  "*" _ value
+
+symbol_range <-
+    ident _ "*" _ ident
+
+symbol_index <-
+    "(" _ index_list ")" _
+
+index_list <-
+    index_item ("," _ index_item )*
+
+index_item <-
+    "*" _
+	/ ident
+	#/ symbol_element
+	#/ compiler_variable
+	#/ symbol_name "+" NUMBER #-> lead
+	#/ symbol_name "-" NUMBER #-> lag
+	#/ symbol_name "++" NUMBER #-> circular_lead
+	#/ symbol_name "--" NUMBER #-> circular_lag
+
+ aliasDefinition <-
+	 "alias"i aliasItem ( "," aliasItem )* _ ";"
+
+ aliasItem <-
+	 _ "(" _ sets ")" _
+
+ equationDefinition <-
+	 ident setsOrNothing? _ dollarCondition? _ ".." equationSide equationOperator equationSide ";" _
+
+ equationSide <-
+	 _ logicRelExpression _
+
+ logicRelExpression <-
+	 logicRelOperator _ logicRelExpression / numericalRelExpression (_ logicRelOperator _ logicRelExpression)? #big win on VM loops
+
+ logicRelOperator <-
+	 "not"i / "and"i / "or"i / "xor"i
+
+ numericalRelExpression <-
+	 additiveExpression (_ numericalRelOperator _ numericalRelExpression )? #big win on VM loops
+
+ numericalRelOperator <-
+	 "<" / "<=" / "<>" / ">=" / ">" / "gt"i / "lt"i / "eq"i / ! equationOperator "="
+
+ additiveExpression <-
+	 multiplicativeExpression (_ additiveOp _ additiveExpression )? / additiveOp _ additiveExpression #big win on VM loops
+
+additiveOp <-
+	[+-]
+
+ multiplicativeExpression <-
+	 exponentialExpression (_ multiplicativeOp _ multiplicativeExpression )? #big win on VM loops
+
+multiplicativeOp <-
+	[*/]
+
+ exponentialExpression <-
+	 functionalPart (_ "**" _ exponentialExpression )? #big win on VM loops
+
+ functionalPart <-
+	 primary / function / parameter #/ someString
+
+ primary <-
+	 float / integer / ( _ "(" _ logicRelExpression _ ")" _ )
+
+ float <-
+	 < ([0-9]+)? "." [0-9]+ >
+	 / < [0-9]+ [eE][+-]? [0-9]+ >
+
+ someString <-
+	 (![=] .)+
+
+ parameter <-
+	 ident suffix? _ setsOrNothing? (&[$] dollarCondition)?
+
+ setsOrNothing <-
+	 <"(" sets ")">
+
+ suffix <-
+	 "." suffixLetters
+
+ suffixLetters <-
+	 "lo"i / "l"i / "fx"i / "up"i / "m"i / "nd"i / "nz"i / "nr"i / "nw"i / ident
+
+ sets <-
+	 set ( "," sets )?
+
+ set <-
+	 _ "'" (![\'] .)+ "'" _ / _ '"' (![\"] .)+ '"' _ / _ logicRelExpression _
+
+ function <-
+	 ( functionName _ "(" set_or_setsInBrackets dollarCondition? "," _ logicRelExpression _ ")" _ dollarCondition? _ )
+
+ functionName <-
+	 "sum"i / "smax"i / "prod"i / "smin"i
+
+ set_or_setsInBrackets <-
+	 _ set _ / _ "(" _ sets _ ")" _
+
+ sqrt <-
+	 ( "sqrt" _ "(" additiveExpression ")" )
+
+ equationOperator <-
+	 "=e="i / "=g="i / "=l="i
+
+ integer <-
+	 [0-9]+
+
+ ~_ <-
+	 whiteSpacePart*
+
+ ~whiteSpacePart <-
+	 #comment / [ \n\t\r]
+         #[\n] ( "*" (![\n] .)* / [ \t\r]) #TODO fix error message with this
+         [\n] "*" (![\n] .)* / [ \t\n\r] #inline comment
+
+
+ endOfLineComment <-
+	(![\n] .)+
+
+ ~noNewLineWhiteSpace <-
+	 [ \t\r]+
+
+ literalString <-
+	 <[A-Za-z_] [A-Za-z0-9_.-]*>
+
+T_STRING <-
+	["] <( ( ! ( ["] / [\n] ) . ) )*> ["] _
+	/ ['] <( ( ! ( ['] / [\n] ) . ) )*> ['] _
+
+WORD_SYMBOL <-
+    <[a-zA-Z0-9][A-Za-z0-9_+-]*>
+
+ ident <-
+	 <[A-Za-z_] [A-Za-z0-9_-]*>
+
+ comment <-
+	 ( [\n] "*" ) (![\n] .)*
+
+~new_line <- [\n]
+

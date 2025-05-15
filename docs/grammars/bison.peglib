@@ -1,0 +1,241 @@
+# From bison 3.8.2 src/parse-gram.y and src/scan-gram.l
+# ../../chpeg-dad/examples/chpeg_nocase bison.chpeg ../../bison-dad/src/parse-gram.y
+# ../../chpeg-dad/examples/chpeg_nocase bison.chpeg ../../../A_databases/postgresql-13.3/src/backend/parser/gram.y
+input <-
+	sp prologue_declaration* "%%" sp grammar epilogue? YYEOF
+
+prologue_declaration <-
+	grammar_declaration
+	/ PROLOGUE
+	/ ("%<flag>" / "%locations") sp
+	/ "%define" sp variable value?
+	/ "%header" sp string_opt?
+	/ "%error-verbose" sp
+	/ "%expect"[-_]"rr" sp INT_LITERAL
+	/ "%expect" sp INT_LITERAL
+	/ "%file"[-_]"prefix" sp eqopt STRING
+	/ "%glr"[-_]"parser" sp
+	/ "%initial"[-_]"action" sp braces
+	/ "%language" sp STRING
+	/ "%name"[-_]"prefix" sp ("=" sp)? STRING
+	/ "%nondeterministic-parser"
+	/ "%no"[-_]"lines" sp
+	/ "%output" sp STRING
+	/ ("%param" / "%parse"[-_]"param" / "%lex"[-_]"param") sp params
+	/ "%pure"[-_]"parser" sp
+	/ "%require" sp STRING
+	/ "%skeleton" sp STRING
+	/ "%token"[-_]"table" sp
+	/ "%verbose" sp
+	/ "%yacc" sp
+	/ error sp SEMICOLON
+	/ SEMICOLON
+
+params <-
+	braces+
+
+grammar_declaration <-
+	symbol_declaration
+	/ "%start" sp  symbol+
+	/ code_props_type braces generic_symlist_item*
+	/ "%default"[-_]"prec" sp
+	/ "%no"[-_]"default"[-_]"prec" sp
+	/ "%code" sp ID? braces
+	/ "%union" sp union_name? braces
+
+code_props_type <-
+	"%destructor" sp
+	/ "%printer" sp
+
+union_name <-
+	ID
+
+symbol_declaration <-
+	"%nterm" sp nterm_decls
+	/ "%token" sp token_decls
+	/ "%type" sp symbol_decls
+	/ precedence_declarator token_decls_for_prec
+
+precedence_declarator <-
+	"%left" sp
+	/ "%right" sp
+	/ "%nonassoc" sp
+	/ "%precedence" sp
+
+string_opt <-
+	STRING
+
+generic_symlist_item <-
+	symbol
+	/ tag
+
+tag_opt <-
+	tag
+
+tag <-
+	"<" ( "*" / (!">" .)*) ">" sp
+
+nterm_decls <-
+	token_decls
+
+token_decls <-
+	(tag? token_decl+)+
+
+token_decl <-
+	id int_opt? alias?
+
+int_opt <-
+	INT_LITERAL sp
+
+alias <-
+	string_as_id
+	/ TSTRING
+
+token_decls_for_prec <-
+	(tag? token_decl_for_prec+)+
+
+token_decl_for_prec <-
+	id int_opt?
+	/ string_as_id
+
+symbol_decls <-
+	(tag? symbol+)+
+
+grammar <-
+	rules_or_grammar_declaration*
+
+rules_or_grammar_declaration <-
+	rules
+	/ grammar_declaration SEMICOLON
+	/ error SEMICOLON
+
+rules <-
+	id_colon named_ref_opt? COLON rhses? SEMICOLON?
+
+rhses <-
+	rhs* (PIPE rhs*)*
+
+rhs <-
+	symbol named_ref_opt?
+	/ tag_opt? braces named_ref_opt?
+	/ "%"? braces
+	/ "%empty" sp
+	/ "%prec" sp symbol
+	/ "%dprec" sp INT_LITERAL
+	/ "%merge" sp tag
+	/ "%expect"[-_]"rr" sp INT_LITERAL
+	/ "%expect" sp INT_LITERAL
+
+named_ref <-
+	'[' sp ID ']' sp
+
+named_ref_opt <-
+	named_ref !':'
+
+variable <-
+	ID
+
+value <-
+	ID
+	/ STRING
+	/ braces
+
+id <-
+	ID
+	/ CHAR_LITERAL
+
+id_colon <-
+	ID &([:] / named_ref &[:])
+
+symbol <-
+	id !':'
+	/ string_as_id
+
+string_as_id <-
+	STRING
+
+epilogue <-
+	"%%" .*
+
+YYEOF <-
+	!.
+
+#Tokens
+
+letter <-
+	[.a-zA-Z_]
+
+ID <-
+	<letter (letter / [-0-9])*> sp
+
+int <-
+	[0-9]+ sp
+
+xint <-
+	'0'[xX][0-9a-fA-F]+ sp
+
+INT_LITERAL <-
+	int
+	/ xint
+
+eol <-
+	&[\n\r] ([\n][\r]? / [\r][\n]?)
+
+# UTF-8 Encoded Unicode Code Point, from Flex's documentation.
+#mbchar  <-  [\x09\x0A\x0D\x20-\x7E] / [\xC2-\xDF][\x80-\xBF] / \xE0[\xA0-\xBF][\x80-\xBF] / [\xE1-\xEC\xEE\xEF]([\x80-\xBF]{2}) / \xED[\x80-\x9F][\x80-\xBF] / \xF0[\x\90-\xBF]([\x80-\xBF]{2}) / [\xF1-\xF3]([\x80-\xBF]{3}) / \xF4[\x80-\x8F]([\x80-\xBF]{2})
+
+# Zero or more instances of backslash-newline.  Following GCC, allow
+#   white space between the backslash and the newline.
+#splice <-
+#	('\\'[ \f\t\v]* eol)*
+
+comment <-
+	"//" (!eol .)* eol?
+	/ "/*"	(!"*/" .)* "*/"
+
+~sp <-
+	(
+	[ \t\n\r] #[[:space:]]*
+	/ &[/] comment
+	)*
+
+# An equal sign, with optional leading whitespaces. This is used in some
+#   deprecated constructs.
+eqopt <-
+	(sp EQUAL)?
+
+COLON <-  ":" sp
+EQUAL <-  "=" sp
+PIPE <- "|" sp
+SEMICOLON <-  ";" sp
+
+PROLOGUE <- "%{" (!"%}" .)* "%}" sp
+
+# Code in between braces.
+braces <-
+	<"{" sp braces_body* sp "}"> sp
+
+braces_body <-
+	&[{"'] (braces / STRING)
+	/ ! '}' .
+
+STRING <-
+	 ( ['] <( ! ( ['] / eol ) char )*> ['] ) sp
+	/ ( ["] <( ! ( ["] / eol ) char )*> ["] ) sp
+
+TSTRING <-
+	"_(" STRING ")" sp
+
+CHAR_LITERAL <-
+	STRING
+
+char <-
+	 ( '\\' [-abefnrtv'"\[\]\\] )
+	/ ( '\\' 'x' [0-9A-Fa-f] [0-9A-Fa-f] )
+	/ ( '\\' 'x' [0-9A-Fa-f] )
+	/ ( '\\' [0-3] [0-7] [0-7] )
+	/ ( '\\' [0-7] [0-7]? )
+	/ ( ! '\\' . )
+
+error <-
+	"error" sp

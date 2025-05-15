@@ -1,0 +1,573 @@
+#/**
+# * Java8 Grammar
+# *
+# *  Based on grammar from Java8 langauge specification
+# *
+# * [1] https://docs.oracle.com/javase/specs/jls/se8/html/jls-2.html#jls-2.4
+# *
+# * Authors:
+# *   Kimio Kuramitsu (https://github.com/kkuramitsu/)
+# *   Kohei Moriya
+# */
+File                               <-  _ PackageDeclaration? ImportDeclaration* TypeDeclaration* _ EOT
+
+#/* Code Layout (Whitespace) */
+~_                                  <-  ( S / BLOCKCOMMENT / LINECOMMENT )*
+#__                                 <-  !S
+S                                  <-  [ \n\r\t\u000B\u000C]
+BLOCKCOMMENT                       <-  '/*' ( !'*/' . )* '*/'
+LINECOMMENT                        <-  '//' ( !'\n' . )*
+#EOL                                <-  '\r'? '\n' / !.
+EOT                                <-  !.
+
+#/* Operators */
+tkIncr                               <-  '++' _
+tkDecr                              <-  '--' _
+tkBand                                <-  '&' ![&=] _
+tkMul                                <-  '*' !'=' _
+tkPlus                                <-  '+' ![+=] _
+tkMinus                                <-  '-' !( '-' / [=>] ) _
+tkTilde                                <-  '~' _
+tkExcl                                <-  '!' !'=' _
+tkLCurly                                <-  '{' _
+tkLbra                                <-  '[' _
+tkRbra                                <-  ']' _
+tkComma                                <-  ',' _
+tkEllipsis                              <-  '...' _
+tkColon                                <-  ':' ![>:] _
+tkNS                               <-  '::' _
+tkDiv                                <-  '/' !'=' _
+tkMod                                <-  '%' ![=>] _
+tkLShit                               <-  '<<' !'=' _
+tkRShit                               <-  '>>' ![=>] _
+tkRShitU                              <-  '>>>' !'=' _
+tkLTEq                               <-  '<=' _
+tkGTEq                               <-  '>=' _
+tkLT                                <-  '<' ![=] _
+tkGT                                <-  '>' ![=] _
+tkEqEq                               <-  '==' _
+tkNotEq                               <-  '!=' _
+tkXor                                <-  '^' ![=] _
+tkBor                                <-  '|' ![|=] _
+tkAnd                               <-  '&&' _
+tkOr                               <-  '||' _
+tkQuest                                <-  '?' _
+tkSemi                                <-  ';' _
+tkRcurly                                <-  '}' _
+tkMulEq                               <-  '*=' _
+tkDivEq                               <-  '/=' _
+tkModEq                               <-  '%=' _
+tkPlusEq                               <-  '+=' _
+tkMinusEq                               <-  '-=' _
+tkLShiftEq                              <-  '<<=' _
+tkRShiftEq                              <-  '>>=' _
+tkRShiftUEq                             <-  '>>>=' _
+tkBandEq                               <-  '&=' _
+tkXorEq                               <-  '^=' _
+tkBorEq                               <-  '|=' _
+tkEq                                <-  '=' !'=' _
+tkDot                                <-  '.' !'.' _
+tkLpar                                <-  '(' _
+tkRpar                                <-  ')' _
+tkAt                                <-  '@' _
+tkArrow                               <-  '->' _
+
+#// reserved keyword
+tk_abstract                         <-  'abstract' !W _
+tk_assert                           <-  'assert' !W _
+tk_boolean                          <-  'boolean' !W _
+tk_break                            <-  'break' !W _
+tk_byte                             <-  'byte' !W _
+tk_case                             <-  'case' !W _
+tk_catch                            <-  'catch' !W _
+tk_char                             <-  'char' !W _
+tk_class                            <-  'class' !W _
+#tk_const                            <-  'const' !W _
+tk_continue                         <-  'continue' !W _
+tk_default                          <-  'default' !W _
+tk_do                               <-  'do' !W _
+tk_double                           <-  'double' !W _
+tk_else                             <-  'else' !W _
+tk_enum                             <-  'enum' !W _
+tk_extends                          <-  'extends' !W _
+tk_false                            <-  'false' !W _
+tk_final                            <-  'final' !W _
+tk_finally                          <-  'finally' !W _
+tk_float                            <-  'float' !W _
+tk_for                              <-  'for' !W _
+#tk_goto                             <-  'goto' !W _
+tk_if                               <-  'if' !W _
+tk_implements                       <-  'implements' !W _
+tk_import                           <-  'import' !W _
+tk_instanceof                       <-  'instanceof' !W _
+tk_int                              <-  'int' !W _
+tk_interface                        <-  'interface' !W _
+tk_long                             <-  'long' !W _
+tk_native                           <-  'native' !W _
+tk_new                              <-  'new' !W _
+tk_null                             <-  'null' !W _
+tk_package                          <-  'package' !W _
+tk_private                          <-  'private' !W _
+tk_protected                        <-  'protected' !W _
+tk_public                           <-  'public' !W _
+tk_return                           <-  'return' !W _
+tk_short                            <-  'short' !W _
+tk_static                           <-  'static' !W _
+tk_strictfp                         <-  'strictfp' !W _
+tk_super                            <-  'super' !W _
+tk_switch                           <-  'switch' !W _
+tk_synchronized                     <-  'synchronized' !W _
+tk_this                             <-  'this' !W _
+tk_throw                            <-  'throw' !W _
+tk_throws                           <-  'throws' !W _
+tk_transient                        <-  'transient' !W _
+tk_true                             <-  'true' !W _
+tk_try                              <-  'try' !W _
+tk_void                             <-  'void' !W _
+tk_volatile                         <-  'volatile' !W _
+tk_while                            <-  'while' !W _
+KEYWORD                            <- <(
+                                     "abstract"
+                                   | "assert"
+                                   | "boolean"
+                                   | "break"
+                                   | "byte"
+                                   | "case"
+                                   | "catch"
+                                   | "char"
+                                   | "class"
+                                   | "const"
+                                   | "continue"
+                                   | "default"
+                                   | "double"
+                                   | "do"
+                                   | "else"
+                                   | "enum"
+                                   | "extends"
+                                   | "false"
+                                   | "final"
+                                   | "finally"
+                                   | "float"
+                                   | "for"
+                                   | "goto"
+                                   | "if"
+                                   | "implements"
+                                   | "import"
+                                   | "instanceof"
+                                   | "interface"
+                                   | "int"
+                                   | "long"
+                                   | "native"
+                                   | "new"
+                                   | "null"
+                                   | "package"
+                                   | "private"
+                                   | "protected"
+                                   | "public"
+                                   | "return"
+                                   | "short"
+                                   | "static"
+                                   | "strictfp"
+                                   | "super"
+                                   | "switch"
+                                   | "synchronized"
+                                   | "this"
+                                   | "throws"
+                                   | "throw"
+                                   | "transient"
+                                   | "true"
+                                   | "try"
+                                   | "void"
+                                   | "volatile"
+                                   | "while" ) !W>
+
+#/* Annotation */
+Annotations                        <-  Annotation+
+Annotation                         <-  tkAt QualifiedName tkLpar ElementValuePairList? tkRpar
+                                   / tkAt QualifiedName tkLpar ElementValue tkRpar
+                                   / tkAt QualifiedName
+ElementValuePairList               <-  ElementValuePair ( tkComma ElementValuePair )*
+ElementValuePair                   <-  Identifier tkEq ElementValue
+ElementValue                       <-  ElementValueArrayInitializer
+                                   / ConditionalExpression
+                                   / Annotation
+ElementValueArrayInitializer       <-  tkLCurly addElementValueList? tkComma? tkRcurly
+addElementValueList                <-  ElementValue ( tkComma ElementValue )*
+
+#/* Declaration */
+#// package
+PackageDeclaration                 <-  Annotations? tk_package QualifiedName tkSemi
+
+#// import
+ImportDeclaration                  <-  tk_import tk_static? PackageName tkSemi
+PackageName                        <-  QualifiedName (tkDot tkMul)?
+
+#// type
+TypeDeclaration                    <-  ClassDeclaration
+                                   / InterfaceDeclaration
+                                   / tkSemi
+
+#// class, enum
+ClassDeclaration                   <-  ClassModifiers? tk_class Identifier TypeParameters? SuperClass? SuperInterfaces? ClassBody
+                                   / ClassModifiers? tk_enum Identifier SuperInterfaces? EnumBody
+ClassModifiers                     <-  ClassModifier+
+ClassModifier                      <-  Annotation
+                                   / tk_public
+                                   / tk_protected
+                                   / tk_private
+                                   / tk_abstract
+                                   / tk_final
+                                   / tk_static
+                                   / tk_strictfp
+SuperClass                         <-  tk_extends ClassOrInterfaceType
+SuperInterfaces                    <-  tk_implements ClassOrInterfaceTypes
+ClassBody                          <-  tkLCurly ClassBodyDeclaration* tkRcurly
+ClassBodyDeclaration               <-  ClassMemberDeclaration
+                                   / Block
+                                   / tk_static Block
+                                   / ConstructorDeclaration
+ClassMemberDeclaration             <-  FieldDeclaration
+                                   / MethodDeclaration
+                                   / ClassDeclaration
+                                   / InterfaceDeclaration
+                                   / tkSemi
+EnumBody                           <-  tkLCurly addEnumeratorList? tkComma? tkSemi ClassBodyDeclaration+ tkRcurly
+                                   / tkLCurly addEnumeratorList? tkComma? tkSemi? tkRcurly
+addEnumeratorList                  <-  Enumerator ( tkComma Enumerator )*
+Enumerator                         <-  Annotations? Identifier ArgumentExpressionList ClassBody?
+                                   / Annotations? Identifier ClassBody
+                                   / Annotations? Identifier
+
+#// interface, annotation
+InterfaceDeclaration               <-  InterfaceModifiers? tk_interface Identifier TypeParameters? ExtendsInterfaces? InterfaceBody
+                                   / InterfaceModifiers? tkAt tk_interface Identifier AnnotationTypeBody
+InterfaceModifiers                 <-  InterfaceModifier+
+InterfaceModifier                  <-  Annotation
+                                   / tk_public
+                                   / tk_protected
+                                   / tk_private
+                                   / tk_abstract
+                                   / tk_static
+                                   / tk_strictfp
+ExtendsInterfaces                  <-  tk_extends ClassOrInterfaceTypes
+InterfaceBody                      <-  tkLCurly InterfaceMemberDeclaration* tkRcurly
+InterfaceMemberDeclaration         <-  ConstantDeclaration
+                                   / InterfaceMethodDeclaration
+                                   / ClassDeclaration
+                                   / InterfaceDeclaration
+                                   / tkSemi
+AnnotationTypeBody                 <-  tkLCurly AnnotationTypeMemberDeclaration* tkRcurly
+AnnotationTypeMemberDeclaration    <-  AnnotationTypeElementDeclaration
+                                   / ConstantDeclaration
+                                   / ClassDeclaration
+                                   / InterfaceDeclaration
+                                   / tkSemi
+AnnotationTypeElementDeclaration   <-  AnnotationTypeElementModifiers? Type Identifier tkLpar tkRpar AnnotationTypeElementDefaultValue tkSemi
+AnnotationTypeElementModifiers     <-  AnnotationTypeElementModifier+
+AnnotationTypeElementModifier      <-  Annotation
+                                   / tk_public
+                                   / tk_abstract
+AnnotationTypeElementDefaultValue  <-  tk_default ElementValue
+
+#// local variable
+VariableDeclaration                <-  VariableModifiers? Type addVariableDeclarations
+VariableModifiers                  <-  VariableModifier+
+VariableModifier                   <-  Annotation
+                                   / tk_final
+addVariableDeclarations            <-  VarName ( tkEq Initializer )? !','
+                                   / InitDeclList
+InitDecl                           <-  VarName ( tkEq Initializer )?
+InitDeclList                       <-  InitDecl ( tkComma InitDecl )*
+VarName                            <-  Identifier ( tkLbra ConstantExpression? tkRbra )*
+Initializer                        <-  Expression
+                                   / ArrayInitializer
+ArrayInitializer                   <-  tkLCurly ( Initializer ( tkComma Initializer )* )? tkComma? tkRcurly
+
+#//field
+FieldDeclaration                   <-  FieldModifiers? Type InitDeclList tkSemi
+FieldModifiers                     <-  FieldModifier+
+FieldModifier                      <-  Annotation
+                                   / tk_public
+                                   / tk_protected
+                                   / tk_private
+                                   / tk_final
+                                   / tk_static
+                                   / tk_transient
+                                   / tk_volatile
+
+#//constant
+ConstantDeclaration                <-  ConstantModifiers? Type InitDeclList tkSemi
+ConstantModifiers                  <-  ConstantModifier+
+ConstantModifier                   <-  Annotation
+                                   / tk_public
+                                   / tk_final
+                                   / tk_static
+
+#//method
+MethodDeclaration                  <-  MethodModifiers? ( TypeParameters Annotations? )? TypeOrVoid Identifier tkLpar MethodParamList tkRpar Throws? (Block / tkSemi)
+MethodModifiers                    <-  MethodModifier+
+MethodModifier                     <-  Annotation
+                                   / tk_public
+                                   / tk_protected
+                                   / tk_private
+                                   / tk_abstract
+                                   / tk_final
+                                   / tk_static
+                                   / tk_synchronized
+                                   / tk_native
+                                   / tk_strictfp
+InterfaceMethodDeclaration         <-  InterfaceMethodModifiers? ( TypeParameters Annotations? )? TypeOrVoid Identifier tkLpar MethodParamList tkRpar Throws? (Block / tkSemi)
+InterfaceMethodModifier            <-  Annotation
+                                   / tk_public
+                                   / tk_abstract
+                                   / tk_default
+                                   / tk_static
+                                   / tk_strictfp
+InterfaceMethodModifiers           <-  InterfaceMethodModifier+
+MethodParamList                    <-  ( MethodParam tkComma )* VarParam
+                                   / ( MethodParam ( tkComma MethodParam )* )?
+MethodParam                        <-  VariableModifiers? Type VarName
+VarParam                           <-  VariableModifiers? Type tkEllipsis VarName
+Throws                             <-  tk_throws ClassOrInterfaceTypes
+
+#//constructor
+ConstructorDeclaration             <-  ConstructorModifiers? ReferenceType tkLpar MethodParamList tkRpar Throws? ConstructorBody
+ConstructorModifiers               <-  ConstructorModifier+
+ConstructorModifier                <-  Annotation
+                                   / tk_public
+                                   / tk_protected
+                                   / tk_private
+ConstructorBody                    <-  tkLCurly ExplicitConstructorInvocation? BlockStatement* tkRcurly
+ExplicitConstructorInvocation      <-  TypeArguments? This tkLpar addArgumentExpressionList? tkRpar tkSemi
+                                   / TypeArguments? Super tkLpar addArgumentExpressionList? tkRpar tkSemi
+                                   / PostfixExpression tkDot TypeArguments? Super tkLpar addArgumentExpressionList? tkRpar tkSemi
+
+#/* Types, Values, Variables */
+Type                               <-  ReferenceType
+                                   / PrimitiveType
+PrimitiveType                      <-  Annotations UnannoPrimitiveType
+                                   / UnannoPrimitiveType
+UnannoPrimitiveType                <-  NumericType
+                                   / BooleanType
+NumericType                        <-  IntegralType
+                                   / FloatingPointType
+IntegralType                       <-  tk_byte
+                                   / tk_char
+                                   / tk_short
+                                   / tk_int
+                                   / tk_long
+FloatingPointType                  <-  tk_float
+                                   / tk_double
+BooleanType                        <-  tk_boolean
+ReferenceType                      <-  ArrayType
+                                   / ClassOrInterfaceType
+                                   / TypeVariable
+ArrayType                          <-  (PrimitiveType / ClassOrInterfaceType / TypeVariable) (Annotations? tkLbra tkRbra)+
+ClassOrInterfaceType               <-  ClassType
+                                   / InterfaceType
+ClassType                          <-  SimpleClassType (tkDot SimpleClassType)*
+SimpleClassType                    <-  Annotations UnannoSimpleClassType
+                                   / UnannoSimpleClassType
+UnannoSimpleClassType              <-  Identifier TypeArguments?
+InterfaceType                      <-  ClassType
+TypeVariable                       <-  Annotations Identifier
+                                   / Identifier
+TypeParameter                      <-  Annotations UnannoTypeParameter
+                                   / UnannoTypeParameter
+UnannoTypeParameter                <-  Identifier ( tk_extends ClassOrInterfaceType ( tkBand InterfaceType )* )?
+TypeParameters                     <-  tkLT TypeParameter ( tkComma TypeParameter )* tkGT
+TypeArgument                       <-  ReferenceType
+                                   / Annotations? tkQuest ( (tk_extends / tk_super) ReferenceType )?
+TypeArguments                      <-  tkLT ( TypeArgument ( tkComma TypeArgument )* )? tkGT
+Void                               <-  tk_void
+TypeOrVoid                         <-  Type
+                                   / Void
+NonArrayType                       <-  ClassOrInterfaceType
+                                   / PrimitiveType
+ClassOrInterfaceTypes              <-  ClassOrInterfaceType ( tkComma ClassOrInterfaceType )*
+
+#// Block, Statement
+#//===================
+Block                              <-  tkLCurly BlockStatement* tkRcurly
+BlockStatement                     <-  Statement
+                                   / VariableDeclaration tkSemi
+                                   / ClassDeclaration
+Statement                          <-  Block
+                                   / tk_assert Expression ( tkColon Expression )? tkSemi
+                                   / tk_if tkLpar Expression tkRpar Statement ( tk_else Statement )?
+                                   / SwitchStatement
+                                   / tk_while tkLpar Expression tkRpar Statement
+                                   / tk_do Statement tk_while tkLpar Expression tkRpar tkSemi
+                                   / tk_for tkLpar Expressions? tkSemi Expression? tkSemi Expressions? tkRpar Statement
+                                   / tk_for tkLpar VariableDeclaration tkSemi Expression? tkSemi Expressions? tkRpar Statement
+                                   / tk_for tkLpar VariableModifiers? Type Identifier tkColon Expression tkRpar Statement
+                                   / tk_continue Identifier? tkSemi
+                                   / tk_break Identifier? tkSemi
+                                   / tk_return Expression? tkSemi
+                                   / TryStatement
+                                   / tk_throw Expression tkSemi
+                                   / tk_synchronized tkLpar Expression tkRpar Block
+                                   / Identifier tkColon
+                                   / Expression tkSemi
+                                   / tkSemi
+
+#// try-catch-finally
+TryStatement                       <-  tk_try ResourceList Block Catch* ( tk_finally Block )?
+                                   / tk_try Block Catch* tk_finally Block
+                                   / tk_try Block Catch+
+ResourceList                       <-  tkLpar Resource ( tkSemi Resource )* tkSemi? tkRpar
+Resource                           <-  VariableModifiers? Type Identifier tkEq Expression
+Catch                              <-  tk_catch tkLpar addCatchParameter tkRpar Block
+addCatchParameter                  <-  VariableModifiers? ClassOrInterfaceType Identifier
+                                   / VariableModifiers? ClassOrInterfaceType ( tkBor ClassOrInterfaceType )+ Identifier
+
+#// switch
+SwitchStatement                    <-  tk_switch tkLpar Expression tkRpar SwitchBlock
+SwitchBlock                        <-  tkLCurly SwitchCondition+ tkRcurly
+SwitchCondition                    <-  tk_case ConstantExpression tkColon CaseBlock
+                                   / tk_default tkColon CaseBlock
+CaseBlock                          <-  BlockStatement*
+
+
+#/* Expression */
+Expression                         <-  LambdaExpression
+                                   / AssignmentExpression
+Expressions                        <-  Expression ( tkComma Expression )*
+AssignmentExpression               <-  UnaryExpression addAssignmentOperator Expression
+                                   / ConditionalExpression
+addAssignmentOperator              <-  tkEq
+                                   / tkMulEq
+                                   / tkDivEq
+                                   / tkModEq
+                                   / tkPlusEq
+                                   / tkMinusEq
+                                   / tkLShiftEq
+                                   / tkRShiftEq
+                                   / tkRShiftUEq
+                                   / tkBandEq
+                                   / tkXorEq
+                                   / tkBorEq
+ConstantExpression                 <-  ConditionalExpression
+ConditionalExpression              <-  LogicalOrExpression ( tkQuest Expression tkColon LogicalOrExpression )*
+LogicalOrExpression                <-  LogicalAndExpression ( tkOr LogicalAndExpression )*
+LogicalAndExpression               <-  InclusiveOrExpression ( tkAnd InclusiveOrExpression)*
+InclusiveOrExpression              <-  ExclusiveOrExpression ( tkBor ExclusiveOrExpression)*
+ExclusiveOrExpression              <-  AndExpression ( tkXor AndExpression)*
+AndExpression                      <-  EqualityExpression ( tkBand EqualityExpression)*
+EqualityExpression                 <-  RelationalExpression ( (tkEqEq / tkNotEq) RelationalExpression )*
+RelationalExpression               <-  ShiftExpression addRelationalOperator*
+addRelationalOperator              <-  tkLTEq ShiftExpression
+                                   / tkGTEq ShiftExpression
+                                   / tkLT ShiftExpression
+                                   / tkGT ShiftExpression
+                                   / tk_instanceof ReferenceType
+ShiftExpression                    <-  AdditiveExpression ( (tkLShit / tkRShit / tkRShitU) AdditiveExpression )*
+AdditiveExpression                 <-  MultiplicativeExpression ( (tkPlus / tkMinus) MultiplicativeExpression )*
+MultiplicativeExpression           <-  CastNewExpression ( (tkMul / tkDiv / tkMod) CastNewExpression )*
+CastNewExpression                  <-  tkLpar Type tkRpar CastNewExpression
+                                   / UnaryExpression
+UnaryExpression                    <-  PostfixExpression
+                                   / tkIncr UnaryExpression
+                                   / tkDecr UnaryExpression
+                                   / tkPlus CastNewExpression
+                                   / tkMinus CastNewExpression
+                                   / tkTilde CastNewExpression
+                                   / tkExcl CastNewExpression
+PostfixExpression                  <-  PrimaryExpression ( addMethodCall / addInstanceCreation / addIndex / addField / addMethodReference / addInc / addDec )*
+addMethodCall                      <-  tkDot TypeArguments? Identifier ArgumentExpressionList
+addInstanceCreation                <-  tkDot tk_new TypeArguments? Annotations? ClassOrInterfaceType ArgumentExpressionList ClassBody?
+ArgumentExpressionList             <-  tkLpar addArgumentExpressionList? tkRpar
+addArgumentExpressionList          <-  Expression ( tkComma Expression )*
+addIndex                           <-  tkLbra Expression tkRbra
+addField                           <-  tkDot Identifier !'('
+addMethodReference                 <-  tkNS TypeArguments? Identifier
+addInc                             <-  tkIncr
+addDec                             <-  tkDecr
+PrimaryExpression                  <-  Constant
+                                   / This
+                                   / Super
+                                   / tkLpar Expression tkRpar
+                                   / ClassLiteral
+                                   / QualifiedName tkDot tk_this
+                                   / QualifiedName tkDot tk_super
+                                   / MethodInvocationExpression
+                                   / InstanceCreationExpression
+                                   / ArrayCreationExpression
+                                   / MethodReference
+                                   / Identifier
+ClassLiteral                       <-  TypeOrVoid tkDot tk_class
+This                               <-  tk_this
+Super                              <-  tk_super
+MethodInvocationExpression         <-  Identifier ArgumentExpressionList
+InstanceCreationExpression         <-  tk_new TypeArguments? Annotations? ClassOrInterfaceType ArgumentExpressionList ClassBody?
+ArrayCreationExpression            <-  tk_new Annotations? (NonArrayType ( Annotations? tkLbra Expression tkRbra )+ (Annotations? tkLbra tkRbra )*)
+                                   / tk_new Annotations? (NonArrayType (Annotations? tkLbra tkRbra )+) ArrayInitializer
+MethodReference                    <-  ReferenceType tkNS TypeArguments? (Identifier / tk_new)
+LambdaExpression                   <-  LambdaParameters tkArrow LambdaBody
+LambdaParameters                   <-  Identifier
+                                   / tkLpar MethodParamList tkRpar
+                                   / tkLpar InferredParamList tkRpar
+InferredParamList                  <-  Identifier ( tkComma Identifier )*
+LambdaBody                         <-  !'{' Expression
+                                   / Block
+
+#/* Identifier */
+Identifier                         <-  <NAME>  _
+QualifiedName                      <-  Identifier ( tkDot Identifier )*
+W                                  <-  [a-zA-Z0-9_$]
+NAME                               <-  !DIGIT !KEYWORD W+
+
+#/* Literal, Constant */
+Literal                            <-  FloatingPointLiteral
+                                   / IntegerLiteral
+                                   / BooleanLiteral
+                                   / CharacterLiteral
+                                   / StringLiteral
+                                   / NullLiteral
+Constant                           <-  Literal
+NullLiteral                        <-  tk_null
+BooleanLiteral                     <-  tk_true
+                                   / tk_false
+
+IntegerLiteral                     <-  <( (DECIMAL / HEXADECIMAL / BINARY / OCTAL) INT_SUFFIX? )> _
+DIGIT                              <-  [0-9]
+DIGITS                             <-  DIGIT ( '_'* DIGIT )*
+DECIMAL                            <-  '0' ![bBxX0-9_]
+                                   / !'0' DIGITS
+HEXDIGIT                           <-  [a-fA-F0-9]
+HEXDIGITS                          <-  HEXDIGIT ( '_'* HEXDIGIT )*
+HEXADECIMAL                        <-  '0' [xX] HEXDIGITS
+BINARYDIGIT                        <-  [01]
+BINARYDIGITS                       <-  BINARYDIGIT ( '_'* BINARYDIGIT )*
+BINARY                             <-  '0' [bB] BINARYDIGITS
+OCTALDIGIT                         <-  [0-7]
+OCTAL                              <-  '0' ( '_'* OCTALDIGIT )*
+INT_SUFFIX                         <-  [lL]
+FloatingPointLiteral               <-  <( FLOAT (FLOAT_SUFFIX / DOUBLE_SUFFIX?) )> _
+                                   / (DIGITS (FLOAT_SUFFIX / DOUBLE_SUFFIX ) ) _
+FLOAT_SUFFIX                       <-  [fF]
+DOUBLE_SUFFIX                      <-  [dD]
+FLOAT                              <-  FRACTION EXPONENT?
+                                   / DIGITS EXPONENT
+                                   / HEXFRACTION BINARYEXPONENT
+EXPONENT                           <-  [eE] [+\-]? DIGITS
+BINARYEXPONENT                     <-  [pP] [+\-]? DIGITS
+FRACTION                           <-  '.' DIGITS
+                                   / DIGITS '.' DIGITS?
+HEXFRACTION                        <-  '0' [xX] '.' HEXDIGITS
+                                   / HEXADECIMAL ( '.' HEXDIGITS? )?
+StringLiteral                      <-  <'"' STRING_CONTENT* '"'> _
+CharacterLiteral                   <-  <'\'' CHAR_CONTENT '\''> _
+STRING_CONTENT                     <-  ESCAPE
+                                   / ![\"\n\\] .
+CHAR_CONTENT                       <-  ESCAPE
+                                   / !['\n\\] .
+ESCAPE                             <-  SIMPLE_ESCAPE
+                                   / OCTAL_ESCAPE
+                                   / HEX_ESCAPE
+SIMPLE_ESCAPE                      <-  '\\' ['\"\\bfnrt]
+OCTAL_ESCAPE                       <-  '\\' [0-3] OCTALDIGIT OCTALDIGIT
+                                   / '\\' OCTALDIGIT OCTALDIGIT
+                                   / '\\' OCTALDIGIT
+HEX_ESCAPE                         <-  '\\' 'u'+ HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
+

@@ -1,0 +1,15 @@
+axiom ax-1 (ph : wff, ps : wff)  {
+    prop 1 : wff = |- ( ph → ( ps → ph ) ) ;;
+}
+axiom ax-mp (ph : wff, ps : wff)  {
+    hyp 1 : wff = |- ph ;;
+    hyp 2 : wff = |- ( ph → ps ) ;;
+    -----------------------
+    prop 1 : wff = |- ps ;;
+}
+theorem syl (ph : wff, ps : wff, ch : wff)  {
+    hyp 1 : wff = |- ( ph → ps ) ;;
+    hyp 2 : wff = |- ( ps → ch ) ;;
+    -----------------------
+    prop 1 : wff = |- ( ph → ch ) ;;
+}

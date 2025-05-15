@@ -1,0 +1,29 @@
+#From https://github.com/chrberger/libcluon/blob/697af05a9f6dba5d1524ee7bdcb1b706264af27d/libcluon/src/MessageParser.cpp
+MESSAGES_SPECIFICATION      <- PACKAGE_DECLARATION? MESSAGE_DECLARATION*
+PACKAGE_DECLARATION         <- 'package' PACKAGE_IDENTIFIER ';'
+PACKAGE_IDENTIFIER          <- < IDENTIFIER ('.' IDENTIFIER)* >
+MESSAGE_DECLARATION         <- 'message' MESSAGE_IDENTIFIER MESSAGE_OPTIONS '{' FIELD* '}'
+MESSAGE_IDENTIFIER          <- < IDENTIFIER ('.' IDENTIFIER)* >
+MESSAGE_OPTIONS             <- '[' 'id' '=' NATURAL_NUMBER ','? ']'
+FIELD                       <- PRIMITIVE_FIELD
+PRIMITIVE_FIELD             <- PRIMITIVE_TYPE IDENTIFIER ('[' PRIMITIVE_FIELD_OPTIONS ']')? ';'
+PRIMITIVE_FIELD_OPTIONS     <- PRIMITIVE_FIELD_DEFAULT? ','? NUMERICAL_FIELD_IDENTIFIER?
+NUMERICAL_FIELD_IDENTIFIER  <- 'id' '=' NATURAL_NUMBER
+PRIMITIVE_FIELD_DEFAULT     <- 'default' '=' (FLOAT_NUMBER / BOOL / CHARACTER / STRING)
+PRIMITIVE_TYPE              <- < 'bool' / 'float' / 'double' /
+				 'char' /
+				 'bytes' / 'string' /
+				 'int8' / 'uint8' /
+				 'int16' / 'uint16' /
+				 'int32' / 'uint32' /
+				 'int64' / 'uint64' /
+				 MESSAGE_TYPE >
+MESSAGE_TYPE                <- < IDENTIFIER ('.' IDENTIFIER)* >
+IDENTIFIER                  <- < [a-zA-Z][a-zA-Z0-9_]* >
+DIGIT                       <- < [0-9] >
+NATURAL_NUMBER              <- < [1-9] DIGIT* >
+FLOAT_NUMBER                <- < ('+' / '-')? DIGIT DIGIT* (('.') DIGIT*)? >
+BOOL                        <- < 'true' > / < 'false' >
+STRING                      <- '"' < (!'"'.)* > '"'
+CHARACTER                   <- '\'' < (!'\'' .) > '\''
+%whitespace                 <- [ \t\r\n]*

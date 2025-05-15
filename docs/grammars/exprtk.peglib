@@ -1,0 +1,217 @@
+parse_corpus <- _ parse_expression* !.
+
+parse_expression <-
+	parse_branch parse_expression
+
+parse_branch <-
+	e_number
+	/ (
+		parse_symbol
+		/ parse_const_string
+		/ e_lbracket parse_expression e_rbracket
+		/ e_lsqrbracket parse_expression e_rsqrbracket
+		/ e_lcrlbracket parse_expression e_rcrlbracket
+		/ e_sub parse_expression
+		/ e_add parse_expression
+		/ parse_ternary_conditional_statement
+	) parse_pending_string_rangesize
+
+
+parse_symbol <-
+	parse_vararg_function
+	/ parse_not_statement
+	/ parse_base_operation
+	/ parse_conditional_statement
+	/ parse_while_loop
+	/ parse_repeat_until_loop
+	/ parse_for_loop
+	/ parse_switch_statement
+	/ parse_special_function
+	/ parse_null_statement
+	/ parse_break_statement
+	/ parse_continue_statement
+	/ parse_define_var_statement
+	/ parse_swap_statement
+	/ parse_return_statement
+	/ parse_symtab_symbol
+
+parse_vararg_function <-
+	parse_multi_sequence
+	/ parse_multi_switch_statement
+	/ (
+		e_avg
+		/ e_mand
+		/ e_max
+		/ e_min
+		/ e_mor
+		/ e_prod
+		/ e_sum
+	) e_lbracket parse_expression (e_comma parse_expression)* e_rbracket
+
+parse_not_statement <-
+	symbol_not parse_base_operation
+
+# 00. if (x) y;
+# 01. if (x) y; else z;
+# 02. if (x) y; else {z0; ... zn;}
+# 03. if (x) y; else if (z) w;
+# 04. if (x) y; else if (z) w; else u;
+# 05. if (x) y; else if (z) w; else {u0; ... un;}
+# 06. if (x) y; else if (z) {w0; ... wn;}
+# 07. if (x) {y0; ... yn;}
+# 08. if (x) {y0; ... yn;} else z;
+# 09. if (x) {y0; ... yn;} else {z0; ... zn;};
+# 10. if (x) {y0; ... yn;} else if (z) w;
+# 11. if (x) {y0; ... yn;} else if (z) w; else u;
+# 12. if (x) {y0; ... nex;} else if (z) w; else {u0 ... un;}
+# 13. if (x) {y0; ... yn;} else if (z) {w0; ... wn;}
+parse_conditional_statement <-
+	symbol_if e_lbracket  parse_expression e_rbracket parse_conditional_statement_01 parse_conditional_statement_02
+
+parse_conditional_statement_01 <-
+
+
+parse_conditional_statement_02 <-
+
+
+parse_while_loop <-
+	symbol_while e_lbracket parse_expression e_rbracket parse_multi_sequence
+
+parse_repeat_until_loop <-
+	symbol_repeat symbol_until parse_expression
+
+parse_for_loop <-
+	symbol_for e_lbracket parse_expression e_rbracket parse_multi_sequence
+
+parse_switch_statement <-
+	symbol_switch
+		e_lcrlbracket
+			(symbol_case parse_expression e_colon parse_expression)+
+			symbol_default e_colon parse_expression
+		e_rcrlbracket
+
+parse_null_statement <-
+	symbol_null
+
+parse_break_statement <-
+	symbol_break
+
+parse_continue_statement <-
+	symbol_continue
+
+parse_define_var_statement <-
+	symbol_var !is_reserved_symbol !symbol_exists local_variable_is_shadowed
+
+parse_swap_statement <-
+	symbol_swap
+
+parse_return_statement <-
+	symbol_return
+
+parse_special_function <-
+
+parse_symtab_symbol <-
+
+
+parse_const_string <-
+	e_lsqrbracket parse_range e_rsqrbracket
+
+parse_base_operation <-
+	parse_base_function_call
+
+parse_base_function_call <-
+	e_lbracket parse_expression (e_comma parse_expression)* e_rbracket
+
+# Examples of valid ranges:
+# 1. [1:5]     -> 1..5
+# 2. [ :5]     -> 0..5
+# 3. [1: ]     -> 1..end
+# 4. [x:y]     -> x..y where x <= y
+# 5. [x+1:y/2] -> x+1..y/2 where x+1 <= y/2
+# 6. [ :y]     -> 0..y where 0 <= y
+# 7. [x: ]     -> x..end where x <= end
+parse_range <-
+	e_lsqrbracket (
+		e_colon  parse_expression
+		/ parse_expression e_colon parse_expression?
+	) e_rsqrbracket
+
+parse_multi_sequence <-
+	"~" _
+
+parse_multi_switch_statement <-
+	"[*]" _
+
+
+# Tokens
+
+_ <- [ \t\n\r]*
+
+symbol_if       <- "if" _
+symbol_while    <- "while" _
+symbol_repeat   <- "repeat" _
+symbol_for      <- "for" _
+symbol_switch   <- "switch" _
+symbol_null     <- "null" _
+symbol_break    <- "break" _
+symbol_continue <- "continue" _
+symbol_var      <- "var" _
+symbol_swap     <- "swap" _
+symbol_return   <- "return" _
+symbol_not      <- "not" _
+
+symbol_case     <- "case" _
+symbol_default  <- "defaulr" _
+symbol_until    <- "until" _
+
+s_and           <- "and" _
+s_nand          <- "nand" _
+s_or            <- "or" _
+s_nor           <- "nor" _
+s_xor           <- "xor" _
+s_xnor          <- "xnor" _
+s_in            <- "in" _
+s_like          <- "like" _
+s_ilike         <- "ilike" _
+s_and1          <- "&" _
+s_or1           <- "|" _
+s_not           <- "not" _
+
+e_avg           <- "avg" _
+e_mand          <- "mand" _
+e_max           <- "max" _
+e_min           <- "min" _
+e_mor           <- "mor" _
+e_prod          <- "mul" _
+e_sum           <- "sum" _
+
+e_assign        <- ":=" _
+e_addass        <- "+=" _
+e_subass        <- "-=" _
+e_mulass        <- "*=" _
+e_divass        <- "/=" _
+e_modass        <- "%=" _
+e_shr           <- ">>" _
+e_shl           <- "<<" _
+e_lte           <- "<=" _
+e_ne            <- "!=" _
+e_gte           <- ">=" _
+e_lt            <- "<" _
+e_gt            <- ">" _
+e_eq            <- "=" _
+e_rbracket      <- ")" _
+e_lbracket      <- "(" _
+e_rsqrbracket   <- "]" _
+e_lsqrbracket   <- "[" _
+e_rcrlbracket   <- "}" _
+e_lcrlbracket   <- "{" _
+e_comma         <- "," _
+e_add           <- "+" _
+e_sub           <- "-" _
+e_div           <- "/" _
+e_mul           <- "*" _
+e_mod           <- "%" _
+e_pow           <- "^" _
+e_colon         <- ":" _
+e_ternary       <- "?" _
+e_swap          <- "<=>"_

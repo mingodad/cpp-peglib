@@ -1,0 +1,65 @@
+#From https://github.com/dmitry-vlasov/russell/blob/d9f7b012db6f0de80a151bf4f7f4ea81b33b00d9/src/rus/rus_parser.cpp
+# Russell grammar
+
+SOURCE     <-  ELEMENT*
+THEORY     <-  TH_DECL '{' ELEMENT* '}'
+TH_DECL    <- 'theory' ID_NAME
+	ELEMENT    <-  COMMENT / IMPORT / CONST / TYPE / RULE / AXIOM / DEF / THEOREM / PROOF / THEORY
+
+	IMPORT     <- 'import' PATH ';;'
+	CONST      <- 'constant' '{' 'symbol' SYMB_CONST ';;' ('ascii' SYMB_CONST ';;' ('latex' SYMB_CONST ';;')?)? '}'
+	TYPE       <- 'type' ID_NAME (SUPERS)? ';;'
+	SUPERS     <- ':' ID_REF (',' ID_REF)*
+	RULE       <- 'rule'       ID_NAME '(' VARS ')'      '{' TERM '}'
+	AXIOM      <- 'axiom'      ID_NAME '(' VARS ')' DISJ '{' HYPS PROPS '}'
+	THEOREM    <- 'theorem'    ID_NAME '(' VARS ')' DISJ '{' HYPS PROPS '}'
+	DEF        <- 'definition' ID_NAME '(' VARS ')' DISJ '{' DEF_H DEF_M DEF_S BAR DEF_P '}'
+	PROOF      <-  PROOF_DECL '{' PROOF_BODY '}'
+	PROOF_DECL <-  PROOF_ANON / PROOF_NAME
+	PROOF_NAME <- 'proof' ID_NAME 'of' ID_REF
+	PROOF_ANON <- 'proof' 'of' ID_REF
+	PROOF_BODY <-  PROOF_ELEM+
+	PROOF_ELEM <-  VAR_DECL / STEP / QED
+TERM       <- 'term'      EX_TERM
+	DEF_M      <- 'defiendum' EX_TERM
+	DEF_S      <- 'definiens' EX_TERM
+DEF_P      <- 'prop'      EX_PLAIN
+	DEF_H      <-  HYP*
+	HYPS       <- (HYP+ BAR)?
+	PROPS      <-  PROP+
+	HYP        <- 'hyp'  IND  EX_STAT
+	PROP       <- 'prop' IND  EX_STAT
+EX_TERM    <- ':' ID_REF '=' '#'  SYMBS_TYPED ';;'
+EX_STAT    <- ':' ID_REF '=' '|-' SYMBS_TYPED ';;'
+EX_PLAIN   <- ':' ID_REF '=' '|-' SYMBS_PLAIN ';;'
+	DISJ       <- ('disjointed' '(' DISJ_SET (',' DISJ_SET)* ')')?
+	DISJ_SET   <-  DISJ_VAR+
+	STEP       <-  STEP_ASS / STEP_QST
+	STEP_ASS   <- 'step' IND ':' ID_REF '=' ID_REF  '(' REFS ')' '|-' SYMBS_TYPED ';;'
+
+	STEP_QST   <- 'step' IND ':' ID_REF '=' ? '|-' EX_STAT ';;'
+	REFS       <- (REF (',' REF)*)?
+	REF        <-  REF_HYP / REF_PROP / REF_STEP
+	REF_HYP    <- 'hyp'  IND
+	REF_PROP   <- 'prop' IND
+	REF_STEP   <- 'step' IND
+	QED        <- 'qed' 'prop' IND '=' 'step' IND ';;'
+	VAR_DECL   <- 'var' VARS ';;'
+	VARS       <- (VAR (',' VAR)*)?
+	VAR        <-  ID_NAME ':' ID_REF
+BAR        <- '-----' '-'*
+	SYMBS_TYPED <- (SYMB_TYPED / COMMENT)+
+SYMBS_PLAIN <- (SYMB_PLAIN / COMMENT)+
+	SYMB_TYPED <- < (![; \t\r\n$] .)+ >
+SYMB_PLAIN <- < (![; \t\r\n$] .)+ >
+	SYMB_CONST <- < (![; \t\r\n$] .)+ >
+	ID_REF     <- < (![,(=;:){ \t\r\n$] .)+ >
+	ID_NAME    <- < (![,(=;:){ \t\r\n$] .)+ >
+	DISJ_VAR   <- < (![,) \t\r\n$] .)+ >
+	PATH       <- < (![; \t\r\n$] .)+ >
+	IND        <- < [0-9]+ >
+	COMMENT    <- COMMENT_ML / COMMENT_SL
+	COMMENT_ML <- '/*' < (!'*/' .)* > '*/'
+	COMMENT_SL <- '//' < (![\n$] .)+ >
+
+%whitespace <- [ \t\r\n]*

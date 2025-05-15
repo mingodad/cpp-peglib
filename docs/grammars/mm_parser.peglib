@@ -1,0 +1,22 @@
+#From https://github.com/dmitry-vlasov/russell/blob/d9f7b012db6f0de80a151bf4f7f4ea81b33b00d9/src/mm/mm_parser.cpp
+# Metamath grammar
+
+SOURCE  <- BLOCK
+BLOCK   <- ELEMENT*
+ELEMENT <- COMMENT / DISJ / ESS / TH / '${' BLOCK '$}'/ AX / CONST / VAR / FLO / INCLUDE
+EXPR    <- (SYMB / COMMENT)+
+CONST   <-      '$c' SYMB '$.'
+VAR     <-      '$v' EXPR '$.'
+DISJ    <-      '$d' EXPR '$.'
+FLO     <- LAB  '$f' SYMB SYMB '$.'
+ESS     <- LAB  '$e' EXPR '$.'
+AX      <- LAB  '$a' EXPR '$.'
+TH      <- LAB  '$p' EXPR '$=' PROOF
+PROOF   <- LAB+ '$.'
+
+SYMB    <- < (![ \t\r\n$] .)+ >
+LAB     <- < (![ \t\r\n$] .)+ >
+COMMENT <- '$(' < (!'$)' .)* > '$)'
+INCLUDE <- '$[' < (!'$]' .)* > '$]'
+
+%whitespace <- [ \t\r\n]*

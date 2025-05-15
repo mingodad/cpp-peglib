@@ -1,0 +1,275 @@
+/* converted on Mon May 12, 2025, 09:58 (UTC+02) by pegjs-to-w3c v0.69 which is Copyright (c) 2011-2025 by Gunther Rademacher <grd@gmx.net> */
+
+program  ::= statements? ( _ EOL )*
+fstring  ::= star_expressions _ ( ':' format_spec )? _
+statements
+         ::= ( ( _ EOL )* statement )+
+statement
+         ::= SAMEDENT ( compound_stmt | simple_stmt )
+simple_stmt
+         ::= small_stmt _ ( ';' _ small_stmt _ )* ( ';' _ )? EOL
+small_stmt
+         ::= ( assignment | 'pass' | 'break' | 'continue' | global_stmt | nonlocal_stmt | yield_stmt | assert_stmt | del_stmt | return_stmt | raise_stmt | print_stmt | import_stmt | expressions | custom_small_stmt )?
+assignment
+         ::= ( id _ ':' _ expression ( _ '=' _ star_expressions )? | ( star_targets _ '=' _ )+ star_expressions | star_expression _ augassign '=' )?
+augassign
+         ::= '+'
+           | '-'
+           | '**'
+           | '*'
+           | '@'
+           | '//'
+           | '/'
+           | '%'
+           | '&'
+           | '|'
+           | '^'
+           | '<<'
+           | '>>'
+global_stmt
+         ::= 'global' SPACE NAME ( _ ',' _ NAME )* ( _ ',' )?
+nonlocal_stmt
+         ::= 'nonlocal' SPACE NAME ( _ ',' _ NAME )* ( _ ',' )?
+yield_stmt
+         ::= ( 'yield' ( SPACE ( 'from' SPACE expression | expressions ) )? )?
+assert_stmt
+         ::= 'assert' SPACE expression ( _ ',' _ expression )?
+del_stmt ::= 'del' SPACE expression ( _ ',' _ expression )* ( _ ',' )?
+return_stmt
+         ::= 'return' ( SPACE expressions )?
+raise_stmt
+         ::= 'raise' ( SPACE expression )?
+print_stmt
+         ::= ( 'print' ( SPACE star_expression ( _ ',' _ star_expression )* ( _ ',' )? | _ ) )?
+import_stmt
+         ::= import_name
+           | import_from
+import_name
+         ::= 'import' SPACE as_name ( _ ',' _ as_name )*
+as_name  ::= dot_name ( SPACE 'as' SPACE NAME )?
+import_from
+         ::= ( 'from' SPACE ( _ '.' )* ( _ dot_name )? SPACE 'import' SPACE ( '*' | from_as_parens | from_as_items ) )?
+from_as_parens
+         ::= '(' _ from_as _ ( ',' _ from_as _ )* ( ',' _ )? ')'
+from_as_items
+         ::= from_as ( _ ',' _ from_as )*
+from_as  ::= from_id ( SPACE 'as' SPACE NAME )?
+from_id  ::= ( dot_name ( _ ( ':' _ expression | from_params ( _ '->' _ expression )? ) )? )?
+dot_name ::= id ( _ '.' _ NAME )*
+from_params
+         ::= '(' _ ( from_param ( _ ',' _ from_param )* ( _ ',' )? )? _ ')'
+from_param
+         ::= expression
+suite    ::= simple_stmt
+           | ( _ EOL )+ statements ( _ EOL )*
+compound_stmt
+         ::= ( function | if_stmt | class | with_stmt | for | try_stmt | while_stmt | match_stmt | custom_stmt )?
+if_stmt  ::= 'if' SPACE named_expression _ ':' _ suite ( SAMEDENT 'elif' SPACE named_expression _ ':' _ suite )* ( SAMEDENT 'else' _ ':' _ suite )?
+while_stmt
+         ::= 'while' SPACE named_expression _ ':' _ suite ( SAMEDENT 'else' ( SPACE 'not' SPACE 'break' )* _ ':' _ suite )?
+for      ::= decorator? for_stmt
+for_stmt ::= 'for' SPACE star_targets SPACE 'in' SPACE star_expressions _ ':' _ suite ( SAMEDENT 'else' ( SPACE 'not' SPACE 'break' )* _ ':' _ suite )?
+with_stmt
+         ::= 'with' SPACE ( with_parens_item | with_item ) _ ':' _ suite
+with_parens_item
+         ::= '(' _ as_item _ ( ',' _ as_item _ )* ( ',' _ )? ')'
+with_item
+         ::= as_item ( _ ',' _ as_item )*
+as_item  ::= ( expression ( SPACE 'as' SPACE id )? )?
+try_stmt ::= ( 'try' _ ':' _ suite excepts? ( SAMEDENT 'finally' _ ':' _ suite )? )?
+excepts  ::= ( SAMEDENT except_block )+
+except_block
+         ::= ( 'except' ( SPACE expression ( SPACE 'as' SPACE NAME )? )? _ ':' _ suite )?
+function ::= ( extern_decorators function_def ( _ EOL )+ extern ( _ EOL )* | decorators? function_def _ suite )?
+function_def
+         ::= ( 'def' SPACE NAME _ ( generics _ )? params _ ( '->' _ expression _ )? ':' )?
+params   ::= '(' _ ( param ( _ ',' _ param )* ( _ ',' )? )? _ ')'
+param    ::= ( param_name ( _ ( ':' ( _ expression _ '=' )? | '=' ) _ expression )? )?
+param_name
+         ::= '**'
+           | '*' _ NAME
+generics ::= '[' _ param _ ( ',' _ param _ )* ( ',' _ )? ']'
+decorators
+         ::= decorator+
+decorator
+         ::= '@' _ named_expression _ EOL SAMEDENT
+extern_decorators
+         ::= ( decorators? ( '@' _ 'llvm' | 'python' _ EOL SAMEDENT ) decorators? )?
+class    ::= decorators? class_def
+base_class_args
+         ::= '(' _ ( expression ( _ ',' _ expression )* ( _ ',' )? )? _ ')'
+class_args
+         ::= ( generics ( _ base_class_args )? | base_class_args )?
+class_def
+         ::= 'class' SPACE NAME _ class_args? _ ':' _ suite
+match_stmt
+         ::= 'match' SPACE expression _ ':' ( _ EOL )+ ( SAMEDENT case )+ ( _ EOL )*
+case     ::= ( 'case' SPACE expression ( SPACE 'if' SPACE pipe )? _ ':' _ suite )?
+custom_stmt
+         ::= ( NAME ( SPACE expression _ ':' _ suite | _ ':' _ suite custom_stmt__PREDICATE ) )?
+custom_small_stmt
+         ::= NAME SPACE expressions custom_small_stmt__PREDICATE
+expressions
+         ::= expression ( _ ',' _ expression )* ( _ ',' )?
+expression
+         ::= ( disjunction SPACE 'if' SPACE disjunction SPACE 'else' SPACE )* ( lambdef | pipe )?
+lambdef  ::= ( 'lambda' ( SPACE NAME ( _ ',' _ NAME )* )? _ ':' _ expression )?
+pipe     ::= ( disjunction ( _ '|>' | '||>' _ disjunction )* )?
+disjunction
+         ::= ( conjunction ( SPACE 'or' SPACE conjunction )* )?
+conjunction
+         ::= ( inversion ( SPACE 'and' SPACE inversion )* )?
+inversion
+         ::= ( 'not' SPACE )* comparison?
+comparison
+         ::= bitwise_or compare_op_bitwise_or*
+compare_op_bitwise_or
+         ::= ( SPACE ( ( 'not' SPACE 'in' | 'is' SPACE 'not' ) SPACE bitwise_or | 'in' ) | ( 'is' SPACE | '>' _ ) bitwise_or | _ '==' | '!=' | '<=' | '<' | '>=' )?
+bitwise_or
+         ::= bitwise_xor ( _ '|' _ bitwise_xor )*
+bitwise_xor
+         ::= bitwise_and ( _ '^' _ bitwise_and )*
+bitwise_and
+         ::= shift_expr ( _ '&' _ shift_expr )*
+shift_expr
+         ::= sum ( _ '<<' | '>>' _ sum )*
+sum      ::= term ( _ '+' | '-' _ term )*
+term     ::= factor ( _ '*' | '//' | '/' | '%' | '@' _ factor )*
+factor   ::= ( '~' _ )* ( '+' | '-' | power )?
+power    ::= ( primary ( _ '**' _ factor )? )?
+primary  ::= atom ( _ primary_tail )*
+primary_tail
+         ::= ( '.' _ NAME | genexp | arguments | slices )?
+slices   ::= '[' _ slice _ ( ',' _ slice _ )* ( ',' _ )? ']'
+slice    ::= ( slice_part _ ':' _ slice_part ( _ ':' _ slice_part )? | expression )?
+slice_part
+         ::= expression?
+atom     ::= ( STRING ( SPACE STRING )* | id | 'True' | 'False' | 'None' | INT ( _ '...' _ INT | NAME )? | FLOAT NAME? | parentheses | '...' )?
+parentheses
+         ::= tuple
+           | yield
+           | named
+           | genexp
+           | listexpr
+           | listcomp
+           | dict
+           | set
+           | dictcomp
+           | setcomp
+tuple    ::= ( '(' _ ( star_named_expression _ ( ',' _ star_named_expression _ )* ( ',' _ )? )? ')' )?
+yield    ::= '(' _ 'yield' _ ')'
+named    ::= '(' _ named_expression _ ')'
+genexp   ::= '(' _ named_expression SPACE for_if_clauses _ ')'
+listexpr ::= '[' _ ( star_named_expression ( _ ',' _ star_named_expression )* ( _ ',' )? )? _ ']'
+listcomp ::= '[' _ named_expression SPACE for_if_clauses _ ']'
+set      ::= '{' _ star_named_expression _ ( ',' _ star_named_expression _ )* ( ',' _ )? '}'
+setcomp  ::= '{' _ named_expression SPACE for_if_clauses _ '}'
+dict     ::= '{' _ ( double_starred_kvpair ( _ ',' _ double_starred_kvpair )* ( _ ',' )? )? _ '}'
+dictcomp ::= '{' _ kvpair SPACE for_if_clauses _ '}'
+double_starred_kvpair
+         ::= ( '**' _ bitwise_or | kvpair )?
+kvpair   ::= expression _ ':' _ expression
+for_if_clauses
+         ::= for_if_clause ( SPACE for_if_clause )*
+for_if_clause
+         ::= 'for' SPACE star_targets SPACE 'in' SPACE disjunction ( SPACE 'if' SPACE disjunction )*
+star_targets
+         ::= star_target ( _ ',' _ star_target )* ( _ ',' )?
+star_target
+         ::= ( '*' _ )* ( star_parens | primary )?
+star_parens
+         ::= ( '(' _ star_target _ ( ',' _ star_target _ )* ( ',' _ )? ')' | '[' _ star_target _ ( ',' _ star_target _ )* ( ',' _ )? ']' )?
+star_expressions
+         ::= star_expression ( _ ',' _ star_expression )* ( _ ',' )?
+star_expression
+         ::= ( '*' _ bitwise_or | expression )?
+star_named_expression
+         ::= ( '*' _ bitwise_or | named_expression )?
+named_expression
+         ::= ( NAME _ ':=' _ | expression )?
+arguments
+         ::= '(' _ ( args ( _ ',' _ args )* ( _ ',' )? )? _ ')'
+args     ::= simple_args ( _ ',' _ kwargs )?
+           | kwargs
+simple_args
+         ::= ( starred_expression | named_expression ) ( ',' ( starred_expression | named_expression ) )*
+starred_expression
+         ::= '*' _ expression
+kwargs   ::= ( ( kwarg_or_starred ( _ ',' _ kwarg_or_starred )* | kwarg_or_double_starred ) ( _ ',' _ kwarg_or_double_starred )* )?
+kwarg_or_starred
+         ::= ( NAME _ '=' _ expression | starred_expression )?
+kwarg_or_double_starred
+         ::= ( ( NAME _ '=' | '**' ) _ expression )?
+id       ::= NAME
+INT      ::= BININT
+           | HEXINT
+           | DECINT
+FLOAT    ::= EXPFLOAT
+           | PTFLOAT
+PTFLOAT  ::= DECINT? '.' DECINT
+           | DECINT '.'
+STRING   ::= NAME? STR STRING__PREDICATE
+STR      ::= '"""' CHAR* '"""'
+           | "'''" CHAR* "'''"
+           | '"' ( CHAR - ( '"' | EOL ) )* '"'
+           | "'" ( CHAR - ( "'" | EOL ) )* "'"
+_        ::= SPACE?
+keyword  ::= 'False'
+           | 'else'
+           | 'import'
+           | 'pass'
+           | 'None'
+           | 'break'
+           | 'except'
+           | 'in'
+           | 'raise'
+           | 'True'
+           | 'class'
+           | 'finally'
+           | 'is'
+           | 'return'
+           | 'and'
+           | 'continue'
+           | 'for'
+           | 'as'
+           | 'lambda'
+           | 'try'
+           | 'def'
+           | 'from'
+           | 'while'
+           | 'assert'
+           | 'del'
+           | 'global'
+           | 'not'
+           | 'with'
+           | 'elif'
+           | 'if'
+           | 'or'
+           | 'yield'
+
+<?TOKENS?>
+
+extern   ::= ( empty_line* EXTERNDENT .* EOL empty_line* )+
+empty_line
+         ::= [ #x9]* EOL
+BININT   ::= '0' [bB] [0-1] ( '_'* [0-1] )*
+HEXINT   ::= '0' [xX] [0-9a-fA-F] ( '_'? [0-9a-fA-F] )*
+DECINT   ::= [0-9] ( '_'? [0-9] )*
+EXPFLOAT ::= ( PTFLOAT | DECINT ) [eE] '+'
+           | '-' DECINT
+NAME     ::= ( ( keyword [a-zA-Z_0-9] | [a-zA-Z_] ) [a-zA-Z_0-9]* )?
+CHAR     ::= '\'? .
+COMMENT  ::= '#' .*
+INDENT__NOPACKRAT
+         ::= [ #x9]* INDENT__PREDICATE
+SAMEDENT__NOPACKRAT
+         ::= [ #x9]* SAMEDENT__PREDICATE
+DEDENT__NOPACKRAT
+         ::= [ #x9]* DEDENT__PREDICATE
+EXTERNDENT__NOPACKRAT
+         ::= [ #x9]* EXTERNDENT__PREDICATE
+EOL      ::= #xD #xA?
+           | #xA
+SPACE    ::= ( [ #x9]+ | COMMENT | NLP EOL )+
+format_spec
+         ::= ( [^{}]? [<>=^] )? [+#x2D]? 'z'? '#'? '0'? [0-9]* [_,]* ( '.' [0-9]+ )? [bcdeEfFgGnosxX%]?

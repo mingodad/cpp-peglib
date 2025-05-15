@@ -1,0 +1,362 @@
+FLUID <-  ( HEADER
+		 OPTION_LIST
+		 TREE_LIST )
+
+
+#//////////////////////////////////////////////////////////////////////
+
+HEADER <-  ( WS
+		  COMMENT_LINE
+		  WS
+		  "version"
+		  WS
+		  FLOAT_VALUE )
+
+OPTION_LIST <-  ( ( WS
+			    OPTION ) )*
+
+TREE_LIST <-  ( ( WS
+			  TREE_ITEM ) )*
+
+TREE_BLOCK <-  ( WS
+		      BRACE_LHS
+		      TREE_LIST
+		      BRACE_RHS )
+
+TREE_ITEM <-  ( TYPE_NON_WIDGET /
+		     TYPE_WIDGET_WITH_CHILDREN /
+		     TYPE_WIDGET_NO_CHILDREN )
+
+
+TYPE_NON_WIDGET <-  ( TYPE_Function /
+			   TYPE_code /
+			   TYPE_codeblock /
+			   TYPE_decl /
+			   TYPE_data /
+			   TYPE_declblock /
+			   TYPE_comment /
+			   TYPE_class )
+
+TYPE_Function <-  ( "Function"
+			 WS
+			 BRACE_LHS
+			 ( ( WS
+				   FUNCTION_SIGNATURE ) )?
+			 BRACE_RHS
+			 WS
+			 BRACE_LHS
+			 ( ( WS
+				   FUNCTION_OPTION ) )*
+			 BRACE_RHS
+			 ( TREE_BLOCK )? )
+
+
+TYPE_WIDGET_NO_CHILDREN <-  ( TYPE_WIDGET_NOC_KEYWORD
+				   WS
+				   TYPE_NAME
+				   WS
+				   BRACE_LHS
+				   ( ( WS
+					     TYPE_WIDGET_OPTION ) )*
+				   BRACE_RHS )
+
+TYPE_WIDGET_NOC_KEYWORD <-  ( "Fl_Box" /
+				   "Fl_Button" /
+				   "Fl_Return_Button" /
+				   "Fl_Light_Button" /
+				   "Fl_Check_Button" /
+				   "Fl_Round_Button" /
+				   "Fl_Repeat_Button" /
+				   "Fl_Browser" /
+				   "Fl_Check_Browser" /
+				   "Fl_Tree" /
+				   "Fl_File_Browser" /
+				   "Fl_Counter" /
+				   "Fl_Spinner" /
+				   "Fl_Input" /
+				   "Fl_Output" /
+				   "Fl_File_Input" /
+				   "Fl_Text_Display" /
+				   "Fl_Text_Editor" /
+				   "Fl_Simple_Terminal" /
+				   "Fl_Clock" /
+				   "Fl_Help_View" /
+				   "Fl_Progress" /
+				   "Fl_Adjuster" /
+				   "Fl_Dial" /
+				   "Fl_Roller" /
+				   "Fl_Slider" /
+				   "Fl_Scrollbar" /
+				   "Fl_Value_Slider" /
+				   "Fl_Value_Input" /
+				   "Fl_Value_Output" )
+
+
+TYPE_WIDGET_WITH_CHILDREN <-  ( TYPE_WIDGET_WINDOW /
+				     TYPE_WIDGET_GROUP /
+				     TYPE_WIDGET_MENU.
+				     TYPE_WIDGET_FLEX )
+
+
+TYPE_WIDGET_WINDOW <-  ( TYPE_WINDOW_KEYWORD
+			      WS
+			      BRACE_LHS
+			      ( ( WS
+					TYPE_WINDOW_OPTION ) )*
+			      BRACE_RHS
+			      TREE_BLOCK )
+
+TYPE_WINDOW_KEYWORD <-  ( "Fl_Window" /
+			       "widget_class" )
+
+
+TYPE_WIDGET_GROUP <-  ( TYPE_GROUP_KEYWORD
+			     WS
+			     BRACE_LHS
+			     ( ( WS
+				       TYPE_GROUP_OPTION ) )*
+			     BRACE_RHS
+			     TREE_BLOCK )
+
+TYPE_GROUP_KEYWORD <-  ( "Fl_Group" /
+			      "Fl_Pack" /
+			      "Fl_Table" /
+			      "Fl_Tabs" /
+			      "Fl_Scroll" /
+			      "Fl_Tile" /
+			      "Fl_Wizard" )
+
+
+TYPE_WIDGET_MENU <-  ( TYPE_MENU_KEYWORD
+			    WS
+			    BRACE_LHS
+			    ( ( WS
+				      TYPE_WIDGET_OPTION ) )*
+			    BRACE_RHS
+			    ( ( WS
+				      BRACE_LHS
+				      MENU_ITEM
+				      BRACE_RHS ) )* )
+
+TYPE_MENU_KEYWORD <-  ( "Fl_Menu_Button" /
+			     "Fl_Choice" /
+			     "Fl_Input_Choice" /
+			     "Fl_Menu_Bar" /
+			     "Fl_" )
+
+
+TYPE_WIDGET_FLEX <-  ( "Fl_Flex"
+			    WS
+			    BRACE_LHS
+			    ( ( WS
+				      TYPE_FLEX_OPTION ) )*
+			    BRACE_RHS
+			    TREE_BLOCK )
+
+
+#//////////////////////////////////////////////////////////////////////
+
+OPTION <-  ( OPTION_Magic /
+		  OPTION_define_in_struct /
+		  OPTION_do_not_include_H_from_C /
+		  OPTION_use_FL_COMMAND /
+		  OPTION_utf8_in_src /
+		  OPTION_avoid_early_includes /
+		  OPTION_i18n_type /
+		  OPTION_i18n_function /
+		  OPTION_i18n_static_function /
+		  OPTION_i18n_file /
+		  OPTION_i18n_set /
+		  OPTION_i18n_include /
+		  OPTION_i18n_conditional /
+		  OPTION_header_name /
+		  OPTION_code_name /
+		  OPTION_snap /
+		  OPTION_gridx /
+		  OPTION_gridy /
+		  OPTION_win_shell_cmd /
+		  OPTION_win_shell_flags /
+		  OPTION_linux_shell_cmd /
+		  OPTION_linux_shell_flags /
+		  OPTION_mac_shell_cmd /
+		  OPTION_mac_shell_flags )
+
+TYPE_OPTION <-  ( OPTION_label /
+		       OPTION_user_data /
+		       OPTION_user_data_type /
+		       OPTION_callback /
+		       OPTION_comment /
+		       OPTION_option_open /
+		       OPTION_option_selected )
+
+FUNCTION_OPTION <-  ( TYPE_OPTION /
+			   #//
+			   OPTION_return_type /
+			   OPTION_private /
+			   OPTION_protected /
+			   OPTION_C )
+
+TYPE_WIDGET_OPTION <-  ( TYPE_OPTION /
+			      #//
+			      OPTION_xywh /
+			      OPTION_tooltip /
+			      OPTION_image /
+			      OPTION_deimage /
+			      OPTION_type /
+			      OPTION_box /
+			      OPTION_down_box /
+			      OPTION_value /
+			      OPTION_color /
+			      OPTION_selection_color /
+			      OPTION_labeltype /
+			      OPTION_labelfont /
+			      OPTION_labelsize /
+			      OPTION_labelcolor /
+			      OPTION_align /
+			      OPTION_when /
+			      OPTION_minimum /
+			      OPTION_maximum /
+			      OPTION_step /
+			      OPTION_slider_size /
+			      OPTION_size /
+			      OPTION_textfont /
+			      OPTION_textsize /
+			      OPTION_textcolor /
+			      OPTION_class /
+			      OPTION_shortcut /
+			      OPTION_code0 /
+			      OPTION_code1 /
+			      OPTION_code2 /
+			      OPTION_code3 /
+			      OPTION_extra_code /
+			      OPTION_hide /
+			      OPTION_deactivate /
+			      OPTION_resizable /
+			      OPTION_hotspot /
+			      OPTION_divider )
+
+TYPE_WINDOW_OPTION <-  ( TYPE_WIDGET_OPTION /
+			      #//
+			      OPTION_xclass /
+			      OPTION_size_range /
+			      OPTION_xywh /
+			      OPTION_modal /
+			      OPTION_nonmodal /
+			      OPTION_visible /
+			      OPTION_noborder )
+
+TYPE_GROUP_OPTION <-  TYPE_WIDGET_OPTION
+
+TYPE_FLEX_OPTION <-  ( TYPE_GROUP_OPTION /
+			    #//
+			    OPTION_margins /
+			    OPTION_gap /
+			    OPTION_set_size_tuples )
+
+
+#//////////////////////////////////////////////////////////////////////
+
+OPTION_Magic <-  "Magic:"
+
+OPTION_define_in_struct <-  "define_in_struct"
+
+OPTION_do_not_include_H_from_C <-  "do_not_include_H_from_C"
+
+OPTION_use_FL_COMMAND <-  "use_FL_COMMAND"
+
+OPTION_utf8_in_src <-  "utf8_in_src"
+
+OPTION_avoid_early_includes <-  "avoid_early_includes"
+
+OPTION_i18n_type <-  ( "i18n_type"
+			    WS
+			    INTEGER_VALUE )
+
+OPTION_i18n_function <-  ( "i18n_function"
+				WS
+				FUNCTION_NAME )
+
+OPTION_i18n_static_function <-  ( "i18n_static_function"
+				       WS
+				       FUNCTION_NAME )
+
+OPTION_i18n_file <-  ( "i18n_file"
+			    WS
+			    FILE_PATH )
+
+OPTION_i18n_set <-  ( "i18n_set"
+			   WS
+			   STRING_VALUE )
+
+OPTION_i18n_include <-  ( "i18n_include"
+			       WS
+			       INCLUDED_FILE_SPEC )
+
+OPTION_i18n_conditional <-  ( "i18n_conditional"
+				   WS
+				   STRING_VALUE )
+
+OPTION_header_name <-  ( "header_name"
+			      WS
+			      FILE_NAME )
+
+OPTION_code_name <-  ( "code_name"
+			    WS
+			    FILE_NAME )
+
+OPTION_snap <-  ( "snap"
+		       WS
+		       IGNORED_WORD )
+
+OPTION_gridx <-  ( "gridx"
+			WS
+			IGNORED_WORD )
+
+OPTION_gridy <-  ( "gridy"
+			WS
+			IGNORED_WORD )
+
+OPTION_win_shell_cmd <-  ( "win_shell_cmd"
+				WS
+				STRING_VALUE )
+
+OPTION_win_shell_flags <-  ( "win_shell_flags"
+				  WS
+				  INTEGER_VALUE )
+
+OPTION_linux_shell_cmd <-  ( "linux_shell_cmd"
+				  WS
+				  STRING_VALUE )
+
+OPTION_linux_shell_flags <-  ( "linux_shell_flags"
+				    WS
+				    INTEGER_VALUE )
+
+OPTION_mac_shell_cmd <-  ( "mac_shell_cmd"
+				WS
+				STRING_VALUE )
+
+OPTION_mac_shell_flags <-  ( "mac_shell_flags"
+				 WS
+				 INTEGER_VALUE )
+
+
+#/////////////////////////////////////////
+
+INTEGER_VALUE <- [0-9]+
+STRING_VALUE <- '"' [^"]* '"'
+IGNORED_WORD <- 'ignore'
+MENU_ITEM <- 'menu_item'
+FILE_NAME <- 'fname'
+FUNCTION_NAME <- 'func_name'
+INCLUDED_FILE_SPEC <- 'inc_file_spec'
+FILE_PATH <- 'file_path'
+TYPE_comment <- 'type_comment'
+TYPE_codeblock <- 'type_codeblock'
+
+WS <-  ( [ \t\r\n\f\v] )*
+
+BRACE_LHS <-  '{'
+
+BRACE_RHS <-  ( WS
+		     '}' )

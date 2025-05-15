@@ -1,0 +1,35 @@
+#From https://github.com/Cockatrice/Cockatrice/blob/baaf26111676270c5044ed88523e4f967664c6aa/cockatrice/src/filter_string.cpp
+Start <- QueryPartList
+~ws <- [ ]+
+QueryPartList <- ComplexQueryPart ( ws ("and" ws)? ComplexQueryPart)* ws*
+ComplexQueryPart <- SomewhatComplexQueryPart ws $or<[oO][rR]> ws ComplexQueryPart / SomewhatComplexQueryPart
+SomewhatComplexQueryPart <- [(] QueryPartList [)] / QueryPart
+QueryPart <- NotQuery / SetQuery / RarityQuery / CMCQuery / FormatQuery / PowerQuery / ToughnessQuery / ColorQuery / TypeQuery / OracleQuery / FieldQuery / GenericQuery
+NotQuery <- ('not' ws/'-') SomewhatComplexQueryPart
+SetQuery <- ('e'/'set') [:] FlexStringValue
+OracleQuery <- 'o' [:] RegexString
+CMCQuery <- ('cmc'/'mv') ws? NumericExpression
+PowerQuery <- [Pp] 'ow' 'er'? ws? NumericExpression
+ToughnessQuery <- [Tt] 'ou' 'ghness'? ws? NumericExpression
+RarityQuery <- [rR] ':' RegexString
+FormatQuery <- 'f' ':' Format / Legality ':' Format
+Format <- [a-zA-Z] [a-z]*
+Legality <- [Ll] 'egal'? / [Bb] 'anned'? / [Rr] 'estricted'
+TypeQuery <- [tT] 'ype'? [:] StringValue
+Color <- < [Ww] 'hite'? / [Uu] / [Bb] 'lack'? / [Rr] 'ed'? / [Gg] 'reen'?  / [Bb] 'lue'? >
+ColorEx <- Color / [mc]
+ColorQuery <- [cC] 'olor'? <[iI]?> <[:!]> ColorEx*
+FieldQuery <- String [:] RegexString / String ws? NumericExpression
+NonQuote <- !["].
+UnescapedStringListPart <- ![":<>=! ].
+String <- UnescapedStringListPart+ / ["] <NonQuote*> ["]
+StringValue <- String / [(] StringList [)]
+StringList <- StringListString (ws? [,] ws? StringListString)*
+StringListString <- UnescapedStringListPart+
+GenericQuery <- RegexString
+RegexString <- String
+FlexStringValue <- CompactStringSet / String / [(] StringList [)]
+CompactStringSet <- StringListString ([,+] StringListString)+
+NumericExpression <- NumericOperator ws? NumericValue
+NumericOperator <- [=:] / <[><!][=]?>
+NumericValue <- [0-9]+

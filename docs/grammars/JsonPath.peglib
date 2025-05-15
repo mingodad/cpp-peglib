@@ -1,0 +1,26 @@
+#From https://github.com/ZephirDev/PocoJsonPath/blob/master/src/PocoJsonPath/JsonPath.cpp
+ROOT_QUERY                  <- ROOT QUERY_OPERATIONS PIPE*
+QUERY                       <- INIT QUERY_OPERATIONS PIPE*
+QUERY_OPERATIONS            <- (FILTER/INDEX/DYNAMIC_INDEX/CHILDREN)*
+PIPE                        <- '|' PIPE_NAME '(' QUERY (',' QUERY)* ')' / '|' PIPE_NAME '(' ')' / '|' PIPE_NAME
+PIPE_NAME                   <- < [A-Za-z] [A-Za-z0-9_]* >
+INIT                        <- ROOT / CURRENT
+FILTER                      <- '[' '?' '(' QUERY_WHERE ')' ']'
+QUERY_WHERE                 <- '(' (QUERY_WHERE/QUERY/VALUE) ')' OPERATOR '(' (QUERY_WHERE/QUERY/VALUE) ')'  / '(' (QUERY_WHERE/QUERY/VALUE) ')' OPERATOR (QUERY_WHERE/QUERY/VALUE) / (QUERY/VALUE) OPERATOR '(' (QUERY_WHERE/QUERY/VALUE) ')' / (QUERY/VALUE) OPERATOR (QUERY_WHERE/QUERY/VALUE) / '(' (QUERY_WHERE/QUERY/VALUE) ')'
+OPERATOR                    <- '+' / '-' / '/' / '*' / '==' / '!=' / '>=' / '>' / '<=' / '<' / '&&' / '||'
+INDEX                       <- '[' (STRING/INDEX_KEYWORD_NUMBER) (',' (STRING/INDEX_KEYWORD_NUMBER))* ']' / '.' INDEX_KEYWORD
+DYNAMIC_INDEX               <- '[' '(' QUERY ')' ']'
+CHILDREN                    <- '..' INDEX_KEYWORD
+INDEX_KEYWORD               <- INDEX_KEYWORD_STRING / INDEX_KEYWORD_NUMBER / INDEX_KEYWORD_WILDCARD
+INDEX_KEYWORD_STRING        <- < [A-Za-z_$] [A-Za-z0-9_$]* >
+INDEX_KEYWORD_NUMBER        <- < [0-9]+ >
+INDEX_KEYWORD_WILDCARD      <- '*'
+VALUE                       <- STRING / NUMBER
+STRING                      <- < '"' (ESCAPE_STRING_CHARACTER/STRING_CHARACTER_DQUOTE)* '"' > / < "'" (ESCAPE_STRING_CHARACTER/STRING_CHARACTER_SQUOTE)* "'" >
+ESCAPE_STRING_CHARACTER     <- < '\\' . >
+STRING_CHARACTER_DQUOTE     <- < [^"] >
+STRING_CHARACTER_SQUOTE     <- < [^'] >
+NUMBER                      <- < [0-9]+ > / < [0-9]+[.][0-9]+ >
+ROOT                        <- '$'
+CURRENT                     <- '@'
+%whitespace                 <- [ \n]*

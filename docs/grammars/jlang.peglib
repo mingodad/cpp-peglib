@@ -1,0 +1,69 @@
+# From https://github.com/pest-parser/book/blob/master/examples/jlang-parser/src/j.pest
+
+program <-
+	 "\n"* ( stmt "\n"+ )* stmt? !.
+
+stmt <-
+	 expr
+
+expr <-
+	 assgmtExpr
+	/ monadicExpr
+	/ dyadicExpr
+	/ string
+	/ terms
+
+monadicExpr <-
+	 verb expr
+
+dyadicExpr <-
+	 ( monadicExpr / terms ) verb expr
+
+assgmtExpr <-
+	 ident "=:" _ expr
+
+terms <-
+	 term+
+
+term <-
+	 decimal
+	/ integer
+	/ ident
+	/ "(" _ expr ")" _
+
+verb <-
+	 <(">:"
+	/ "*:"
+	/ "-"
+	/ "%"
+	/ "#"
+	/ ">."
+	/ "+"
+	/ "*"
+	/ "<"
+	/ "="
+	/ "^"
+	/ "|"
+	/ ">"
+	/ "$")> _
+
+integer <-
+	 "_"? <[0-9]+> _
+
+decimal <-
+	 "_"? <[0-9]+ "." [0-9]*> _
+
+ident <-
+	 <[a-zA-Z] [a-zA-Z0-9_]*> _
+
+string <-
+	 <"'" ( "''" / (! "'" . ) )* "'"> _
+
+WHITESPACE <-
+	 " "
+	/ "\t"
+
+COMMENT <-
+	 "NB." (! "\n" . )*
+
+~_ <- (WHITESPACE / COMMENT)*

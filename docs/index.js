@@ -19,12 +19,99 @@ function setupEditorArea(id, lsKey) {
   return e;
 }
 
-const grammar = setupEditorArea("grammar-editor", "grammarText");
-const code = setupEditorArea("code-editor", "codeText");
+let userContentHasChanged = false;
+let grammarContentHasChanged = false;
+let inputContentHasChanged = false;
+function grammarOnChange(delta) {
+	if(!grammarContentHasChanged) {
+		grammarContentHasChanged = true;
+		userContentHasChanged = true;
+	}
+}
+function inputOnChange(delta) {
+	if(!inputContentHasChanged) {
+		inputContentHasChanged = true;
+		userContentHasChanged = true;
+	}
+}
+
+const grammarEditor = setupEditorArea("grammar-editor", "grammarText");
+grammarEditor.on("change", grammarOnChange);
+grammarEditor.getSession().setMode("ace/mode/yaml");
+const codeEditor = setupEditorArea("code-editor", "codeText");
+codeEditor.on("change", inputOnChange);
+userContentHasChanged = localStorage.getItem("userContentHasChanged");
 
 const codeAst = setupInfoArea("code-ast");
 const codeAstOptimized = setupInfoArea("code-ast-optimized");
 const codeProfile = setupInfoArea("code-profile");
+
+onbeforeunload= function(event) { updateLocalStorage(); };
+
+const sampleList = [
+	//title, grammar, input, input ace syntax
+	["antlr4 parser", "Antlr4-naked.peglib", "test.antlr4", "ace/mode/yaml"],
+	["bass parser", "bass-grammar.peglib", "test.bass", "ace/mode/asm"],
+	["bc calculator parser", "bc.peglib", "test.bc", "ace/mode/text"],
+	["bison parser", "bison.peglib", "test.bison", "ace/mode/yaml"],
+	["c99-mouse parser", "c99-mouse-dict.peglib", "test.c", "ace/mode/c_cpp"],
+	["chpeg parser", "chpeg-ext.peglib", "test.chpeg-ext", "ace/mode/yaml"],
+	["clunc parser", "clunc.peglib", "test.clunc", "ace/mode/c_cpp"],
+	["com parser", "com-parser-grammar.peglib", "test.com-parser-grammar", "ace/mode/c_cpp"],
+	["cpp-peglib parser", "cpp-peglib.peglib", "cpp-peglib.peglib", "ace/mode/yaml"],
+	["Css parser", "css.peglib", "../style.css", "ace/mode/css"],
+	//["Css parser", "CssParser.peglib", "style.css", "ace/mode/css"],
+	//["exprtk parser", "exprtk.peglib", "test.exprtk", "ace/mode/c_cpp"],
+	["filter string parser", "filter_string.peglib", "test.filter_string", "ace/mode/text"],
+	["fluid-fltk parser", "fluid.peglib", "test.fluid", "ace/mode/text"],
+	["gams parser", "gams.peglib", "test.gams", "ace/mode/text"],
+	["gmpl parser", "gmpl.peglib", "test.gmpl", "ace/mode/text"],
+	["golang parser", "golang.peglib", "test.golang", "ace/mode/go"],
+	["Java8 parser", "java8-nez.peglib", "test.java", "ace/mode/java"],
+	["JsonPath parser", "JsonPath.peglib", "test.JsonPath", "ace/mode/text"],
+	["Jlang parser", "jlang.peglib", "test.jlang", "ace/mode/text"],
+	["kotlin parser", "kotlin-perf.peglib", "test.kotlin", "ace/mode/text"],
+	["leg parser", "leg.peglib", "test.leg", "ace/mode/text"],
+	["lpegrex parser", "lpegrex.peglib", "test.lpegrex", "ace/mode/text"],
+	["lua parser", "lua.peglib", "test.lua", "ace/mode/lua"],
+	["nelua parser", "nelua.peglib", "test.nelua", "ace/mode/lua"],
+	["nez parser", "nez-peg.peglib", "test.nez", "ace/mode/text"],
+	["peg-piumarta parser", "peg-piumarta.peglib", "test.peg-piumarta", "ace/mode/text"],
+	["pegjs parser", "pegjs.peglib", "test.pegjs", "ace/mode/text"],
+	["pegn parser", "pegn.peglib", "test.pegn", "ace/mode/text"],
+	["pest parser", "pest.peglib", "test.pest", "ace/mode/text"],
+	["reelay regex parser", "reelay-regex.peglib", "test.reelay-regex", "ace/mode/text"],
+	["rus parser", "rus_parser.peglib", "test.rus_parser", "ace/mode/text"],
+	["scc parser", "scc.peglib", "test.scc", "ace/mode/text"],
+	["slang parser", "slang-grammar.peglib", "test.slang-grammar", "ace/mode/text"],
+	["sql parser", "sql.peglib", "test.sql", "ace/mode/sql"],
+	["tsv parser", "tsv.peglib", "test.tsv", "ace/mode/text"],
+	["virgil parser", "virgil.peglib", "test.virgil", "ace/mode/c_cpp"],
+	["zig parser", "zig.peglib", "test.zig", "ace/mode/c_cpp"],
+];
+
+function load_example(self) {
+  if(userContentHasChanged)
+  {
+	let ok = confirm("Your changes will be lost !\nIf the changes you've made are important save then before proceed.\nCopy and paste to your prefered editor and save it.\nEither OK or Cancel.");
+	if(!ok) return false;
+  }
+  let base_url = "./grammars/"
+  if(self.selectedIndex > 0) {
+      let sample_to_use = sampleList[self.selectedIndex-1];
+      $.get(base_url + sample_to_use[1], function( data ) {
+        grammarEditor.setValue( data );
+	grammarContentHasChanged = false;
+	userContentHasChanged = false;
+      });
+      $.get(base_url + sample_to_use[2], function( data ) {
+        codeEditor.setValue( data );
+	codeEditor.getSession().setMode(sample_to_use[3]);
+	inputContentHasChanged = false;
+	userContentHasChanged = false;
+      });
+  }
+}
 
 $('#opt-mode').val(localStorage.getItem('optimizationMode') || 'all');
 $('#start-rule').val(localStorage.getItem('startRule') || '');
@@ -59,22 +146,29 @@ function generateErrorListHTML(errors) {
 }
 
 function updateLocalStorage() {
-  localStorage.setItem('grammarText', grammar.getValue());
-  localStorage.setItem('codeText', code.getValue());
-  localStorage.setItem('optimizationMode', $('#opt-mode').val());
-  localStorage.setItem('startRule', $('#start-rule').val());
-  localStorage.setItem('packrat', $('#packrat').prop('checked'));
-  localStorage.setItem('autoRefresh', $('#auto-refresh').prop('checked'));
+  if(grammarContentHasChanged || inputContentHasChanged)
+  {
+    localStorage.setItem('grammarText', grammarEditor.getValue());
+    localStorage.setItem('codeText', codeEditor.getValue());
+    grammarContentHasChanged = false;
+    inputContentHasChanged = false;
+    localStorage.setItem('optimizationMode', $('#opt-mode').val());
+    localStorage.setItem('startRule', $('#start-rule').val());
+    localStorage.setItem('packrat', $('#packrat').prop('checked'));
+    localStorage.setItem('autoRefresh', $('#auto-refresh').prop('checked'));
+  }
 }
+
+var parse_start_time = 0;
 
 function parse() {
   const $grammarValidation = $('#grammar-validation');
   const $grammarInfo = $('#grammar-info');
-  const grammarText = grammar.getValue();
+  const grammarText = grammarEditor.getValue();
 
   const $codeValidation = $('#code-validation');
   const $codeInfo = $('#code-info');
-  const codeText = code.getValue();
+  const codeText = codeEditor.getValue();
 
   const optimizationMode = $('#opt-mode').val();
   const startRule = $('#start-rule').val();
@@ -146,8 +240,8 @@ function setupTimer() {
     }
   }, 750);
 };
-grammar.getSession().on('change', setupTimer);
-code.getSession().on('change', setupTimer);
+grammarEditor.getSession().on('change', setupTimer);
+codeEditor.getSession().on('change', setupTimer);
 
 // Event handing in the info area
 function makeOnClickInInfo(editor) {
@@ -158,13 +252,13 @@ function makeOnClickInInfo(editor) {
     editor.focus();
 
     if(el.data('gln') && el.data('gcol')) {
-      grammar.navigateTo(el.data('gln') - 1, el.data('gcol') - 1);
-      grammar.scrollToLine(el.data('gln') - 1, true, false, null);
+      grammarEditor.navigateTo(el.data('gln') - 1, el.data('gcol') - 1);
+      grammarEditor.scrollToLine(el.data('gln') - 1, true, false, null);
     }
   }
 };
-$('#grammar-info').on('click', 'li', makeOnClickInInfo(grammar));
-$('#code-info').on('click', 'li', makeOnClickInInfo(code));
+$('#grammar-info').on('click', 'li', makeOnClickInInfo(grammarEditor));
+$('#code-info').on('click', 'li', makeOnClickInInfo(codeEditor));
 
 // Event handing in the AST optimization
 $('#opt-mode').on('change', setupTimer);
@@ -179,13 +273,13 @@ $('#parse').on('click', parse);
 
 // Resize editors to fit their parents
 function resizeEditorsToParent() {
-	code.resize();
-  code.renderer.updateFull();
-	codeAst.resize();
+  codeEditor.resize();
+  codeEditor.renderer.updateFull();
+  codeAst.resize();
   codeAst.renderer.updateFull();
-	codeAstOptimized.resize();
+  codeAstOptimized.resize();
   codeAstOptimized.renderer.updateFull();
-	codeProfile.resize();
+  codeProfile.resize();
   codeProfile.renderer.updateFull();
 }
 
@@ -220,3 +314,15 @@ var Module = {
     }
   }
 };
+
+function doFinalSettings() {
+	let select_samples = document.getElementById('opt-samples');
+	sampleList.map( (lang, i) => {
+           let opt = document.createElement("option");
+           opt.value = i; // the index
+           opt.innerHTML = lang[0];
+           select_samples.append(opt);
+        });
+}
+
+// vim: sw=2:sts=2

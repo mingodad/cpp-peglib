@@ -1,0 +1,74 @@
+#include <vector>
+#include <string>
+
+#pragma load meta
+#pragma load demo
+
+#pragma var ints   {num1: 1, num2: 077, num3: 0b10101, num4: 0xafE5}
+#pragma var chars  {char1: 'c', char2: '\n', char3: '\''}
+#pragma var nulls  {null1: nullptr}
+#pragma var floats {f1: 0.0, f2: 0.001, f3: 1000.55}
+#pragma var exp    {exp1: 0.1e5, exp2: 0.001e-1, exp3: 100e5, exp4: 077e1}
+#pragma var str    {str1: "", str2: "Hello world", str3: R"(Hello again\n "from us)"}
+
+#pragma invoke demo::debug.incs({name: "Carter", age: 30, sex: 'M', amount: 40e6, vote: true})
+
+namespace demo::scc {
+
+    struct [[gen(meta)]] [[$meta(id=10, name="User")]] User {
+        [[$meta::ignore]]
+        std::string Email;
+        [[$meta::skip]]
+        int    Age{6};
+    };
+
+    class [[gen(demo/debug)]] Demo {
+    public:
+        Demo(User user, User admin);
+
+    private:
+        [[$demo::debug("Email","Age")]]
+        User  mUser;
+        [[$demo::debug("Email")]]
+        User  mAdmin;
+    };
+
+    class [[gen(demo/debug)]] Calculator {
+    private:
+        [[$demo(tag='H')]]
+        std::string host{"localhost"};
+        [[$demo(tag='P')]]
+        int port{8080};
+
+        void add(
+                [[$demo(tag='a')]] int first,
+                [[$demo(tag='b')]] int b
+                );
+
+        struct Shape {
+            enum Kind {
+                SQUARE,
+                CIRCLE
+            };
+            Kind kind;
+            union Shapes {
+                struct Square {
+                    int w;
+                };
+                struct Circle {
+                    int r;
+                };
+                Circle circle;
+                Square square;
+            };
+        };
+        Shape shape;
+    };
+
+#pragma native[cpp]
+    Demo::Demo(User user, User admin)
+        : mUser(user), mAdmin(admin)
+    {}
+#pragma endnative
+
+}

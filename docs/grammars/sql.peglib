@@ -1,0 +1,1875 @@
+ #This grammar takes a while to parse input  with cpp-peglib
+start <-
+	 o semi_optional ( stmt_list )? semi_optional
+
+#start_streaming <-
+#	 o semi_optional ( stmt ) semi_optional
+
+stmt_list <-
+	 ( stmt ) o ( stmt_list_tail )*
+
+semi_optional <-
+	 ( sym_semi )*
+
+semi_required <-
+	 ( sym_semi )+
+
+stmt_list_tail <-
+	 semi_required ( stmt ) o
+
+type_definition <-
+	 ( type_definition_types / datatype_custom ) o ( type_definition_args )? ( array_bounds )?
+
+array_bounds <-
+	 ( array_bound ) ( array_bound )* / o ARRAY ( array_bound )?
+
+array_bound <-
+	 o sym_bopen o ( literal_number )? o sym_bclose
+
+type_definition_types <-
+	 ( datatype_types )
+
+datatype_custom <-
+	 ( name ) ( datatype_word_tail )*
+
+datatype_word_tail <-
+	 [\t ] ( name_unquoted )
+
+type_definition_args <-
+	 sym_popen ( literal_number_signed ) o ( definition_args_loop )? sym_pclose
+
+definition_args_loop <-
+	 sym_comma o ( literal_number_signed ) o
+
+literal_value <-
+	 literal_number_signed / literal_number / literal_blob / literal_null / literal_date / literal_string / literal_typed
+
+literal_null <-
+	 ( NULL ) o
+
+literal_date <-
+	 ( CURRENT_DATE / CURRENT_TIMESTAMP / CURRENT_TIME ) o
+
+literal_string <-
+	 ( number_sign )? ( literal_string_single )
+
+literal_string_single <-
+	 sym_sglquote ( literal_string_schar )* sym_sglquote
+
+literal_string_schar <-
+	 "''" / [^\']
+
+literal_blob <-
+	 [xX] ( literal_string_single )
+
+literal_typed <-
+	 ( type_definition ) ( literal_string / bind_parameter )
+
+literal_text <-
+	 ( name_unquoted / name_dblquoted )
+
+number_sign <-
+	 ( sym_plus / sym_minus )
+
+literal_number_signed <-
+	 ( number_sign )? ( literal_number )
+
+literal_number <-
+	 literal_number_hex / literal_number_decimal
+
+literal_number_decimal <-
+	 ( number_decimal_node ) ( number_decimal_exponent )?
+
+number_decimal_node <-
+	 <number_decimal_full / number_decimal_fraction>
+
+number_decimal_full <-
+	 number_digit+ number_decimal_fraction?
+
+number_decimal_fraction <-
+	 ( sym_dot ) ( number_digit )*
+
+number_decimal_exponent <-
+	 ( "E"i ) ( [+-] )? ( number_digit )+
+
+literal_number_hex <-
+	 ( "0x"i ) ( number_hex )+
+
+number_hex <-
+	 [0-9a-fA-F]
+
+number_digit <-
+	 [0-9]
+
+bind_parameter <-
+	 ( bind_parameter_numbered / bind_parameter_named / bind_parameter_tcl )
+
+bind_parameter_numbered <-
+	 ( sym_quest ) ( bind_number_id )? o
+
+bind_number_id <-
+	 ( [1-9] ) ( number_digit* )
+
+bind_parameter_named <-
+	 ( [:@] ) ( name_char )+ o
+
+bind_parameter_tcl <-
+	 ( "$" ) ( name_char / ":" )+ o ( tcl_suffix )?
+
+tcl_suffix <-
+	 ( name_dblquoted ) o
+
+expression_exists <-
+	 ( expression_exists_ne )? o ( select_wrapped )
+
+expression_exists_ne <-
+	 ( expression_is_not )? ( EXISTS ) o
+
+expression_raise <-
+	 ( RAISE ) o sym_popen o ( expression_raise_args ) o sym_pclose
+
+expression_raise_args <-
+	 ( raise_args_ignore / raise_args_message )
+
+raise_args_ignore <-
+	 ( IGNORE )
+
+raise_args_message <-
+	 ( ROLLBACK / ABORT / FAIL ) o sym_comma o ( error_message )
+
+expression_root <-
+	 bind_parameter / function_call / literal_value / id_column
+
+expression_wrapped <-
+	 sym_popen o ( expression ) o sym_pclose
+
+expression_recur <-
+	 expression_wrapped / expression_exists / expression_cast / expression_case / expression_raise / expression_array / expression_array_select / expression_root
+
+expression_array <-
+	 ARRAY o ( array_expr )
+
+expression_array_select <-
+	 ARRAY o ( select_wrapped )
+
+array_expr <-
+	 sym_bopen o ( array_expr_list / expression_list ) o sym_bclose
+
+array_expr_list <-
+	 ( array_expr ) o ( array_expr_tail )*
+
+array_expr_tail <-
+	 sym_comma o ( array_expr )
+
+expression_unary_collate <-
+	 ( expression_recur ) o ( expression_collate ) / expression_recur
+
+expression_pg_cast <-
+	 ( expression_unary_collate ) o "::" o ( type_definition ) / expression_unary_collate
+
+expression_unary <-
+	 ( expression_unary_op ) o ( expression_pg_cast / expression ) / expression_pg_cast
+
+expression_unary_op <-
+	 sym_tilde / sym_minus / sym_plus / ( expression_is_not ! EXISTS )
+
+expression_collate <-
+	 ( column_collate )
+
+expression_concat <-
+	 ( expression_unary ) ( o expression_concat_op o expression_unary )*
+
+expression_concat_op <-
+	 binary_concat
+
+expression_multiply <-
+	 ( expression_concat ) ( o expression_multiply_op o expression_concat )*
+
+expression_multiply_op <-
+	 binary_multiply / binary_divide / binary_mod
+
+expression_add <-
+	 ( expression_multiply ) ( o expression_add_op o expression_multiply )*
+
+expression_add_op <-
+	 binary_plus / binary_minus
+
+expression_shift <-
+	 ( expression_add ) ( o expression_shift_op o expression_add )*
+
+expression_shift_op <-
+	 binary_left / binary_right / binary_custom / binary_and / ( binary_or ! binary_or )
+
+expression_compare <-
+	 ( expression_shift ) ( o expression_compare_op o expression_shift )*
+
+expression_compare_op <-
+	 binary_lte / binary_gte / ( binary_lt ! expression_shift_op ) / ( binary_gt ! expression_shift_op )
+
+expression_equiv <-
+	 ( expression_compare ) ( expression_equiv_tails )*
+
+expression_equiv_tails <-
+	 o ( expression_equiv_null_op ) / o expression_equiv_op o expression_compare
+
+expression_equiv_null_op <-
+	 "NOT "i o "NULL"i / ISNULL / NOTNULL
+
+expression_equiv_op <-
+	 binary_lang / binary_notequal_a / binary_notequal_b / binary_equal
+
+expression_cast <-
+	 ( CAST ) o sym_popen ( expression ) o ( type_alias ) o sym_pclose
+
+type_alias <-
+	 AS o ( type_definition )
+
+expression_case <-
+	 ( CASE ) o ( case_expression )? o ( expression_case_when )+ o ( expression_case_else )? o END o
+
+case_expression <-
+	 ! WHEN ( expression )
+
+expression_case_when <-
+	 ( WHEN ) o ( expression ) o THEN o ( expression ) o
+
+expression_case_else <-
+	 ( ELSE ) o ( expression ) o
+
+expression_postfix <-
+	 ( expression_equiv ) o ( expression_postfix_tail ) / expression_equiv
+
+expression_postfix_tail <-
+	 expression_in / expression_distinct / expression_between / expression_like
+
+expression_distinct <-
+	 IS o ( expression_is_not )? ( DISTINCT ) o FROM o ( expression_postfix )
+
+expression_like <-
+	 ( expression_is_not )? ( LIKE / ILIKE / GLOB / REGEXP / MATCH ) o ( expression_postfix ) o ( expression_escape )?
+
+expression_escape <-
+	 ( ESCAPE ) o ( expression_postfix ) o
+
+expression_between <-
+	 ( expression_is_not )? ( BETWEEN ) o ( expression_between_tail )
+
+expression_between_tail <-
+	 ( expression_postfix ) ( o AND o expression_postfix )
+
+expression_is_not <-
+	 ( NOT ) o
+
+expression_in <-
+	 ( expression_is_not )? ( IN ) o ( expression_in_target )
+
+expression_in_target <-
+	 expression_list_or_select / id_table
+
+expression_list_or_select <-
+	 sym_popen ( stmt_select_full / expression_list ) o sym_pclose
+
+expression_and <-
+	 ( expression_postfix ) ( o expression_and_op o expression_postfix )*
+
+expression_and_op <-
+	 AND
+
+expression <-
+	 ( expression_and ) ( o expression_or_op o expression_and )*
+
+expression_or_op <-
+	 OR
+
+expression_list <-
+	 ( expression_list_loop )? o
+
+expression_list_loop <-
+	 ( expression ) o ( expression_list_rest )*
+
+expression_list_rest <-
+	 sym_comma ( expression ) o
+
+function_call <-
+	 ( id_function ) o sym_popen ( function_call_args )? o sym_pclose o ( filter_clause )? o ( over_clause )?
+
+filter_clause <-
+	 "FILTER"i o sym_popen o WHERE o ( expression ) o sym_pclose
+
+function_call_args <-
+	 ( select_node_star ) / ( args_list_distinct )? ( expression_list )
+
+args_list_distinct <-
+	 ( DISTINCT / ALL ) o
+
+over_clause <-
+	 OVER o ( window_specification / window_name )
+
+window_name <-
+	 ( id_name )
+
+window_specification <-
+	 sym_popen o ( source_window_name )? o ( partition_clause )? o ( stmt_core_order )? o sym_pclose
+
+source_window_name <-
+	 ( window_name ) ! ( o BY )
+
+partition_clause <-
+	 PARTITION o BY o ( expression_list )
+
+error_message <-
+	 ( literal_string )
+
+stmt <-
+	 ( stmt_modifier )? ( stmt_nodes ) o
+
+stmt_modifier <-
+	 ( EXPLAIN ) o ( modifier_query )?
+
+modifier_query <-
+	 ( QUERY ) o ( PLAN ) o
+
+stmt_nodes <-
+	 stmt_crud / stmt_create / stmt_drop / stmt_begin / stmt_commit / stmt_alter / stmt_rollback / stmt_savepoint / stmt_release / stmt_set / stmt_show / stmt_sqlite
+
+stmt_commit <-
+	 ( COMMIT / END ) o ( commit_transaction )?
+
+stmt_begin <-
+	 ( BEGIN ) o ( stmt_begin_modifier )? ( commit_transaction )? ( savepoint_name )?
+
+commit_transaction <-
+	 ( TRANSACTION ) o
+
+stmt_begin_modifier <-
+	 ( DEFERRED / IMMEDIATE / EXCLUSIVE ) o
+
+stmt_rollback <-
+	 ( ROLLBACK ) o ( commit_transaction )? ( rollback_savepoint )?
+
+rollback_savepoint <-
+	 ( TO o )? ( savepoint_alt )? ( savepoint_name )
+
+savepoint_name <-
+	 ( id_savepoint ) o
+
+savepoint_alt <-
+	 ( SAVEPOINT ) o
+
+stmt_savepoint <-
+	 ( savepoint_alt ) ( savepoint_name )
+
+stmt_release <-
+	 ( RELEASE ) o ( savepoint_alt )? ( savepoint_name )
+
+stmt_alter <-
+	 ( alter_start ) ( id_table ) o ( alter_action ) o
+
+alter_start <-
+	 ( ALTER ) o ( TABLE ) o
+
+alter_action <-
+	 alter_action_rename / alter_action_add
+
+alter_action_rename <-
+	 ( RENAME ) o TO o ( id_table )
+
+alter_action_add <-
+	 ( ADD ) o ( action_add_modifier )? ( source_def_column )
+
+action_add_modifier <-
+	 ( COLUMN ) o
+
+stmt_crud <-
+	 ( stmt_core_with ) ( stmt_crud_types )
+
+stmt_core_with <-
+	 ( clause_with )? o
+
+clause_with <-
+	 ( WITH ) o ( clause_with_recursive )? ( clause_with_tables )
+
+clause_with_recursive <-
+	 ( RECURSIVE ) o
+
+clause_with_tables <-
+	 ( expression_cte ) o ( clause_with_loop )*
+
+clause_with_loop <-
+	 sym_comma ( expression_cte ) o
+
+expression_cte <-
+	 ( id_cte ) ( select_alias )
+
+select_alias <-
+	 AS o ( select_wrapped )
+
+select_wrapped <-
+	 sym_popen ( stmt_select_full ) o sym_pclose
+
+stmt_select_full <-
+	 ( stmt_core_with ) ( stmt_select )
+
+stmt_set <-
+	 SET o ( set_local_session )? o ( id_variable ) o ( set_rest )
+
+set_local_session <-
+	 "LOCAL"i / "SESSION"i
+
+set_rest <-
+	 FROM o "CURRENT"i / ( TO / sym_equal ) o DEFAULT / ( TO / sym_equal ) o ( var_list )
+
+var_list <-
+	 ( var_value ) ( var_list_tail )*
+
+var_list_tail <-
+	 o sym_comma o ( var_value )
+
+var_value <-
+	 pragma_value / bind_parameter
+
+stmt_show <-
+	 SHOW o ( show_target )
+
+show_target <-
+	 "TIME"i o "ZONE"i / "TRANSACTION"i o "ISOLATION"i o "LEVEL"i / "SESSION"i o "AUTHORIZATION"i / "ALL"i / id_variable
+
+stmt_sqlite <-
+	 stmt_attach / stmt_detach / stmt_vacuum / stmt_analyze / stmt_reindex / stmt_pragma
+
+stmt_attach <-
+	 ( ATTACH ) o ( DATABASE o )? ( expression ) o AS o ( attach_arg ) o
+
+attach_arg <-
+	 id_database / literal_null / bind_parameter
+
+stmt_detach <-
+	 ( DETACH ) o ( DATABASE o )? ( attach_arg ) o
+
+stmt_vacuum <-
+	 ( VACUUM ) o ( vacuum_target )?
+
+vacuum_target <-
+	 ( id_database ) o
+
+stmt_analyze <-
+	 ( ANALYZE ) o ( analyze_arg )?
+
+analyze_arg <-
+	 ( id_table / id_index / id_database ) o
+
+stmt_reindex <-
+	 ( REINDEX ) o ( reindex_arg )? o
+
+reindex_arg <-
+	 ( id_table / id_index / id_collation ) o
+
+stmt_pragma <-
+	 ( PRAGMA ) o ( id_pragma ) o ( pragma_expression )?
+
+pragma_expression <-
+	 sym_popen ( pragma_value ) o sym_pclose / sym_equal ( pragma_value ) o
+
+pragma_value <-
+	 pragma_value_bool / pragma_value_literal / pragma_value_name
+
+pragma_value_literal <-
+	 literal_number_signed / literal_string / literal_text
+
+pragma_value_bool <-
+	 ( pragma_bool_id )
+
+pragma_bool_id <-
+	 ( name_char )+
+
+pragma_value_name <-
+	 ( pragma_bool_id )
+
+stmt_crud_types <-
+	 stmt_select / stmt_insert / stmt_update / stmt_delete
+
+stmt_select <-
+	 ( select_loop ) o ( stmt_core_order )? o ( stmt_core_limit ) o ( stmt_core_for_locking )? / ( select_loop ) o ( stmt_core_order )? o ( stmt_core_for_locking )? o ( stmt_core_limit )?
+
+stmt_core_for_locking <-
+	 for_locking_items / FOR o READ o ONLY o
+
+for_locking_items <-
+	 ( for_locking_item ) o ( for_locking_loop )*
+
+for_locking_loop <-
+	 ( for_locking_item ) o
+
+for_locking_item <-
+	 FOR o ( for_locking_strength ) o ( locked_rels_list )? o ( nowait_or_skip )?
+
+for_locking_strength <-
+	 UPDATE / NO o KEY o UPDATE / SHARE / KEY o SHARE
+
+locked_rels_list <-
+	 OF o ( id_table_list )
+
+id_table_list <-
+	 ( id_table ) o ( id_table_loop )*
+
+id_table_loop <-
+	 sym_comma o ( id_table )
+
+nowait_or_skip <-
+	 ( NOWAIT / SKIP o LOCKED )
+
+window_clause <-
+	 WINDOW o ( window_definition_list ) o
+
+window_definition_list <-
+	 ( window_definition ) o ( window_definition_loop )*
+
+window_definition_loop <-
+	 sym_comma ( window_definition ) o
+
+window_definition <-
+	 ( window_name ) o AS o ( window_specification )
+
+stmt_core_order <-
+	 ORDER o BY o ( stmt_core_order_list )
+
+stmt_core_limit <-
+	 ( LIMIT ) o ( expression ) o ( stmt_core_limit_offset )? / OFFSET o ( expression )
+
+stmt_core_limit_offset <-
+	 ( limit_offset_variant ) ( expression )
+
+limit_offset_variant <-
+	 limit_offset_variant_name / sym_comma
+
+limit_offset_variant_name <-
+	 ( OFFSET ) o
+
+select_loop <-
+	 ( select_parts ) o ( select_loop_union )*
+
+select_loop_union <-
+	 ( operator_compound ) o ( select_parts ) o
+
+select_parts <-
+	 select_parts_core / select_parts_values
+
+select_parts_core <-
+	 ( select_core_select ) ( select_core_from )? ( stmt_core_where )? ( select_core_group )? o ( window_clause )?
+
+select_core_select <-
+	 SELECT o ( select_modifier )? o ( select_target )
+
+select_modifier <-
+	 select_modifier_distinct / select_modifier_all
+
+select_modifier_distinct <-
+	 ( DISTINCT ) o
+
+select_modifier_all <-
+	 ( ALL ) o
+
+select_target <-
+	 ( select_node ) o ( select_target_loop )*
+
+select_target_loop <-
+	 sym_comma ( select_node ) o
+
+select_core_from <-
+	 ( FROM ) o ( select_source ) o
+
+stmt_core_where <-
+	 ( WHERE ) o ( expression ) o
+
+select_core_group <-
+	 ( GROUP ) o BY o ( expression_list ) o ( select_core_having )?
+
+select_core_having <-
+	 ( HAVING ) o ( expression ) o
+
+select_node <-
+	 select_node_star / select_node_aliased
+
+select_node_star <-
+	 ( select_node_star_qualified )? ( select_star )
+
+select_node_star_qualified <-
+	 ( name ) ( sym_dot )
+
+select_node_aliased <-
+	 ( expression ) o ( alias )?
+
+select_source <-
+	 ( table_or_sub ) o ( source_loop_tail )*
+
+source_loop_tail <-
+	 ( select_cross_clause / select_join_clause ) ( join_condition )?
+
+select_cross_clause <-
+	 sym_comma ( table_or_sub ) o
+
+select_join_clause <-
+	 ( join_operator ) o ( table_or_sub ) o
+
+table_or_sub <-
+	 ( lateral )? o ( table_or_sub_sub / bind_parameter / table_or_sub_func / table_qualified / table_or_sub_select )
+
+table_or_sub_func <-
+	 ( id_function ) o ( expression_list_wrapped ) o ( func_alias_clause )?
+
+func_alias_clause <-
+	 AS? o ( name ) o sym_popen ( table_func_element_list ) o sym_pclose / AS o sym_popen o ( table_func_element_list ) o sym_pclose / alias
+
+table_func_element_list <-
+	 ( table_func_element ) o ( table_func_element_tail )*
+
+table_func_element <-
+	 ( source_def_name ) o ( type_definition ) o ( column_collate )?
+
+table_func_element_tail <-
+	 sym_comma o ( table_func_element ) o
+
+lateral <-
+	 LATERAL
+
+table_qualified <-
+	 ( table_qualified_id ) o ( table_or_sub_index_node )?
+
+table_qualified_id <-
+	 ( id_table ) o ( alias )?
+
+table_or_sub_index_node <-
+	 index_node_indexed / index_node_none
+
+index_node_indexed <-
+	 ( INDEXED ) o BY o ( id_index ) o
+
+index_node_none <-
+	 ( expression_is_not ) ( INDEXED ) o
+
+table_or_sub_sub <-
+	 sym_popen ( select_source ) o sym_pclose ( alias )?
+
+table_or_sub_select <-
+	 ( select_wrapped ) ( alias )?
+
+alias <-
+	 ( AS ( ! ( name_char / reserved_critical_list ) o ) )? ( name ) o ( loop_columns )? o
+
+join_operator <-
+	 ( join_operator_natural )? o ( join_operator_types )? ( JOIN )
+
+join_operator_natural <-
+	 ( NATURAL ) o
+
+join_operator_types <-
+	 operator_types_hand / operator_types_misc
+
+operator_types_hand <-
+	 ( LEFT / RIGHT / FULL ) o ( types_hand_outer )?
+
+types_hand_outer <-
+	 ( OUTER ) o
+
+operator_types_misc <-
+	 ( INNER / CROSS ) o
+
+join_condition <-
+	 ( join_condition_on / join_condition_using ) o
+
+join_condition_on <-
+	 ( ON ) o ( expression )
+
+join_condition_using <-
+	 ( USING ) o ( loop_columns )
+
+select_parts_values <-
+	 ( VALUES ) o ( insert_values_list )
+
+stmt_core_order_list <-
+	 ( stmt_core_order_list_item ) o ( stmt_core_order_list_loop )*
+
+stmt_core_order_list_loop <-
+	 sym_comma ( stmt_core_order_list_item ) o
+
+stmt_core_order_list_item <-
+	 ( expression ) o ( primary_column_dir )? o ( nulls_order )?
+
+nulls_order <-
+	 NULLS o ( FIRST / LAST )
+
+select_star <-
+	 sym_star
+
+stmt_fallback_types <-
+	 REPLACE / ROLLBACK / ABORT / FAIL / IGNORE
+
+stmt_insert <-
+	 ( insert_keyword ) o ( insert_target ) o ( opt_on_conflict )? o ( returning_clause )?
+
+returning_clause <-
+	 RETURNING o ( select_target )
+
+insert_keyword <-
+	 insert_keyword_ins / insert_keyword_repl
+
+insert_keyword_ins <-
+	 ( INSERT ) o ( insert_keyword_mod )?
+
+insert_keyword_repl <-
+	 ( REPLACE ) o
+
+insert_keyword_mod <-
+	 ( OR ) o ( stmt_fallback_types )
+
+insert_target <-
+	 ( insert_into ) ( insert_results )
+
+insert_into <-
+	 ( insert_into_start ) ( id_cte )
+
+insert_into_start <-
+	 ( INTO ) o
+
+insert_results <-
+	 ( insert_value / stmt_select_full / insert_default ) o
+
+opt_on_conflict <-
+	 primary_conflict_start o ( opt_conf_expr )? o "DO"i o ( opt_on_conflict_action )
+
+opt_on_conflict_action <-
+	 ( update_start ) o ( update_set ) o ( stmt_core_where )? / ( "NOTHING"i )
+
+opt_conf_expr <-
+	 ( primary_columns_index ) o ( stmt_core_where )? / ON o CONSTRAINT o ( id_name )
+
+loop_columns <-
+	 sym_popen ( loop_name ) o ( loop_column_tail )* sym_pclose
+
+loop_column_tail <-
+	 sym_comma ( loop_name ) o
+
+loop_name <-
+	 ( id_name )
+
+insert_value <-
+	 ( insert_value_start ) ( insert_values_list )
+
+insert_value_start <-
+	 ( VALUES ) o
+
+insert_values_list <-
+	 ( expression_list_wrapped ) o ( insert_values_loop )*
+
+insert_values_loop <-
+	 sym_comma ( expression_list_wrapped ) o
+
+expression_list_wrapped <-
+	 sym_popen ( expression_list ) o sym_pclose
+
+insert_default <-
+	 ( DEFAULT ) o ( VALUES )
+
+operator_compound <-
+	 ( compound_union / INTERSECT / EXCEPT )
+
+compound_union <-
+	 ( UNION ) o ( compound_union_all )?
+
+compound_union_all <-
+	 ( ALL ) o
+
+stmt_update <-
+	 ( update_start ) ( update_fallback )? ( table_qualified ) o ( update_set ) ( stmt_core_where )? ( stmt_core_order )? o ( stmt_core_limit )? o ( returning_clause )?
+
+update_start <-
+	 ( UPDATE ) o
+
+update_fallback <-
+	 OR o ( stmt_fallback_types ) o
+
+update_set <-
+	 SET o ( update_columns ) o
+
+update_columns <-
+	 ( update_column ) ( update_columns_tail )*
+
+update_columns_tail <-
+	 o sym_comma ( update_column )
+
+update_column <-
+	 ( id_column ) o sym_equal ( update_expression ) o
+
+update_expression <-
+	 expression / DEFAULT
+
+stmt_delete <-
+	 ( delete_start ) ( table_qualified ) o ( stmt_core_where )? ( stmt_core_order )? ( stmt_core_limit )? o ( returning_clause )?
+
+delete_start <-
+	 ( DELETE ) o FROM o
+
+stmt_create <-
+	 create_table_only / create_index_only / create_trigger_only / create_view_only / create_virtual_only
+
+create_start <-
+	 ( CREATE ) o
+
+create_table_only <-
+	 ! ( create_start ( INDEX / TRIGGER / VIEW / VIRTUAL ) ) ( create_table )
+
+create_index_only <-
+	 ! ( create_start ( TABLE / TRIGGER / VIEW / VIRTUAL ) ) ( create_index )
+
+create_trigger_only <-
+	 ! ( create_start ( TABLE / INDEX / VIEW / VIRTUAL ) ) ( create_trigger )
+
+create_view_only <-
+	 ! ( create_start ( TABLE / INDEX / TRIGGER / VIRTUAL ) ) ( create_view )
+
+create_virtual_only <-
+	 ! ( create_start ( TABLE / INDEX / TRIGGER / VIEW ) ) ( create_virtual )
+
+create_table <-
+	 ( create_table_start ) ( create_core_ine )? ( id_table ) o ( create_table_source )
+
+create_table_start <-
+	 ( create_start ) ( create_core_tmp )? ( TABLE ) o
+
+create_core_tmp <-
+	 ( TEMPORARY / TEMP ) o
+
+create_core_ine <-
+	 ( IF ) o ( expression_is_not ) ( EXISTS ) o
+
+create_table_source <-
+	 table_source_def / table_source_select
+
+table_source_def <-
+	 sym_popen ( source_def_loop ) ( source_tbl_loop )* sym_pclose ( source_def_rowid )?
+
+source_def_rowid <-
+	 ( WITHOUT ) o ( ROWID ) o
+
+source_def_loop <-
+	 ( source_def_column ) o ( source_def_tail )*
+
+source_def_tail <-
+	 sym_comma ( source_def_column ) o
+
+source_tbl_loop <-
+	 sym_comma? ( table_constraint )
+
+source_def_column <-
+	 ( source_def_name ) o ( column_type )? ( column_constraints )?
+
+source_def_name <-
+	 ( name ) ( o ) / ! ( column_type / column_constraint / table_constraint ) o ( name_reserved )
+
+column_type <-
+	 ( type_definition ) o
+
+column_constraints <-
+	 ( column_constraint ) ( column_constraint_tail )* o
+
+column_constraint_tail <-
+	 o ( column_constraint )
+
+column_constraint <-
+	 ( constraint_name )? ( column_constraint_types ) ( constraint_name )?
+
+constraint_name <-
+	 ( constraint_name_loop )+
+
+constraint_name_loop <-
+	 CONSTRAINT o ( name ) o
+
+column_constraint_types <-
+	 column_constraint_primary / column_constraint_null / column_constraint_check / column_constraint_default / column_constraint_collate / column_constraint_foreign
+
+column_constraint_foreign <-
+	 ( foreign_clause )
+
+column_constraint_primary <-
+	 ( col_primary_start ) ( primary_column_dir )? ( primary_conflict )? ( col_primary_auto )?
+
+col_primary_start <-
+	 ( PRIMARY / PRAGMA ) o ( KEY ) o
+
+col_primary_auto <-
+	 ( AUTOINCREMENT ) o
+
+column_constraint_null <-
+	 ( constraint_null_types ) ( primary_conflict )? o
+
+constraint_null_types <-
+	 ( constraint_null_value / UNIQUE ) o
+
+constraint_null_value <-
+	 ( expression_is_not )? ( NULL )
+
+column_constraint_check <-
+	 constraint_check
+
+column_constraint_default <-
+	 ( DEFAULT ) o ( column_default_values ) o
+
+column_default_values <-
+	 expression_wrapped / literal_number_signed / literal_value / literal_text
+
+column_constraint_collate <-
+	 ( column_collate )
+
+table_constraint <-
+	 ( constraint_name )? ( table_constraint_types ) o ( constraint_name )?
+
+table_constraint_types <-
+	 table_constraint_foreign / table_constraint_primary / table_constraint_check
+
+table_constraint_check <-
+	 ( constraint_check )
+
+table_constraint_primary <-
+	 ( primary_start ) o ( primary_columns_table ) ( primary_conflict )?
+
+primary_start <-
+	 ( primary_start_normal / primary_start_unique ) o
+
+primary_start_normal <-
+	 ( PRIMARY ) o ( KEY )
+
+primary_start_unique <-
+	 ( UNIQUE )
+
+primary_columns <-
+	 sym_popen ( primary_column ) o ( primary_column_tail )* sym_pclose
+
+primary_columns_index <-
+	 ( primary_columns )
+
+primary_columns_table <-
+	 ( primary_columns )
+
+primary_column_tail <-
+	 sym_comma ( primary_column ) o
+
+primary_column <-
+	 ( primary_column_types ) o ( primary_column_dir )? ( col_primary_auto )?
+
+primary_column_types <-
+	 ( loop_name ) ( o ( sym_semi / sym_pclose / primary_column_dir ) ) / expression
+
+column_collate <-
+	 ( column_collate_loop )+
+
+column_collate_loop <-
+	 COLLATE o ( id_collation ) o
+
+primary_column_dir <-
+	 ( ASC / DESC ) o
+
+primary_conflict <-
+	 ( primary_conflict_start ) ( stmt_fallback_types ) o
+
+primary_conflict_start <-
+	 ( ON ) o ( CONFLICT ) o
+
+constraint_check <-
+	 ( CHECK ) o ( expression_wrapped )
+
+table_constraint_foreign <-
+	 ( foreign_start ) ( loop_columns ) ( foreign_clause ) o
+
+foreign_start <-
+	 ( FOREIGN ) o ( KEY ) o
+
+foreign_clause <-
+	 ( foreign_references ) ( foreign_actions )? ( foreign_deferrable )?
+
+foreign_references <-
+	 ( REFERENCES ) o ( id_cte ) o
+
+foreign_actions <-
+	 ( foreign_action ) o ( foreign_actions_tail )*
+
+foreign_actions_tail <-
+	 ( foreign_action ) o
+
+foreign_action <-
+	 foreign_action_on / foreign_action_match
+
+foreign_action_on <-
+	 ( ON ) o ( DELETE / UPDATE ) o ( action_on_action )
+
+action_on_action <-
+	 on_action_set / on_action_cascade / on_action_none
+
+on_action_set <-
+	 ( SET ) o ( NULL / DEFAULT ) o
+
+on_action_cascade <-
+	 ( CASCADE / RESTRICT ) o
+
+on_action_none <-
+	 ( NO ) o ( ACTION ) o
+
+foreign_action_match <-
+	 ( MATCH ) o ( name ) o
+
+foreign_deferrable <-
+	 ( expression_is_not )? ( DEFERRABLE ) o ( deferrable_initially )?
+
+deferrable_initially <-
+	 ( INITIALLY ) o ( DEFERRED / IMMEDIATE ) o
+
+table_source_select <-
+	 ( create_as_select )
+
+create_index <-
+	 ( create_index_start ) ( create_core_ine )? ( id_index ) o ( index_on ) ( stmt_core_where )?
+
+create_index_start <-
+	 ( create_start ) ( index_unique )? ( INDEX ) o
+
+index_unique <-
+	 ( UNIQUE ) o
+
+index_on <-
+	 ( ON ) o ( id_table ) o ( primary_columns_index )
+
+create_trigger <-
+	 ( create_trigger_start ) ( create_core_ine )? ( id_trigger )? o ( trigger_conditions ) ( ON ) o ( id_table ) o ( trigger_foreach )? ( trigger_when )? ( trigger_action )
+
+create_trigger_start <-
+	 ( create_start ) ( create_core_tmp )? ( TRIGGER ) o
+
+trigger_conditions <-
+	 ( trigger_apply_mods )? ( trigger_do )
+
+trigger_apply_mods <-
+	 ( BEFORE / AFTER / trigger_apply_instead ) o
+
+trigger_apply_instead <-
+	 ( INSTEAD ) o ( OF )
+
+trigger_do <-
+	 trigger_do_on / trigger_do_update
+
+trigger_do_on <-
+	 ( DELETE / INSERT ) o
+
+trigger_do_update <-
+	 ( UPDATE ) o ( do_update_of )?
+
+do_update_of <-
+	 ( OF ) o ( do_update_columns )
+
+do_update_columns <-
+	 ( loop_name ) o ( loop_column_tail )*
+
+trigger_foreach <-
+	 ( FOR ) o ( EACH ) o ( ROW / "STATEMENT"i ) o
+
+trigger_when <-
+	 ( WHEN ) o ( expression ) o
+
+trigger_action <-
+	 ( BEGIN ) o ( action_loop ) o ( END ) o
+
+action_loop <-
+	 ( action_loop_stmt )+
+
+action_loop_stmt <-
+	 ( stmt_crud ) o semi_required
+
+create_view <-
+	 ( create_view_start ) ( create_core_ine )? ( id_view_expression ) o ( create_as_select )
+
+id_view_expression <-
+	 ( id_view ) o ( loop_columns ) / id_view
+
+create_view_start <-
+	 ( create_start ) ( create_core_tmp )? ( VIEW ) o
+
+create_as_select <-
+	 ( AS ) o ( stmt_select ) o
+
+create_virtual <-
+	 ( create_virtual_start ) ( create_core_ine )? ( id_table ) o ( USING ) o ( virtual_module )
+
+create_virtual_start <-
+	 ( create_start ) ( VIRTUAL ) o ( TABLE ) o
+
+virtual_module <-
+	 ( name_unquoted ) o ( virtual_args )?
+
+virtual_args <-
+	 sym_popen o ( virtual_args_loop )? o sym_pclose o
+
+virtual_args_loop <-
+	 ( virtual_arg_types ) ( virtual_args_tail )*
+
+virtual_args_tail <-
+	 o sym_comma o ( virtual_arg_types )?
+
+virtual_arg_types <-
+	 ! ( name o ( type_definition / column_constraint ) ) ( expression ) o / ( virtual_column_name ) ( ! ( name_char ) o ) ( column_type )? ( column_constraints )?
+
+virtual_column_name <-
+	 name / name_reserved
+
+stmt_drop <-
+	 ( drop_start ) ( id_table ) o
+
+drop_start <-
+	 ( DROP ) o ( drop_types ) ( drop_ie )?
+
+drop_types <-
+	 ( TABLE / INDEX / TRIGGER / VIEW ) o
+
+drop_ie <-
+	 ( IF ) o ( EXISTS ) o
+
+binary_concat <-
+	 sym_pipe sym_pipe
+
+binary_plus <-
+	 sym_plus
+
+binary_minus <-
+	 sym_minus
+
+binary_multiply <-
+	 sym_star
+
+binary_divide <-
+	 sym_fslash
+
+binary_mod <-
+	 sym_mod
+
+binary_left <-
+	 sym_lt sym_lt
+
+binary_right <-
+	 sym_gt sym_gt
+
+binary_and <-
+	 sym_amp
+
+binary_or <-
+	 sym_pipe
+
+binary_lt <-
+	 sym_lt
+
+binary_gt <-
+	 sym_gt
+
+binary_lte <-
+	 sym_lt sym_equal
+
+binary_gte <-
+	 sym_gt sym_equal
+
+binary_equal <-
+	 sym_equal ( sym_equal )?
+
+binary_notequal_a <-
+	 sym_excl sym_equal
+
+binary_notequal_b <-
+	 sym_lt sym_gt
+
+binary_custom <-
+	 ( sym_op+ )
+
+binary_lang <-
+	 binary_lang_isnt
+
+binary_lang_isnt <-
+	 ( IS ) o ( expression_is_not )?
+
+id_name <-
+	 name / name_reserved
+
+id_database <-
+	 ( id_name )
+
+id_function <-
+	 ( id_table_qualified )? ( id_name )
+
+id_table <-
+	 ( id_table_qualified )? ( id_name )
+
+id_table_qualified <-
+	 ( id_name ) ( sym_dot )
+
+id_column <-
+	 ( column_qualifiers / id_column_qualified / column_unqualified ) ( id_name ) o ( indirection )?
+
+indirection <-
+	 ( indirection_loop )
+
+indirection_loop <-
+	 ( indirection_el ) o ( indirection_el )*
+
+indirection_el <-
+	 indirection_attr / indirection_slice / indirection_index
+
+indirection_attr <-
+	 sym_dot o ( name ) / sym_dot o ( sym_star )
+
+indirection_slice <-
+	 sym_bopen o ( slice_lbound )? sym_colon o ( slice_ubound )? o sym_bclose / sym_bopen o sym_colon o ( slice_ubound )? o sym_bclose
+
+indirection_index <-
+	 sym_bopen o ( expression ) o sym_bclose
+
+slice_lbound <-
+	 ( expression )
+
+slice_ubound <-
+	 ( expression )
+
+column_unqualified <-
+	 o
+
+column_qualifiers <-
+	 ( id_table_qualified ) ( id_column_qualified )
+
+id_column_qualified <-
+	 ( id_name ) ( sym_dot )
+
+id_collation <-
+	 ( id_name )
+
+id_savepoint <-
+	 ( id_name )
+
+id_index <-
+	 ( id_table_qualified )? ( id_name )
+
+id_trigger <-
+	 ( id_table_qualified )? ( id_name )
+
+id_view <-
+	 ( id_table_qualified )? ( id_name )
+
+id_pragma <-
+	 ( id_table_qualified )? ( id_name )
+
+id_variable <-
+	 ( id_table_qualified )? ( id_name )
+
+id_cte <-
+	 ( id_table_expression / id_table ) o
+
+id_table_expression <-
+	 ( id_table ) o ( loop_columns )
+
+#id_constraint_table <-
+#	 ( id_name )
+
+#id_constraint_column <-
+#	 ( id_name )
+
+datatype_types <-
+	 ( datatype_text ) ! name_char / ( datatype_real ) ! name_char / ( datatype_numeric ) ! name_char / ( datatype_integer ) ! name_char / ( datatype_none ) ! name_char
+
+datatype_text <-
+	 ( ( ( "N"i )? ( "VAR"i )? "CHAR"i ) / ( ( "TINY"i / "MEDIUM"i / "LONG"i )? "TEXT"i ) / "CLOB"i )
+
+datatype_real <-
+	 ( datatype_real_double / "FLOAT"i / "REAL"i )
+
+datatype_real_double <-
+	 ( "DOUBLE"i ) ( [\t ]+ "PRECISION"i )?
+
+datatype_numeric <-
+	 ( "NUMERIC"i / "DECIMAL"i / "BOOLEAN"i / ( "DATE"i ( "TIME"i )? ) / ( "TIME"i ( "STAMP"i )? ) / "STRING"i )
+
+datatype_integer <-
+	 ( ( "INT"i ( "2" / "4" / "8" / "EGER"i ) ) / ( ( "BIG"i / "MEDIUM"i / "SMALL"i / "TINY"i )? "INT"i ) / datatype_integer_fp )
+
+datatype_integer_fp <-
+	 ( "FLOATING"i ) ( [\t ]+ "POINT"i )
+
+datatype_none <-
+	 ( "BLOB"i )
+
+name_char <-
+	 [a-zA-Z0-9$_]
+
+unicode_char <-
+	 ( "\\u" ) ( [a-fA-F0-9]+ )
+
+name <-
+	 <name_quoted / name_unquoted>
+
+name_quoted <-
+	 name_bracketed / name_backticked / name_dblquoted / name_sglquoted
+
+name_unquoted <-
+	 ! ( reserved_words / number_digit ) ( unicode_char / name_char )+
+
+name_reserved <-
+	 ! ( reserved_critical_list / number_digit ) ( unicode_char / name_char )+
+
+name_bracketed <-
+	 sym_bopen o ( ! bracket_terminator . )* bracket_terminator
+
+bracket_terminator <-
+	 [ \t]* sym_bclose o
+
+name_dblquoted <-
+	 '"' ( '""' / [^\"] )* '"'
+
+name_sglquoted <-
+	 "'" ( "''" / [^\'] )* "'"
+
+name_backticked <-
+	 '`' ( '``' / ! '`' . )* '`'
+
+sym_bopen <-
+	 ( "[" ) o
+
+sym_bclose <-
+	 ( "]" ) o
+
+sym_popen <-
+	 ( "(" ) o
+
+sym_pclose <-
+	 ( ")" ) o
+
+sym_comma <-
+	 ( "," ) o
+
+sym_dot <-
+	 ( "." ) o
+
+sym_star <-
+	 ( "*" ) o
+
+sym_quest <-
+	 ( "?" ) o
+
+sym_sglquote <-
+	 ( "'" ) o
+
+#sym_dblquote <-
+#	 ( '"' ) o
+
+#sym_backtick <-
+#	 ( "`" ) o
+
+sym_tilde <-
+	 ( "~" ) o
+
+sym_plus <-
+	 ( "+" ) o
+
+sym_minus <-
+	 ( "-" ) o
+
+sym_equal <-
+	 ( "=" ) o
+
+sym_amp <-
+	 ( "&" ) o
+
+sym_pipe <-
+	 ( "|" ) o
+
+sym_mod <-
+	 ( "%" ) o
+
+sym_lt <-
+	 ( "<" ) o
+
+sym_gt <-
+	 ( ">" ) o
+
+sym_excl <-
+	 ( "!" ) o
+
+sym_semi <-
+	 ( ";" ) o
+
+sym_colon <-
+	 ( ":" ) o
+
+sym_fslash <-
+	 ( "/" ) o
+
+#sym_bslash <-
+#	 ( "\\" ) o
+
+sym_op <-
+	 [-+*/<>=~!@#%^&|`]
+
+ABORT <-
+	 "ABORT"i ! name_char
+
+ACTION <-
+	 "ACTION"i ! name_char
+
+ADD <-
+	 "ADD"i ! name_char
+
+AFTER <-
+	 "AFTER"i ! name_char
+
+ALL <-
+	 "ALL"i ! name_char
+
+ALTER <-
+	 "ALTER"i ! name_char
+
+ANALYZE <-
+	 "ANALYZE"i ! name_char
+
+AND <-
+	 "AND"i ! name_char
+
+ARRAY <-
+	 "ARRAY"i ! name_char
+
+AS <-
+	 "AS"i ! name_char
+
+ASC <-
+	 "ASC"i ! name_char
+
+ATTACH <-
+	 "ATTACH"i ! name_char
+
+AUTOINCREMENT <-
+	 "AUTOINCREMENT"i ! name_char
+
+BEFORE <-
+	 "BEFORE"i ! name_char
+
+BEGIN <-
+	 "BEGIN"i ! name_char
+
+BETWEEN <-
+	 "BETWEEN"i ! name_char
+
+BY <-
+	 "BY"i ! name_char
+
+CASCADE <-
+	 "CASCADE"i ! name_char
+
+CASE <-
+	 "CASE"i ! name_char
+
+CAST <-
+	 "CAST"i ! name_char
+
+CHECK <-
+	 "CHECK"i ! name_char
+
+COLLATE <-
+	 "COLLATE"i ! name_char
+
+COLUMN <-
+	 "COLUMN"i ! name_char
+
+COMMIT <-
+	 "COMMIT"i ! name_char
+
+CONFLICT <-
+	 "CONFLICT"i ! name_char
+
+CONSTRAINT <-
+	 "CONSTRAINT"i ! name_char
+
+CREATE <-
+	 "CREATE"i ! name_char
+
+CROSS <-
+	 "CROSS"i ! name_char
+
+CURRENT_DATE <-
+	 "CURRENT_DATE"i ! name_char
+
+CURRENT_TIME <-
+	 "CURRENT_TIME"i ! name_char
+
+CURRENT_TIMESTAMP <-
+	 "CURRENT_TIMESTAMP"i ! name_char
+
+DATABASE <-
+	 "DATABASE"i ! name_char
+
+DEFAULT <-
+	 "DEFAULT"i ! name_char
+
+DEFERRABLE <-
+	 "DEFERRABLE"i ! name_char
+
+DEFERRED <-
+	 "DEFERRED"i ! name_char
+
+DELETE <-
+	 "DELETE"i ! name_char
+
+DESC <-
+	 "DESC"i ! name_char
+
+DETACH <-
+	 "DETACH"i ! name_char
+
+DISTINCT <-
+	 "DISTINCT"i ! name_char
+
+DROP <-
+	 "DROP"i ! name_char
+
+EACH <-
+	 "EACH"i ! name_char
+
+ELSE <-
+	 "ELSE"i ! name_char
+
+END <-
+	 "END"i ! name_char
+
+ESCAPE <-
+	 "ESCAPE"i ! name_char
+
+EXCEPT <-
+	 "EXCEPT"i ! name_char
+
+EXCLUSIVE <-
+	 "EXCLUSIVE"i ! name_char
+
+EXISTS <-
+	 "EXISTS"i ! name_char
+
+EXPLAIN <-
+	 "EXPLAIN"i ! name_char
+
+FAIL <-
+	 "FAIL"i ! name_char
+
+FIRST <-
+	 "FIRST"i ! name_char
+
+FOR <-
+	 "FOR"i ! name_char
+
+FOREIGN <-
+	 "FOREIGN"i ! name_char
+
+FROM <-
+	 "FROM"i ! name_char
+
+FULL <-
+	 "FULL"i ! name_char
+
+GLOB <-
+	 "GLOB"i ! name_char
+
+GROUP <-
+	 "GROUP"i ! name_char
+
+HAVING <-
+	 "HAVING"i ! name_char
+
+IF <-
+	 "IF"i ! name_char
+
+IGNORE <-
+	 "IGNORE"i ! name_char
+
+ILIKE <-
+	 "ILIKE"i ! name_char
+
+IMMEDIATE <-
+	 "IMMEDIATE"i ! name_char
+
+IN <-
+	 "IN"i ! name_char
+
+INDEX <-
+	 "INDEX"i ! name_char
+
+INDEXED <-
+	 "INDEXED"i ! name_char
+
+INITIALLY <-
+	 "INITIALLY"i ! name_char
+
+INNER <-
+	 "INNER"i ! name_char
+
+INSERT <-
+	 "INSERT"i ! name_char
+
+INSTEAD <-
+	 "INSTEAD"i ! name_char
+
+INTERSECT <-
+	 "INTERSECT"i ! name_char
+
+INTO <-
+	 "INTO"i ! name_char
+
+IS <-
+	 "IS"i ! name_char
+
+ISNULL <-
+	 "ISNULL"i ! name_char
+
+JOIN <-
+	 "JOIN"i ! name_char
+
+KEY <-
+	 "KEY"i ! name_char
+
+LAST <-
+	 "LAST"i ! name_char
+
+LATERAL <-
+	 "LATERAL"i ! name_char
+
+LEFT <-
+	 "LEFT"i ! name_char
+
+LIKE <-
+	 "LIKE"i ! name_char
+
+LIMIT <-
+	 "LIMIT"i ! name_char
+
+LOCKED <-
+	 "LOCKED"i ! name_char
+
+MATCH <-
+	 "MATCH"i ! name_char
+
+NATURAL <-
+	 "NATURAL"i ! name_char
+
+NO <-
+	 "NO"i ! name_char
+
+NOT <-
+	 "NOT"i ! name_char
+
+NOTNULL <-
+	 "NOTNULL"i ! name_char
+
+NOWAIT <-
+	 "NOWAIT"i ! name_char
+
+NULL <-
+	 "NULL"i ! name_char
+
+NULLS <-
+	 "NULLS"i ! name_char
+
+OF <-
+	 "OF"i ! name_char
+
+OFFSET <-
+	 "OFFSET"i ! name_char
+
+ON <-
+	 "ON"i ! name_char
+
+ONLY <-
+	 "ONLY"i ! name_char
+
+OR <-
+	 "OR"i ! name_char
+
+ORDER <-
+	 "ORDER"i ! name_char
+
+OUTER <-
+	 "OUTER"i ! name_char
+
+OVER <-
+	 "OVER"i ! name_char
+
+PARTITION <-
+	 "PARTITION"i ! name_char
+
+PLAN <-
+	 "PLAN"i ! name_char
+
+PRAGMA <-
+	 "PRAGMA"i ! name_char
+
+PRIMARY <-
+	 "PRIMARY"i ! name_char
+
+QUERY <-
+	 "QUERY"i ! name_char
+
+RAISE <-
+	 "RAISE"i ! name_char
+
+READ <-
+	 "READ"i ! name_char
+
+RECURSIVE <-
+	 "RECURSIVE"i ! name_char
+
+REFERENCES <-
+	 "REFERENCES"i ! name_char
+
+REGEXP <-
+	 "REGEXP"i ! name_char
+
+REINDEX <-
+	 "REINDEX"i ! name_char
+
+RELEASE <-
+	 "RELEASE"i ! name_char
+
+RENAME <-
+	 "RENAME"i ! name_char
+
+REPLACE <-
+	 "REPLACE"i ! name_char
+
+RESTRICT <-
+	 "RESTRICT"i ! name_char
+
+RETURNING <-
+	 "RETURNING"i ! name_char
+
+RIGHT <-
+	 "RIGHT"i ! name_char
+
+ROLLBACK <-
+	 "ROLLBACK"i ! name_char
+
+ROW <-
+	 "ROW"i ! name_char
+
+ROWID <-
+	 "ROWID"i ! name_char
+
+SAVEPOINT <-
+	 "SAVEPOINT"i ! name_char
+
+SELECT <-
+	 "SELECT"i ! name_char
+
+SET <-
+	 "SET"i ! name_char
+
+SHARE <-
+	 "SHARE"i ! name_char
+
+SHOW <-
+	 "SHOW"i ! name_char
+
+SKIP <-
+	 "SKIP"i ! name_char
+
+TABLE <-
+	 "TABLE"i ! name_char
+
+TEMP <-
+	 "TEMP"i ! name_char
+
+TEMPORARY <-
+	 "TEMPORARY"i ! name_char
+
+THEN <-
+	 "THEN"i ! name_char
+
+TO <-
+	 "TO"i ! name_char
+
+TRANSACTION <-
+	 "TRANSACTION"i ! name_char
+
+TRIGGER <-
+	 "TRIGGER"i ! name_char
+
+UNION <-
+	 "UNION"i ! name_char
+
+UNIQUE <-
+	 "UNIQUE"i ! name_char
+
+UPDATE <-
+	 "UPDATE"i ! name_char
+
+USING <-
+	 "USING"i ! name_char
+
+VACUUM <-
+	 "VACUUM"i ! name_char
+
+VALUES <-
+	 "VALUES"i ! name_char
+
+VIEW <-
+	 "VIEW"i ! name_char
+
+VIRTUAL <-
+	 "VIRTUAL"i ! name_char
+
+WHEN <-
+	 "WHEN"i ! name_char
+
+WHERE <-
+	 "WHERE"i ! name_char
+
+WINDOW <-
+	 "WINDOW"i ! name_char
+
+WITH <-
+	 "WITH"i ! name_char
+
+WITHOUT <-
+	 "WITHOUT"i ! name_char
+
+reserved_words <-
+	 ( reserved_word_list )
+
+reserved_word_list <-
+	 ABORT / ACTION / ADD / AFTER / ALL / ALTER / ANALYZE / AND / ARRAY / AS / ASC / ATTACH / AUTOINCREMENT / BEFORE / BEGIN / BETWEEN / BY / CASCADE / CASE / CAST / CHECK / COLLATE / COLUMN / COMMIT / CONFLICT / CONSTRAINT / CREATE / CROSS / CURRENT_DATE / CURRENT_TIME / CURRENT_TIMESTAMP / DATABASE / DEFAULT / DEFERRABLE / DEFERRED / DELETE / DESC / DETACH / DISTINCT / DROP / EACH / ELSE / END / ESCAPE / EXCEPT / EXCLUSIVE / EXISTS / EXPLAIN / FAIL / FIRST / FOR / FOREIGN / FROM / FULL / GLOB / GROUP / HAVING / IF / IGNORE / ILIKE / IMMEDIATE / IN / INDEX / INDEXED / INITIALLY / INNER / INSERT / INSTEAD / INTERSECT / INTO / IS / ISNULL / JOIN / KEY / LAST / LEFT / LIKE / LIMIT / LOCKED / MATCH / NATURAL / NO / NOT / NOTNULL / NOWAIT / NULL / NULLS / OF / OFFSET / ON / ONLY / OR / ORDER / OUTER / OVER / PARTITION / PLAN / PRAGMA / PRIMARY / QUERY / RAISE / READ / RECURSIVE / REFERENCES / REGEXP / REINDEX / RELEASE / RENAME / REPLACE / RESTRICT / RETURNING / RIGHT / ROLLBACK / SAVEPOINT / SELECT / SET / SHARE / SHOW / SKIP / TABLE / TEMPORARY / THEN / TO / TRANSACTION / TRIGGER / UNION / UNIQUE / UPDATE / USING / VACUUM / VALUES / VIEW / VIRTUAL / WHEN / WHERE / WINDOW / WITH / WITHOUT
+
+reserved_critical_list <-
+	 ADD / ALL / ALTER / AND / AS / AUTOINCREMENT / BETWEEN / CASE / CHECK / COLLATE / COMMIT / CONSTRAINT / CREATE / DEFAULT / DEFERRABLE / DELETE / DISTINCT / DROP / ELSE / ESCAPE / EXCEPT / EXISTS / FOREIGN / FROM / GROUP / HAVING / IN / INDEX / INSERT / INTERSECT / INTO / IS / ISNULL / JOIN / LIMIT / NOT / NOTNULL / NULL / ON / OR / ORDER / PRIMARY / REFERENCES / SELECT / SET / TABLE / THEN / TO / TRANSACTION / UNION / UNIQUE / UPDATE / USING / VALUES / WHEN / WHERE
+
+comment <-
+	 comment_line / comment_block
+
+comment_line <-
+	 "--" ( ! [\n\v\f\r] . )*
+
+comment_block <-
+	 comment_block_start comment_block_feed comment_block_end
+
+comment_block_start <-
+	 "/*"
+
+comment_block_end <-
+	 "*/"
+
+comment_block_body <-
+	 ( ! ( comment_block_end / comment_block_start ) . )+
+
+block_body_nodes <-
+	 comment_block_body / comment_block
+
+comment_block_feed <-
+	 block_body_nodes ( [\n\v\f\r\t ] / block_body_nodes )*
+
+~o <-
+	 ( [\n\v\f\r\t ] / comment )*
+
+#_TODO_ <-
+#	 "__TODO__"

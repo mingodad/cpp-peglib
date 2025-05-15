@@ -1,0 +1,310 @@
+# NEZ peg parser https://github.com/nez-peg/nez
+#/* Nez format */
+
+#public
+File
+   <-  S* (Statement )* #List
+
+
+#/* Code Layout  */
+
+~_
+   <- (S / COMMENT)*
+
+~S
+   <- [\t\n\r ]
+
+COMMENT
+   <- '/*' (!('*/') .)* '*/'
+   / '//' (!EOL .)* EOL
+
+EOL
+   <- '\n'
+   / '\r' ('\n')?
+   / EOT
+
+EOT
+   <- !(.)
+
+#/* Operators */
+
+LT <- '<' _
+GT <- '>' _
+COMMA <- ',' _
+#SEMI <- ';' _
+ASSIGN <- '=' _
+LPAR <- '(' _
+LRAR <- ')' _
+LBRAK <- '[' _
+RBRAK <- ']' _
+LCURLY <- '{' !AT _
+RCURLY <- '}' _
+OCHOICE <- '/' _
+#VERTBAR <- '|' _
+STAR <- '*' _
+DOT <- '.' _
+AND <- '&' _
+NOT <- '!' _
+DOLLAR <- '$' _
+TILDE <- '~' _
+AT <- '@' _
+PLUS <- '+' _
+QMARK <- '?' _
+
+#/* Keywords */
+
+PUBLIC   <- 'public'   !W _
+INLINE   <- 'inline'   !W _
+IMPORT   <- 'import'   !W _
+FROM     <- 'from'     !W _
+GRAMMAR  <- 'grammar'  !W _
+EXAMPLE  <- 'example'  !W _
+TEMPLATE <- 'template' !W _
+FORMAT   <- 'format'   !W _
+TRUE     <- 'true'     !W _
+FALSE    <- 'false'    !W _
+
+IF       <- 'if'       !W _
+ON       <- 'on'       !W _
+BLOCK    <- 'block'    !W _
+DEF      <- 'def'      !W _
+MATCH    <- 'match'    !W _
+IS       <- 'is'       !W _
+ISA      <- 'isa'      !W _
+EXISTS   <- 'exists'   !W _
+LOCAL    <- 'local'    !W _
+SYMBOL   <- 'symbol'   !W _
+
+#/* reserved */
+
+#TYPE     <- 'type'    !W _
+DEFINE   <- 'define'  !W _
+
+KEYWORD
+   <- PUBLIC
+   / INLINE
+   / IMPORT
+   / FROM
+   / GRAMMAR
+   / EXAMPLE
+   / TEMPLATE
+   / FORMAT
+   / TRUE
+   / FALSE
+   / DEFINE
+  #// / TYPE
+
+NAME
+   <- <!KEYWORD LETTER W*>
+
+LETTER
+   <- [A-Z_a-z$]
+
+W
+   <- [0-9A-Z_a-z$]
+
+Identifier
+   <- ( NAME  ) _
+
+
+#/* Statement */
+
+Statement
+   <- Document
+   / ExampleStatement
+   / ImportStatement
+   / FormatStatement
+   / TemplateStatement
+   / Production
+
+ImportStatement
+   <-  IMPORT ImportName FROM (Character / String) #Import
+
+ImportName
+   <- ( STAR / NAME (DOT ( STAR / NAME ))? )  _
+
+Document
+   <- COMMENT (S* COMMENT)* _
+
+#/* Production */
+
+Production
+   <- (Modifiers)? (Identifier / String) _SKIP_ ASSIGN (OldExample)* (Expression) #Production
+
+Modifiers
+   <- (Modifier)* #Sequence
+
+Modifier
+   <- PUBLIC
+	/ INLINE
+
+_SKIP_
+   <- _ANNOTATION_*
+
+_ANNOTATION_
+   <- LBRAK _DOC_ RBRAK _
+
+_DOC_
+   <- (!(RBRAK / LBRAK) .)* (LBRAK _DOC_ RBRAK _DOC_)?
+
+#/* Expression */
+
+Expression
+   <- Sequence ( (OCHOICE Sequence)+ )?
+
+Sequence
+   <- Prefix ( (#/* !(SEMI / RuleHead ) */
+        Prefix)+ )?
+
+
+#RuleHead
+#   <- (Modifiers)? (Identifier / String) _ _SKIP_ ASSIGN
+
+Prefix
+   <- ( AND #And
+        / NOT #Not
+        / DOLLAR (Label)? #Link
+        / '@[' _ Integer _ RBRAK #Link
+        / AT #Link
+        / TILDE #Match
+        ) Suffix
+   / Suffix
+
+Suffix
+   <- Primary ( ( STAR (Integer)? #Repetition
+        / PLUS #Repetition1
+        / QMARK #Option
+        ) )? _
+
+Integer
+   <-  INT #Integer
+
+Primary
+   <-  TRUE #Empty
+   /  FALSE #Failure
+   / Character
+   / Charset
+   /  DOT _ #Any
+   / <'0x' HEX HEX> _ #Byte
+   / <'U+' HEX HEX HEX HEX> _ #Byte
+   / LPAR Expression LRAR
+   / Constructor
+   / Replace
+   / Tagging
+   / String !ASSIGN
+   / Extension
+   / NonTerminal !(ASSIGN / '[example:' / '[bad-example:')
+
+NonTerminal
+   <-  NAME (DOT NAME)? _ #NonTerminal
+
+Character
+   <- "'"  <('\\\'' / '\\\\' / !['\n\r] .)*>  "'" _ #Character
+
+String
+   <- '"' < ('\\"' / '\\\\' / !["\n\r] .)*>  '"' _ #String
+
+Charset
+   <- <LBRAK ((CHAR #Class
+        ( '-' ( CHAR
+            #Class
+            ) #List
+            )?))* RBRAK> _ #Class
+
+CHAR
+   <- '\\u' HEX HEX HEX HEX
+   / '\\x' HEX HEX
+   / '\\n'
+   / '\\t'
+   / '\\\\'
+   / '\\r'
+   / '\\v'
+   / '\\f'
+   / '\\-'
+   / '\\]'
+   / !(RBRAK) .
+
+HEX
+   <- [0-9A-Fa-f]
+
+Label
+  <-  NAME (DOT NAME)? #Label
+
+Constructor
+   <-  ('{@' S #LeftNew
+        / '{$' (Label)? S #LeftNew
+        / LCURLY #New
+        ) _ (Expression)? RCURLY _
+
+Tagging
+   <- '#'  <LETTER+ W*> _ #Tagging
+
+Replace
+   <- '`' ('\\`' / '\\\\' / ![`\n\r] .)*  '`' _ #Replace
+
+Extension
+   <- LT addExtension S* GT
+
+addExtension
+   <- IF       FlagName #If
+	/ ON        FlagName Expression #On
+	/ BLOCK     Expression #Block
+	/ SYMBOL    Expression #Symbol
+	/ DEF       Expression #Symbol
+	/ MATCH     Expression #Match
+	/ IS        TableName #Is
+	/ ISA       TableName #Isa
+	/ EXISTS    TableName #Exists
+	/ LOCAL     TableName Expression #Local
+	/ Identifier Expression (COMMA Expression)* #Expand
+	/ (!('>') .)+ #Undefined
+
+FlagName
+   <- (NOT)? <LETTER W*> _ #Name
+
+TableName
+   <- <LETTER W*> _ #Name
+
+#/* Other Statements */
+
+TemplateStatement
+   <- TEMPLATE Identifier LT TemplateParameter GT ASSIGN Expression _ #Template
+
+TemplateParameter
+   <- Identifier (COMMA Identifier)*
+
+OldExample
+   <-  LBRAK ('bad-')? 'example:' (!RBRAK .)* RBRAK _ #OldExample
+
+ExampleStatement
+   <-  EXAMPLE  NonTerminal (AND NonTerminal)* (TILDE W+ #Hash
+                _ )? addInputText _
+
+addInputText
+   <- '\'\'\'' EOL ( (!('\n' '\'\'\'') .)* ) '\n' '\'\'\''
+   / '```' EOL ( (!('\n' '```') .)* ) '\n' '```'
+   / '"""' EOL ( (!('\n' '"""') .)* ) '\n' '"""'
+   / ( (!EOL .)* ) EOL
+
+FormatStatement
+   <- FORMAT '#' Identifier LBRAK FormatSize RBRAK '`' Formatter '`' _ #Format
+
+FormatSize
+   <- ( STAR / INT ) #Integer
+
+Formatter
+   <- #List
+        (!('`') ('${' Identifier RCURLY
+   / '$[' _ Index _ ( '`' Formatter '`' _ Index _ #Format
+        )? RBRAK
+   /  ( '$$' '$' / '\\`' '`'
+   / (!('$$' / '${' / '$[' / '\\`' / '`') .)+ ) ))*
+
+Index
+   <- ('-')? INT #Integer
+
+INT
+   <- DIGIT DIGIT*
+
+DIGIT
+   <- [0-9]

@@ -1,0 +1,1373 @@
+# ../../cpp-peglib0/build/lint/peglint --packrat kotlin.chpeg kotlin.kt
+
+file <-
+	 shebangLine? NL* fileAnnotation* _* packageHeader* _* importList* _* ( filePart / _ / unparsable )* EOF
+
+shebangLine <-
+	 ShebangLine _* NL+
+
+~NL <-
+	 _* ( '\n' / ( '\r' '\n'? ) ) _*
+
+fileAnnotation <-
+	 ( AT_NO_WS / AT_PRE_WS ) FILE NL* COLON _* NL* ( ( LSQUARE _* unescapedAnnotation+ _* RSQUARE ) / unescapedAnnotation ) _* NL*
+
+~_ <-
+	 ( WS / DelimitedComment / LineComment )+
+
+packageHeader <-
+	 PACKAGE _ identifier _* semi?
+
+importList <-
+	 importHeader+
+
+filePart <-
+	 topLevelObject
+	/ ( statement _* semi )
+
+unparsable <-
+	 ( ! [\n] . )+ NL*
+
+EOF <-
+	 ! .
+
+topLevelObject <-
+	 declaration _* semis?
+
+statement <-
+	 ( label / annotation )* ( declaration / assignment / loopStatement / expression )
+
+~semi <-
+	 _* ( SEMICOLON / NL ) _* NL*
+
+ShebangLine <-
+	 '#!' ( ! [\r\n] . )*
+
+AT_NO_WS <-
+	 '@'
+
+AT_PRE_WS <-
+	 ( Hidden / NL ) '@'
+
+FILE <-
+	 'file' ! ( Letter / UnicodeDigit )
+
+COLON <-
+	 ':'
+
+LSQUARE <-
+	 '['
+
+unescapedAnnotation <-
+	 constructorInvocation
+	/ userType
+
+RSQUARE <-
+	 ']'
+
+PACKAGE <-
+	 'package' ! ( Letter / UnicodeDigit )
+
+identifier <-
+	 <simpleIdentifier ( __* DOT simpleIdentifier )*>
+
+importHeader <-
+	 IMPORT _ identifier ( ( DOT MULT ) / importAlias )? _* semi? _*
+
+IMPORT <-
+	 'import' ! ( Letter / UnicodeDigit )
+
+DOT <-
+	 '.'
+
+MULT <-
+	 '*'
+
+importAlias <-
+	 _ AS _ simpleIdentifier
+
+AS <-
+	 'as' ! ( Letter / UnicodeDigit )
+
+simpleIdentifier <-
+	 ( ! ( hardKeyword ! ( Letter / '_' / UnicodeDigit ) ) Identifier )
+	/ ABSTRACT
+	/ ANNOTATION
+	/ BY
+	/ CATCH
+	/ COMPANION
+	/ CONSTRUCTOR
+	/ CROSSINLINE
+	/ DATA
+	/ DYNAMIC
+	/ ENUM
+	/ EXTERNAL
+	/ FINAL
+	/ FINALLY
+	/ GET
+	/ IMPORT
+	/ INFIX
+	/ INIT
+	/ INLINE
+	/ INNER
+	/ INTERNAL
+	/ LATEINIT
+	/ NOINLINE
+	/ OPEN
+	/ OPERATOR
+	/ OUT
+	/ OVERRIDE
+	/ PRIVATE
+	/ PROTECTED
+	/ PUBLIC
+	/ REIFIED
+	/ SEALED
+	/ TAILREC
+	/ SET
+	/ VARARG
+	/ WHERE
+	/ FIELD
+	/ PROPERTY
+	/ RECEIVER
+	/ PARAM
+	/ SETPARAM
+	/ DELEGATE
+	/ FILE
+	/ EXPECT
+	/ ACTUAL
+	/ CONST
+	/ SUSPEND
+
+declaration <-
+	 classDeclaration
+	/ objectDeclaration
+	/ functionDeclaration
+	/ propertyDeclaration
+	/ typeAlias
+
+semis <-
+	 ( _* ( SEMICOLON / NL ) _* )+
+
+typeAlias <-
+	 modifiers? _* TYPE_ALIAS ( _ / NL )* simpleIdentifier _* ( __* typeParameters )? __* ASSIGNMENT __* type
+
+modifiers <-
+	 ( annotation / modifier )+
+
+TYPE_ALIAS <-
+	 'typealias' ! ( Letter / UnicodeDigit )
+
+~__ <-
+	 ( [ \t\f\r\n] / DelimitedComment / LineComment )+
+
+typeParameters <-
+	 LANGLE __* typeParameter ( __* COMMA __* typeParameter )* ( __* COMMA )? __* RANGLE
+
+ASSIGNMENT <-
+	 '=' ! '='
+
+type <-
+	 typeModifiers? ( functionType / nullableType / parenthesizedType / typeReference )
+
+classDeclaration <-
+	 modifiers? ( CLASS / ( ( FUN __* )? INTERFACE ) ) _ NL* simpleIdentifier ( __* typeParameters )? ( __* primaryConstructor )? ( __* COLON __* delegationSpecifiers )? ( __* typeConstraints )? ( ( __* classBody ) / ( __* enumClassBody ) )?
+
+objectDeclaration <-
+	 modifiers? _* OBJECT __* simpleIdentifier ( __* COLON __* delegationSpecifiers )? ( __* classBody )?
+
+functionDeclaration <-
+	 modifiers? _* FUN _* ( __* typeParameters )? _* ( __* receiverTypeAndDot )? __* simpleIdentifier __* functionValueParameters _* ( __* COLON __* type )? _* ( __* typeConstraints )? _* ( __* functionBody )?
+
+propertyDeclaration <-
+	 modifiers? _* ( VAL / VAR ) _ ( __* typeParameters )? ( __* receiverTypeAndDot )? ( __* ( multiVariableDeclaration / variableDeclaration ) ) ( __* typeConstraints )? ( __* ( ( ASSIGNMENT __* expression ) / propertyDelegate ) )? ( ( semi? _* setter ( NL* semi? _* getter )? ) / ( semi? _* getter ( NL* semi? _* setter )? ) )?
+
+CLASS <-
+	 'class' ! ( Letter / UnicodeDigit )
+
+FUN <-
+	 'fun' ! ( Letter / UnicodeDigit )
+
+INTERFACE <-
+	 'interface' ! ( Letter / UnicodeDigit )
+
+primaryConstructor <-
+	 ( modifiers? CONSTRUCTOR __* )? classParameters
+
+delegationSpecifiers <-
+	 annotatedDelegationSpecifier ( __* COMMA __* annotatedDelegationSpecifier )*
+
+typeConstraints <-
+	 WHERE __* typeConstraint ( __* COMMA __* typeConstraint )*
+
+classBody <-
+	 LCURL __* classMemberDeclarations __* RCURL
+
+enumClassBody <-
+	 LCURL __* enumEntries? ( __* SEMICOLON __* classMemberDeclarations )? __* RCURL
+
+CONSTRUCTOR <-
+	 'constructor' ! ( Letter / UnicodeDigit )
+
+classParameters <-
+	 LPAREN __* ( classParameter ( __* COMMA __* classParameter )* ( __* COMMA )? )? __* RPAREN
+
+LCURL <-
+	 '{'
+
+classMemberDeclarations <-
+	 ( classMemberDeclaration semis? )*
+
+RCURL <-
+	 '}'
+
+LPAREN <-
+	 '('
+
+classParameter <-
+	 ( ( modifiers? _* VAL ) / ( modifiers? _* VAR ) / ( modifiers? _* ) )? __* simpleIdentifier _* COLON __* type ( __* ASSIGNMENT __* expression )?
+
+COMMA <-
+	 ','
+
+RPAREN <-
+	 ')'
+
+VAL <-
+	 'val' ! ( Letter / UnicodeDigit )
+
+VAR <-
+	 'var' ! ( Letter / UnicodeDigit )
+
+expression <-
+	 disjunction
+
+annotatedDelegationSpecifier <-
+	 annotation* __* delegationSpecifier
+
+delegationSpecifier <-
+	 constructorInvocation
+	/ explicitDelegation
+	/ userType
+	/ functionType
+
+constructorInvocation <-
+	 userType _* valueArguments
+
+explicitDelegation <-
+	 ( userType / functionType ) __* BY __* expression
+
+userType <-
+	 simpleUserType ( __* DOT __* simpleUserType )*
+
+functionType <-
+	 ( receiverType __* DOT __* )? functionTypeParameters __* ARROW __* type
+
+valueArguments <-
+	 ( LPAREN __* RPAREN )
+	/ ( LPAREN __* inside_valueArgument ( __* COMMA __* inside_valueArgument )* ( __* COMMA )? __* RPAREN )
+
+annotation <-
+	 ( singleAnnotation / multiAnnotation ) __*
+
+BY <-
+	 'by' ! ( Letter / UnicodeDigit )
+
+LANGLE <-
+	 '<'
+
+typeParameter <-
+	 typeParameterModifiers? __* simpleIdentifier ( __* COLON __* type )?
+
+RANGLE <-
+	 '>'
+
+typeParameterModifiers <-
+	 typeParameterModifier+
+
+WHERE <-
+	 'where' ! ( Letter / UnicodeDigit )
+
+typeConstraint <-
+	 annotation* simpleIdentifier __* COLON __* type
+
+classMemberDeclaration <-
+	 secondaryConstructor
+	/ anonymousInitializer
+	/ companionObject
+	/ declaration
+
+secondaryConstructor <-
+	 modifiers? CONSTRUCTOR __* functionValueParameters ( __* COLON __* constructorDelegationCall )? __* block?
+
+anonymousInitializer <-
+	 INIT __* block
+
+companionObject <-
+	 modifiers? COMPANION __* OBJECT ( __* simpleIdentifier )? ( __* COLON __* delegationSpecifiers )? ( __* classBody )?
+
+INIT <-
+	 'init' ! ( Letter / UnicodeDigit )
+
+block <-
+	 LCURL __* statements __* RCURL
+
+COMPANION <-
+	 'companion' ! ( Letter / UnicodeDigit )
+
+OBJECT <-
+	 'object' ! ( Letter / UnicodeDigit )
+
+functionValueParameters <-
+	 LPAREN __* ( functionValueParameter ( __* COMMA __* functionValueParameter )* ( __* COMMA )? )? __* RPAREN
+
+functionValueParameter <-
+	 parameterModifiers? _* parameter ( __* ASSIGNMENT __* expression )?
+
+parameterModifiers <-
+	 ( annotation / parameterModifier )+
+
+parameter <-
+	 simpleIdentifier __* COLON __* type
+
+receiverTypeAndDot <-
+	 ( typeModifiers _* )? ( ( nullableType __* DOT __* ) / ( parenthesizedType __* DOT __* ) / ( simpleUserType __* DOT __* )+ )
+
+functionBody <-
+	 block
+	/ ( ASSIGNMENT __* expression )
+
+variableDeclaration <-
+	 annotation* __* simpleIdentifier ( __* COLON __* type )?
+
+multiVariableDeclaration <-
+	 LPAREN __* variableDeclaration _* ( __* COMMA __* variableDeclaration )* _* ( __* COMMA )? __* RPAREN
+
+propertyDelegate <-
+	 BY __* expression
+
+setter <-
+	 ( ( modifiers _* )? SET __* LPAREN __* parameterWithOptionalType ( __* COMMA )? __* RPAREN ( __* COLON __* type )? __* functionBody )
+	/ ( ( modifiers _* )? SET ! ( _* ( ! [;\r\n] . ) ) )
+
+getter <-
+	 ( ( modifiers _* )? GET __* LPAREN __* RPAREN ( __* COLON __* type )? __* functionBody )
+	/ ( ( modifiers _* )? GET ! ( _* ( ! [;\r\n] . ) ) )
+
+GET <-
+	 'get' ! ( Letter / UnicodeDigit )
+
+SET <-
+	 'set' ! ( Letter / UnicodeDigit )
+
+parameterWithOptionalType <-
+	 parameterModifiers? simpleIdentifier __* ( COLON __* type )?
+
+parametersWithOptionalType <-
+	 LPAREN __* ( parameterWithOptionalType ( __* COMMA __* parameterWithOptionalType )* ( __* COMMA )? )? __* RPAREN
+
+constructorDelegationCall <-
+	 ( THIS __* valueArguments )
+	/ ( SUPER __* valueArguments )
+
+THIS <-
+	 'this' ! ( Letter / UnicodeDigit )
+
+SUPER <-
+	 'super' ! ( Letter / UnicodeDigit )
+
+enumEntries <-
+	 enumEntry ( __* COMMA __* enumEntry )* __* COMMA?
+
+SEMICOLON <-
+	 ';'
+
+enumEntry <-
+	 ( modifiers __* )? simpleIdentifier ( __* valueArguments )? ( __* classBody )?
+
+typeModifiers <-
+	 typeModifier+
+
+nullableType <-
+	 ( typeReference / parenthesizedType ) __* quest+
+
+parenthesizedType <-
+	 LPAREN __* type __* RPAREN
+
+typeReference <-
+	 userType
+	/ DYNAMIC
+
+DYNAMIC <-
+	 'dynamic' ! ( Letter / UnicodeDigit )
+
+quest <-
+	 ! elvis ( QUEST_WS / QUEST_NO_WS )
+
+elvis <-
+	 QUEST_NO_WS COLON
+
+QUEST_WS <-
+	 '?' Hidden
+
+QUEST_NO_WS <-
+	 '?'
+
+simpleUserType <-
+	 simpleIdentifier ( __* typeArguments )?
+
+typeArguments <-
+	 LANGLE __* typeProjection ( __* COMMA __* typeProjection )* ( __* COMMA )? __* RANGLE
+
+typeProjection <-
+	 ( typeProjectionModifiers? type )
+	/ MULT
+
+typeProjectionModifiers <-
+	 typeProjectionModifier+
+
+typeProjectionModifier <-
+	 ( varianceModifier __* )
+	/ annotation
+
+varianceModifier <-
+	 IN
+	/ OUT
+
+receiverType <-
+	 ( typeModifiers _* )? ( nullableType / parenthesizedType / typeReference )
+
+functionTypeParameters <-
+	 LPAREN __* ( parameter / type )? _* ( __* COMMA __* ( parameter / type ) )* _* ( __* COMMA )? __* RPAREN
+
+ARROW <-
+	 '->'
+
+statements <-
+	 ( statement _* ( semis _* statement _* )* )? _* semis?
+
+label <-
+	 simpleIdentifier ( AT_POST_WS / AT_NO_WS ) __*
+
+assignment <-
+	 ( directlyAssignableExpression _* ASSIGNMENT __* expression )
+	/ ( assignableExpression _* assignmentAndOperator __* expression )
+
+loopStatement <-
+	 forStatement
+	/ whileStatement
+	/ doWhileStatement
+
+AT_POST_WS <-
+	 '@' ( Hidden / NL )
+
+controlStructureBody <-
+	 block
+	/ statement
+
+forStatement <-
+	 FOR __* LPAREN _* annotation* _* ( variableDeclaration / multiVariableDeclaration ) _ IN _ inside_expression _* RPAREN __* controlStructureBody?
+
+whileStatement <-
+	 ( WHILE __* LPAREN _* inside_expression _* RPAREN __* controlStructureBody )
+	/ ( WHILE __* LPAREN _* expression _* RPAREN __* SEMICOLON )
+
+doWhileStatement <-
+	 DO __* controlStructureBody? __* WHILE __* LPAREN _* expression _* RPAREN
+
+FOR <-
+	 'for' ! ( Letter / UnicodeDigit )
+
+IN <-
+	 'in' ! ( Letter / UnicodeDigit )
+
+inside_expression <-
+	 inside_disjunction
+
+WHILE <-
+	 'while' ! ( Letter / UnicodeDigit )
+
+DO <-
+	 'do' ! ( Letter / UnicodeDigit )
+
+directlyAssignableExpression <-
+	 ( postfixUnaryExpression _* assignableSuffix )
+	/ postfixUnaryExpression
+	/ simpleIdentifier
+	/ parenthesizedDirectlyAssignableExpression
+
+assignableExpression <-
+	 prefixUnaryExpression
+	/ parenthesizedAssignableExpression
+
+assignmentAndOperator <-
+	 ADD_ASSIGNMENT
+	/ SUB_ASSIGNMENT
+	/ MULT_ASSIGNMENT
+	/ DIV_ASSIGNMENT
+	/ MOD_ASSIGNMENT
+
+disjunction <-
+	 conjunction ( __* DISJ __* conjunction )*
+
+conjunction <-
+	 equality ( __* CONJ __* equality )*
+
+DISJ <-
+	 '||'
+
+equality <-
+	 comparison ( _* equalityOperator __* comparison _* )*
+
+CONJ <-
+	 '&&'
+
+comparison <-
+	 genericCallLikeComparison ( _* comparisonOperator __* genericCallLikeComparison _* )*
+
+equalityOperator <-
+	 EQEQEQ
+	/ EQEQ
+	/ EXCL_EQEQ
+	/ EXCL_EQ
+
+genericCallLikeComparison <-
+	 infixOperation ( _* callSuffix )*
+
+comparisonOperator <-
+	 LE
+	/ GE
+	/ LANGLE
+	/ RANGLE
+
+infixOperation <-
+	 elvisExpression ( ( _* inOperator __* elvisExpression ) / ( _* isOperator __* type ) )*
+
+callSuffix <-
+	 ( typeArguments? _* valueArguments? _* annotatedLambda )
+	/ ( typeArguments? _* valueArguments )
+
+elvisExpression <-
+	 infixFunctionCall ( __* elvis __* infixFunctionCall )*
+
+inOperator <-
+	 IN
+	/ NOT_IN
+
+isOperator <-
+	 IS
+	/ NOT_IS
+
+infixFunctionCall <-
+	 rangeExpression ( _* simpleIdentifier __* rangeExpression )*
+
+rangeExpression <-
+	 additiveExpression ( _* RANGE __* additiveExpression )*
+
+additiveExpression <-
+	 multiplicativeExpression ( _* additiveOperator __* multiplicativeExpression )*
+
+RANGE <-
+	 '..'
+
+multiplicativeExpression <-
+	 asExpression ( _* multiplicativeOperator __* asExpression )*
+
+additiveOperator <-
+	 ADD
+	/ SUB
+
+asExpression <-
+	 prefixUnaryExpression ( __* asOperator __* type )*
+
+multiplicativeOperator <-
+	 MULT
+	/ DIV
+	/ MOD
+
+prefixUnaryExpression <-
+	 ( unaryPrefix _* )* postfixUnaryExpression
+
+asOperator <-
+	 AS_SAFE
+	/ AS
+
+unaryPrefix <-
+	 annotation
+	/ label
+	/ ( prefixUnaryOperator __* )
+
+postfixUnaryExpression <-
+	 ( primaryExpression ( _* postfixUnarySuffix )+ )
+	/ primaryExpression
+
+prefixUnaryOperator <-
+	 INCR
+	/ DECR
+	/ SUB
+	/ ADD
+	/ excl
+
+primaryExpression <-
+	 thisExpression
+	/ superExpression
+	/ ifExpression
+	/ whenExpression
+	/ tryExpression
+	/ jumpExpression
+	/ parenthesizedExpression
+	/ callableReference
+	/ stringLiteral
+	/ functionLiteral
+	/ objectLiteral
+	/ collectionLiteral
+	/ simpleIdentifier
+	/ literalConstant
+
+postfixUnarySuffix <-
+	 postfixUnaryOperator
+	/ typeArguments
+	/ callSuffix
+	/ indexingSuffix
+	/ navigationSuffix
+
+postfixUnaryOperator <-
+	 INCR
+	/ DECR
+	/ ( EXCL_NO_WS excl )
+
+indexingSuffix <-
+	 LSQUARE __* inside_expression ( __* COMMA __* inside_expression )* ( __* COMMA )? __* RSQUARE
+
+navigationSuffix <-
+	 __* memberAccessOperator __* ( simpleIdentifier / parenthesizedExpression / CLASS )
+
+assignableSuffix <-
+	 navigationSuffix
+	/ typeArguments
+	/ indexingSuffix
+
+parenthesizedDirectlyAssignableExpression <-
+	 LPAREN __* inside_directlyAssignableExpression __* RPAREN
+
+inside_directlyAssignableExpression <-
+	 ( inside_postfixUnaryExpression ( _ / NL )* assignableSuffix )
+	/ inside_postfixUnaryExpression
+	/ simpleIdentifier
+	/ parenthesizedDirectlyAssignableExpression
+
+parenthesizedAssignableExpression <-
+	 LPAREN __* inside_assignableExpression __* RPAREN
+
+inside_assignableExpression <-
+	 inside_prefixUnaryExpression
+	/ parenthesizedAssignableExpression
+
+memberAccessOperator <-
+	 DOT
+	/ safeNav
+	/ COLONCOLON
+
+parenthesizedExpression <-
+	 LPAREN __* inside_expression __* RPAREN
+
+annotatedLambda <-
+	 annotation* _* label? __* lambdaLiteral
+
+lambdaLiteral <-
+	 ( LCURL __* statements __* RCURL )
+	/ ( LCURL __* lambdaParameters? __* ARROW __* statements __* RCURL )
+
+inside_valueArgument <-
+	 annotation? __* ( simpleIdentifier __* ASSIGNMENT __* )? MULT? __* inside_expression
+
+thisExpression <-
+	 THIS_AT
+	/ ( THIS ! ( Letter / UnicodeDigit ) )
+
+superExpression <-
+	 SUPER_AT
+	/ ( SUPER ( LANGLE __* type __* RANGLE )? ( AT_NO_WS simpleIdentifier )? )
+
+ifExpression <-
+	 ( IF __* LPAREN __* expression __* RPAREN __* controlStructureBody? __* SEMICOLON? __* ELSE __* ( controlStructureBody / SEMICOLON ) )
+	/ ( IF __* LPAREN __* expression __* RPAREN __* ( controlStructureBody / SEMICOLON ) )
+
+whenExpression <-
+	 WHEN __* whenSubject? __* LCURL __* ( whenEntry __* )* __* RCURL
+
+tryExpression <-
+	 TRY __* block ( ( ( __* catchBlock )+ ( __* finallyBlock )? ) / ( __* finallyBlock ) )
+
+jumpExpression <-
+	 ( THROW __* expression )
+	/ ( ( RETURN_AT / RETURN ) _* expression? )
+	/ CONTINUE_AT
+	/ CONTINUE
+	/ BREAK_AT
+	/ BREAK
+
+callableReference <-
+	 receiverType? __* COLONCOLON __* ( simpleIdentifier / CLASS )
+
+stringLiteral <-
+	 multiLineStringLiteral
+	/ lineStringLiteral
+
+functionLiteral <-
+	 lambdaLiteral
+	/ anonymousFunction
+
+objectLiteral <-
+	 ( OBJECT __* COLON __* delegationSpecifiers __* classBody )
+	/ ( OBJECT __* classBody )
+
+collectionLiteral <-
+	 ( LSQUARE __* inside_expression ( __* COMMA __* inside_expression )* ( __* COMMA )? __* RSQUARE )
+	/ ( LSQUARE __* RSQUARE )
+
+literalConstant <-
+	 BooleanLiteral
+	/ CharacterLiteral
+	/ NullLiteral
+	/ RealLiteral
+	/ UnsignedLiteral
+	/ LongLiteral
+	/ HexLiteral
+	/ BinLiteral
+	/ IntegerLiteral
+
+BooleanLiteral <-
+	 'true'
+	/ 'false'
+
+CharacterLiteral <-
+	 '\'' ( EscapeSeq / ( ! [\n\r'\\] . ) ) '\''
+
+NullLiteral <-
+	 'null'
+
+RealLiteral <-
+	 FloatLiteral
+	/ DoubleLiteral
+
+UnsignedLiteral <-
+	 ( HexLiteral / BinLiteral / IntegerLiteral ) [uU] [lL]?
+
+LongLiteral <-
+	 ( HexLiteral / BinLiteral / IntegerLiteral ) [lL]
+
+HexLiteral <-
+	 <( '0' [xX] HexDigit HexDigitOrSeparator* )
+	/ ( '0' [xX] HexDigit )>
+
+BinLiteral <-
+	 <( '0' [bB] BinDigit BinDigitOrSeparator* )
+	/ ( '0' [bB] BinDigit )>
+
+IntegerLiteral <-
+	 <( DecDigitNoZero DecDigitOrSeparator* )
+	/ DecDigit>
+
+multiLineStringLiteral <-
+	 TRIPLE_QUOTE_OPEN ( multiLineStringExpression / multiLineStringContent / MultiLineStringQuote )* TRIPLE_QUOTE_CLOSE
+
+lineStringLiteral <-
+	 QUOTE_OPEN ( lineStringExpression / lineStringContent )* QUOTE_CLOSE
+
+QUOTE_OPEN <-
+	 '"' ! '""'
+
+lineStringExpression <-
+	 LineStrExprStart __* expression __* RCURL
+
+lineStringContent <-
+	 LineStrText
+	/ LineStrEscapedChar
+	/ LineStrRef
+
+QUOTE_CLOSE <-
+	 '"'
+
+TRIPLE_QUOTE_OPEN <-
+	 '"""'
+
+multiLineStringExpression <-
+	 MultiLineStrExprStart __* expression __* RCURL
+
+multiLineStringContent <-
+	 MultiLineStrRef
+	/ MultiLineStrText
+	/ MultiLineStringQuote
+
+MultiLineStringQuote <-
+	 ( '""' ! '"' )
+	/ ( '"' ! '""' )
+
+TRIPLE_QUOTE_CLOSE <-
+	 '"""""'
+	/ '""""'
+	/ '"""'
+
+LineStrText <-
+	 ( ! [\\"$] . )+
+	/ '$'
+
+LineStrEscapedChar <-
+	 EscapedIdentifier
+	/ UniCharacterLiteral
+
+LineStrRef <-
+	 FieldIdentifier
+
+LineStrExprStart <-
+	 '${'
+
+MultiLineStrRef <-
+	 FieldIdentifier
+
+MultiLineStrText <-
+	 ( ! ["$] . )+
+	/ '$'
+
+MultiLineStrExprStart <-
+	 '${'
+
+inside_disjunction <-
+	 inside_conjunction ( __* DISJ __* inside_conjunction )*
+
+inside_conjunction <-
+	 inside_equality ( __* CONJ __* inside_equality )*
+
+inside_equality <-
+	 inside_comparison ( ( _ / NL )* equalityOperator __* inside_comparison ( _ / NL )* )*
+
+inside_comparison <-
+	 inside_genericCallLikeComparison ( ( _ / NL )* comparisonOperator __* inside_genericCallLikeComparison ( _ / NL )* )*
+
+inside_genericCallLikeComparison <-
+	 inside_infixOperation ( ( _ / NL )* callSuffix )*
+
+inside_infixOperation <-
+	 inside_elvisExpression ( ( ( _ / NL )* inOperator __* inside_elvisExpression ) / ( ( _ / NL )* isOperator __* type ) )*
+
+inside_elvisExpression <-
+	 inside_infixFunctionCall ( __* elvis __* inside_infixFunctionCall )*
+
+inside_infixFunctionCall <-
+	 inside_rangeExpression ( ( _ / NL )* simpleIdentifier __* inside_rangeExpression )*
+
+inside_rangeExpression <-
+	 inside_additiveExpression ( ( _ / NL )* RANGE __* inside_additiveExpression )*
+
+inside_additiveExpression <-
+	 inside_multiplicativeExpression ( ( _ / NL )* additiveOperator __* inside_multiplicativeExpression )*
+
+inside_multiplicativeExpression <-
+	 inside_asExpression ( ( _ / NL )* multiplicativeOperator __* inside_asExpression )*
+
+inside_asExpression <-
+	 inside_prefixUnaryExpression ( __* asOperator __* type )*
+
+inside_prefixUnaryExpression <-
+	 ( inside_unaryPrefix ( _ / NL )* )* inside_postfixUnaryExpression
+
+inside_unaryPrefix <-
+	 annotation
+	/ label
+	/ ( prefixUnaryOperator __* )
+
+inside_postfixUnaryExpression <-
+	 ( primaryExpression ( ( _ / NL )* inside_postfixUnarySuffix )+ )
+	/ primaryExpression
+
+inside_postfixUnarySuffix <-
+	 postfixUnaryOperator
+	/ typeArguments
+	/ callSuffix
+	/ indexingSuffix
+	/ navigationSuffix
+
+lambdaParameters <-
+	 lambdaParameter ( __* COMMA __* lambdaParameter )* ( __* COMMA )?
+
+lambdaParameter <-
+	 variableDeclaration
+	/ ( multiVariableDeclaration ( __* COLON __* type )? )
+
+anonymousFunction <-
+	 FUN ( __* type __* DOT )? __* parametersWithOptionalType ( __* COLON __* type )? ( __* typeConstraints )? ( __* functionBody )?
+
+THIS_AT <-
+	 'this@' Identifier
+
+Letter <-
+	 [a-zA-Z]
+
+UnicodeDigit <-
+	 [0-9]
+
+SUPER_AT <-
+	 'super@' Identifier
+
+IF <-
+	 'if' ! ( Letter / UnicodeDigit )
+
+ELSE <-
+	 'else' ! ( Letter / UnicodeDigit )
+
+whenSubject <-
+	 LPAREN ( annotation* __* VAL __* variableDeclaration __* ASSIGNMENT __* )? expression RPAREN
+
+WHEN <-
+	 'when' ! ( Letter / UnicodeDigit )
+
+whenEntry <-
+	 ( whenCondition ( __* COMMA __* whenCondition )* ( __* COMMA )? __* ARROW __* controlStructureBody semi? )
+	/ ( ELSE __* ARROW __* controlStructureBody semi? )
+
+whenCondition <-
+	 expression
+	/ rangeTest
+	/ typeTest
+
+rangeTest <-
+	 inOperator __* expression
+
+typeTest <-
+	 isOperator __* type
+
+TRY <-
+	 'try' ! ( Letter / UnicodeDigit )
+
+catchBlock <-
+	 CATCH __* LPAREN _* ( annotation _* )* simpleIdentifier _* COLON _* type ( __* COMMA )? _* RPAREN __* block
+
+finallyBlock <-
+	 FINALLY __* block
+
+CATCH <-
+	 'catch' ! ( Letter / UnicodeDigit )
+
+FINALLY <-
+	 'finally' ! ( Letter / UnicodeDigit )
+
+THROW <-
+	 'throw' ! ( Letter / UnicodeDigit )
+
+RETURN_AT <-
+	 'return@' Identifier
+
+RETURN <-
+	 'return' ! ( Letter / UnicodeDigit )
+
+CONTINUE_AT <-
+	 'continue@' Identifier
+
+CONTINUE <-
+	 'continue' ! ( Letter / UnicodeDigit )
+
+BREAK_AT <-
+	 'break@' Identifier
+
+BREAK <-
+	 'break' ! ( Letter / UnicodeDigit )
+
+COLONCOLON <-
+	 '::'
+
+ADD_ASSIGNMENT <-
+	 '+='
+
+SUB_ASSIGNMENT <-
+	 '-='
+
+MULT_ASSIGNMENT <-
+	 '*='
+
+DIV_ASSIGNMENT <-
+	 '/='
+
+MOD_ASSIGNMENT <-
+	 '%='
+
+EQEQEQ <-
+	 '==='
+
+EQEQ <-
+	 '=='
+
+EXCL_EQEQ <-
+	 '!=='
+
+EXCL_EQ <-
+	 '!='
+
+LE <-
+	 '<='
+
+GE <-
+	 '>='
+
+NOT_IN <-
+	 '!in' ! ( Letter / UnicodeDigit )
+
+IS <-
+	 'is' ! ( Letter / UnicodeDigit )
+
+NOT_IS <-
+	 '!is' ! ( Letter / UnicodeDigit )
+
+ADD <-
+	 '+'
+
+SUB <-
+	 '-'
+
+DIV <-
+	 '/'
+
+MOD <-
+	 '%'
+
+AS_SAFE <-
+	 'as?'
+
+INCR <-
+	 '++'
+
+DECR <-
+	 '--'
+
+excl <-
+	 EXCL_WS
+	/ EXCL_NO_WS
+
+EXCL_NO_WS <-
+	 '!'
+
+EXCL_WS <-
+	 '!' Hidden
+
+safeNav <-
+	 QUEST_NO_WS DOT
+
+modifier <-
+	 ( classModifier / memberModifier / visibilityModifier / functionModifier / propertyModifier / inheritanceModifier / parameterModifier / platformModifier ) __*
+
+parameterModifier <-
+	 VARARG
+	/ NOINLINE
+	/ CROSSINLINE
+
+classModifier <-
+	 ENUM
+	/ SEALED
+	/ ANNOTATION
+	/ DATA
+	/ INNER
+
+memberModifier <-
+	 OVERRIDE
+	/ LATEINIT
+
+visibilityModifier <-
+	 PUBLIC
+	/ PRIVATE
+	/ INTERNAL
+	/ PROTECTED
+
+functionModifier <-
+	 TAILREC
+	/ OPERATOR
+	/ INFIX
+	/ INLINE
+	/ EXTERNAL
+	/ SUSPEND
+
+propertyModifier <-
+	 CONST
+
+inheritanceModifier <-
+	 ABSTRACT
+	/ FINAL
+	/ OPEN
+
+platformModifier <-
+	 EXPECT
+	/ ACTUAL
+
+typeModifier <-
+	 annotation
+	/ ( SUSPEND __* )
+
+SUSPEND <-
+	 'suspend' ! ( Letter / UnicodeDigit )
+
+ENUM <-
+	 'enum' ! ( Letter / UnicodeDigit )
+
+SEALED <-
+	 'sealed' ! ( Letter / UnicodeDigit )
+
+ANNOTATION <-
+	 'annotation' ! ( Letter / UnicodeDigit )
+
+DATA <-
+	 'data' ! ( Letter / UnicodeDigit )
+
+INNER <-
+	 'inner' ! ( Letter / UnicodeDigit )
+
+OVERRIDE <-
+	 'override' ! ( Letter / UnicodeDigit )
+
+LATEINIT <-
+	 'lateinit' ! ( Letter / UnicodeDigit )
+
+PUBLIC <-
+	 'public' ! ( Letter / UnicodeDigit )
+
+PRIVATE <-
+	 'private' ! ( Letter / UnicodeDigit )
+
+INTERNAL <-
+	 'internal' ! ( Letter / UnicodeDigit )
+
+PROTECTED <-
+	 'protected' ! ( Letter / UnicodeDigit )
+
+OUT <-
+	 'out' ! ( Letter / UnicodeDigit )
+
+typeParameterModifier <-
+	 ( reificationModifier __* )
+	/ ( varianceModifier __* )
+	/ annotation
+
+reificationModifier <-
+	 REIFIED
+
+TAILREC <-
+	 'tailrec' ! ( Letter / UnicodeDigit )
+
+OPERATOR <-
+	 'operator' ! ( Letter / UnicodeDigit )
+
+INFIX <-
+	 'infix' ! ( Letter / UnicodeDigit )
+
+INLINE <-
+	 'inline' ! ( Letter / UnicodeDigit )
+
+EXTERNAL <-
+	 'external' ! ( Letter / UnicodeDigit )
+
+CONST <-
+	 'const' ! ( Letter / UnicodeDigit )
+
+ABSTRACT <-
+	 'abstract' ! ( Letter / UnicodeDigit )
+
+FINAL <-
+	 'final' ! ( Letter / UnicodeDigit )
+
+OPEN <-
+	 'open' ! ( Letter / UnicodeDigit )
+
+VARARG <-
+	 'vararg' ! ( Letter / UnicodeDigit )
+
+NOINLINE <-
+	 'noinline' ! ( Letter / UnicodeDigit )
+
+CROSSINLINE <-
+	 'crossinline' ! ( Letter / UnicodeDigit )
+
+REIFIED <-
+	 'reified' ! ( Letter / UnicodeDigit )
+
+EXPECT <-
+	 'expect' ! ( Letter / UnicodeDigit )
+
+ACTUAL <-
+	 'actual' ! ( Letter / UnicodeDigit )
+
+singleAnnotation <-
+	 ( annotationUseSiteTarget __* unescapedAnnotation )
+	/ ( ( AT_NO_WS / AT_PRE_WS ) unescapedAnnotation )
+
+multiAnnotation <-
+	 ( annotationUseSiteTarget __* LSQUARE unescapedAnnotation+ RSQUARE )
+	/ ( ( AT_NO_WS / AT_PRE_WS ) LSQUARE unescapedAnnotation+ RSQUARE )
+
+annotationUseSiteTarget <-
+	 ( AT_NO_WS / AT_PRE_WS ) ( FIELD / PROPERTY / GET / SET / RECEIVER / PARAM / SETPARAM / DELEGATE ) __* COLON
+
+FIELD <-
+	 'field' ! ( Letter / UnicodeDigit )
+
+PROPERTY <-
+	 'property' ! ( Letter / UnicodeDigit )
+
+RECEIVER <-
+	 'receiver' ! ( Letter / UnicodeDigit )
+
+PARAM <-
+	 'param' ! ( Letter / UnicodeDigit )
+
+SETPARAM <-
+	 'setparam' ! ( Letter / UnicodeDigit )
+
+DELEGATE <-
+	 'delegate' ! ( Letter / UnicodeDigit )
+
+hardKeyword <-
+	 AS
+	/ BREAK
+	/ CLASS
+	/ CONTINUE
+	/ DO
+	/ ELSE
+	/ FOR
+	/ FUN
+	/ IF
+	/ IN
+	/ INTERFACE
+	/ IS
+	/ NullLiteral
+	/ OBJECT
+	/ PACKAGE
+	/ RETURN
+	/ SUPER
+	/ THIS
+	/ THROW
+	/ TRY
+	/ TYPE_ALIAS
+	/ TYPEOF
+	/ VAL
+	/ VAR
+	/ WHEN
+	/ WHILE
+	/ BooleanLiteral
+
+Identifier <-
+	 <( '`' ( ! [`\r\n] . )+ '`' )
+	/ ( ( Letter / '_' ) ( Letter / '_' / UnicodeDigit )* )>
+
+TYPEOF <-
+	 'typeof' ! ( Letter / UnicodeDigit )
+
+DelimitedComment <-
+	 '/*' ( DelimitedComment / ( ! '*/' . ) )* '*/'
+
+LineComment <-
+	 '//' ( ! [\r\n] . )*
+
+~Hidden <-
+	 DelimitedComment
+	/ LineComment
+	/ WS
+
+~WS <-
+	 [ \t\f]
+
+DecDigit <-
+	 [0-9]
+
+DecDigitNoZero <-
+	 [1-9]
+
+DecDigitOrSeparator <-
+	 DecDigit
+	/ '_'
+
+DecDigits <-
+	 ( DecDigit DecDigitOrSeparator* )
+	/ DecDigit
+
+DoubleExponent <-
+	 [eE] [-+]? DecDigits
+
+FloatLiteral <-
+	 ( DoubleLiteral [fF] )
+	/ ( DecDigits [fF] )
+
+DoubleLiteral <-
+	 <( DecDigits? '.' DecDigits DoubleExponent? )
+	/ ( DecDigits DoubleExponent )>
+
+HexDigit <-
+	 [0-9a-fA-F]
+
+HexDigitOrSeparator <-
+	 HexDigit
+	/ '_'
+
+BinDigit <-
+	 [01]
+
+BinDigitOrSeparator <-
+	 BinDigit
+	/ '_'
+
+EscapeSeq <-
+	 UniCharacterLiteral
+	/ EscapedIdentifier
+
+IdentifierOrSoftKey <-
+	 Identifier
+	/ ABSTRACT
+	/ ANNOTATION
+	/ BY
+	/ CATCH
+	/ COMPANION
+	/ CONSTRUCTOR
+	/ CROSSINLINE
+	/ DATA
+	/ DYNAMIC
+	/ ENUM
+	/ EXTERNAL
+	/ FINAL
+	/ FINALLY
+	/ IMPORT
+	/ INFIX
+	/ INIT
+	/ INLINE
+	/ INNER
+	/ INTERNAL
+	/ LATEINIT
+	/ NOINLINE
+	/ OPEN
+	/ OPERATOR
+	/ OUT
+	/ OVERRIDE
+	/ PRIVATE
+	/ PROTECTED
+	/ PUBLIC
+	/ REIFIED
+	/ SEALED
+	/ TAILREC
+	/ VARARG
+	/ WHERE
+	/ GET
+	/ SET
+	/ FIELD
+	/ PROPERTY
+	/ RECEIVER
+	/ PARAM
+	/ SETPARAM
+	/ DELEGATE
+	/ FILE
+	/ EXPECT
+	/ ACTUAL
+	/ CONST
+	/ SUSPEND
+
+FieldIdentifier <-
+	 '$' IdentifierOrSoftKey
+
+UniCharacterLiteral <-
+	 '\\' 'u' HexDigit HexDigit HexDigit HexDigit
+
+EscapedIdentifier <-
+	 '\\' ( 't' / 'b' / 'r' / 'n' / '\'' / '"' / '\\' / '$' )

@@ -1,0 +1,470 @@
+#From: https://gitlab.com/FascinatedBox/lily
+lily <-
+	_ stmt_wca* !.
+
+stmt_wca <-
+	stmt
+	/ token
+
+stmt <-
+    var_stmt
+    / constant_stmt
+    / if_stmt
+    / for_stmt
+    / foreach_stmt
+    / while_stmt
+    / do_stmt
+    / return_stm
+    / function_stmt
+    / class_stmt
+    / stmt_block
+    / with_stmt
+    / enum_stmt
+    / match_stmt
+    / try_stmt
+    / raise_stmt
+    / import_stmt
+
+stmt_block <-
+    	~tk_left_curly stmt* ~tk_right_curly
+
+if_stmt_block <-
+    	tk_left_curly stmt* (TK_else expression tk_colon stmt)? tk_right_curly
+
+loop_stmt_block <-
+    	tk_left_curly (stmt / break_stmt / continue_stmt)*  tk_right_curly
+
+import_stmt <-
+    ~TK_import parse_import_target parse_import_link? (tk_comma parse_import_target parse_import_link?)*
+
+parse_import_target <-
+	parse_import_refs? parse_import_path_into_ims
+
+parse_import_refs <-
+	~tk_left_parenth tk_word (~tk_comma tk_word)* ~tk_right_parenth
+
+parse_import_path_into_ims <-
+	TK_string_literal
+	/ tk_word
+
+parse_import_link <-
+	TK_as tk_word
+
+if_stmt <-
+    TK_if expression tk_colon if_stmt_block (TK_elif expression tk_colon if_stmt_block)*
+
+for_stmt <-
+    TK_for tk_word TK_in expression tk_two_dots expression (TK_by expression)?  tk_colon loop_stmt_block
+
+foreach_stmt <-
+    TK_foreach tk_word TK_in expression (TK_by expression)? tk_colon loop_stmt_block
+
+while_stmt <-
+    TK_while expression tk_colon loop_stmt_block
+
+do_stmt <-
+    TK_do tk_colon loop_stmt_block TK_while expression stmt_sep
+
+enum_stmt <-
+    TK_enum tk_word collect_generics_for? tk_left_curly tk_word parse_variant_header? (tk_comma tk_word parse_variant_header?)* tk_right_curly
+
+parse_variant_header <-
+	collect_call_args
+
+collect_call_args <-
+	tk_left_parenth tk_word (tk_comma tk_word)* tk_right_parenth
+
+match_stmt <-
+    TK_match expression tk_colon match_block
+
+match_block <-
+	tk_left_curly case_stmt+ tk_right_curly
+
+case_stmt <-
+	TK_case expression tk_colon stmt
+
+var_stmt <-
+    ~TK_var tk_word get_type? (tk_equal expression)?
+
+constant_stmt <-
+    TK_constant tk_word tk_equal literal stmt_sep
+
+return_stm <-
+    ~TK_return expression? stmt_sep
+
+break_stmt <-
+    ~TK_break stmt_sep
+
+continue_stmt <-
+    ~TK_continue stmt_sep
+
+function_stmt <-
+    function_header stmt_block
+
+class_stmt <-
+    class_header class_body
+
+class_header <-
+	sym_scope ? TK_class tk_word collect_generics_for?
+
+class_body <-
+	tk_left_curly stmt+ tk_right_curly
+
+with_stmt <-
+    TK_with tk_word TK_as expression tk_colon stmt_block
+
+try_stmt <-
+    TK_try tk_colon stmt_block except_stmt
+
+except_stmt <-
+    TK_except get_type (TK_as tk_word)? tk_colon stmt_block
+
+raise_stmt <-
+    TK_raise expression stmt_sep
+
+stmt_sep <-
+    tk_semi?
+
+function_header <-
+	sym_storage? ~TK_define tk_word collect_generics_for? collect_define_call_args
+
+sym_storage <-
+	TK_static
+
+sym_scope <-
+	 TK_public
+	/ TK_protected
+	/ TK_private
+
+collect_generics_for <-
+	tk_left_bracket tk_word (tk_comma tk_word)* tk_right_bracket
+
+collect_define_call_args <-
+	~tk_left_parenth tk_word get_type (tk_comma tk_word get_type)* ~tk_right_parenth get_type #(tk_colon (get_type_raw / TK_self))?
+
+#get_nameless_arg <-
+#    tk_word
+
+get_type_raw <-
+	tk_word (tk_left_bracket get_type_raw (tk_comma get_type_raw)* tk_right_bracket)?
+
+get_type <-
+    ~tk_colon type (tk_left_bracket type (tk_comma type)* tk_right_bracket)?
+
+type <-
+    builtin_type
+    / tk_prop_word
+
+expression <-
+    tk_left_bracket tk_right_bracket
+    / literal
+    / tk_word
+
+token <-
+	 TK_as
+	/ TK_by
+	/ TK_unit
+	/ TK_break
+	/ TK_case
+	/ TK_class
+	/ TK_constant
+	/ TK_continue
+	/ TK_define
+	/ TK_do
+	/ TK_elif
+	/ TK_else
+	/ TK_enum
+	/ TK_except
+	/ TK_for
+	/ TK_foreach
+	/ TK_forward
+	/ TK_if
+	/ TK_import
+	/ TK_in
+	/ TK_match
+	/ TK_private
+	/ TK_protected
+	/ TK_public
+	/ TK_raise
+	/ TK_return
+	/ TK_scoped
+	/ TK_static
+	/ TK_try
+	/ TK_var
+	/ TK_while
+	/ TK_with
+	/ tk_bitwise_and
+	/ tk_bitwise_and_eq
+	/ tk_bitwise_or
+	/ tk_bitwise_or_eq
+	/ tk_bitwise_xor
+	/ tk_bitwise_xor_eq
+	/ tk_divide
+	/ tk_divide_eq
+	/ tk_eq_eq
+	/ tk_equal
+	/ tk_func_pipe
+	/ tk_gt
+	/ tk_gt_eq
+	/ tk_left_shift
+	/ tk_left_shift_eq
+	/ tk_logical_and
+	/ tk_logical_or
+	/ tk_lt
+	/ tk_lt_eq
+	/ tk_minus
+	/ tk_minus_eq
+	/ tk_modulo
+	/ tk_modulo_eq
+	/ tk_multiply
+	/ tk_multiply_eq
+	/ tk_not_eq
+	/ tk_plus
+	/ tk_plus_eq
+	/ tk_plus_plus
+	/ tk_right_shift
+	/ tk_right_shift_eq
+	/ tk_tilde
+	/ tk_not
+	/ tk_colon
+	/ tk_end_tag
+	/ tk_left_curly
+	/ tk_right_curly
+	/ tk_left_bracket
+	/ tk_right_bracket
+	/ tk_left_parenth
+	/ tk_right_parenth
+	/ tk_three_dots
+	/ tk_two_dots
+	/ tk_tuple_open
+	/ tk_tuple_close
+	/ tk_semi
+	/ tk_dot
+	/ tk_comma
+	/ tk_arrow
+	/ tk_typecast_parenth
+	/ tk_scoop
+	/ tk_prop_word
+	/ tk_word
+	/ tk_at_word
+	/ TK_bytestring
+	/ TK_docblock
+	/ builtin_type
+	/ literal
+
+literal <-
+	 TK_char_literal
+	/ TK_string_literal
+	/ TK_int_literal
+	/ TK_float_literal
+	/ TK___dir__
+	/ TK___file__
+	/ TK___function__
+	/ TK___line__
+	/ TK_false
+	/ TK_self
+	/ TK_true
+
+
+builtin_type <-
+	TK_String
+	/ TK_Integer
+	/ TK_Double
+	/ TK_Boolean
+	/ TK_Byte
+	/ TK_ByteString
+	/ TK_Hash
+	/ TK_List
+	/ TK_Tuple
+
+
+WS <- [ \t\r\n]
+
+TK_docblock <- '###'[^\n]*
+COMMENT <- '#'[^\n]*
+BLK_COMMENT <- '#[' (!']#' . )* ']#'
+
+~__ <- (WS / BLK_COMMENT / COMMENT )+
+
+~_ <- __?
+
+W <- [A-Za-z_][A-Za-z0-9_]*
+#wW <- [a-z][A-Za-z0-9_]*
+WW <- [A-Z][A-Za-z0-9_]*
+
+tk_word <- !KW <W> _
+tk_prop_word <- !KW <WW> _
+tk_at_word <- <"@" W> _
+
+TK_string_literal <- <( '"""' ('\\'. / !'"""' .)* '"""' / '"' ('\\'. / !["\r\n\\] .)* '"' )> _
+TK_bytestring <- 'B' TK_string_literal
+
+#constants
+TK___dir__ <- "__dir__" !W _
+TK___file__ <- "__file__" !W _
+TK___function__ <- "__function__" !W _
+TK___line__ <- "__line__" !W _
+TK_false <- "false" !W _
+TK_self <- "self" !W _
+TK_true <- "true" !W _
+TK_unit <- "unit" !W _
+
+#Keywords
+TK_as <- "as" !W _
+TK_break <- "break" !W _
+TK_by <- "by" !W _
+TK_case <- "case" !W _
+TK_class <- "class" !W _
+TK_constant <- "constant" !W _
+TK_continue <- "continue" !W _
+TK_define <- "define" !W _
+TK_do <- "do" !W _
+TK_elif <- "elif" !W _
+TK_else <- "else" !W _
+TK_enum <- "enum" !W _
+TK_except <- "except" !W _
+TK_for <- "for" !W _
+TK_foreach <- "foreach" !W _
+TK_forward <- "forward" !W _
+TK_if <- "if" !W _
+TK_import <- "import" !W _
+TK_in <- "in" !W _
+TK_match <- "match" !W _
+TK_private <- "private" !W _
+TK_protected <- "protected" !W _
+TK_public <- "public" !W _
+TK_raise <- "raise" !W _
+TK_return <- "return" !W _
+TK_scoped <- "scoped" !W _
+TK_static <- "static" !W _
+TK_try <- "try" !W _
+TK_var <- "var" !W _
+TK_while <- "while" !W _
+TK_with <- "with" !W _
+
+#builtin types
+TK_String <- "String" !W _
+TK_Integer <- "Integer" !W _
+TK_Double <- "Double" !W _
+TK_Boolean <- "Boolean" !W _
+TK_Byte <- "Byte" !W _
+TK_ByteString <- "ByteString" !W _
+TK_Hash <- "Hash" !W _
+TK_List <- "List" !W _
+TK_Tuple <- "Tuple" !W _
+
+#expr_binary
+tk_bitwise_and <- "&" _
+tk_bitwise_and_eq <- "&=" _
+tk_bitwise_or <- "|" _
+tk_bitwise_or_eq <- "|=" _
+tk_bitwise_xor <- "^" _
+tk_bitwise_xor_eq <- "^=" _
+tk_divide <- "/" _
+tk_divide_eq <- "/=" _
+tk_eq_eq <- "==" _
+tk_equal <- "=" _
+tk_func_pipe <- "|>" _
+tk_gt <- ">" _
+tk_gt_eq <- ">=" _
+tk_left_shift <- "<<" _
+tk_left_shift_eq <- "<<=" _
+tk_logical_and <- "&&" _
+tk_logical_or <- "||" _
+tk_lt <- "<" _
+tk_lt_eq <- "<=" _
+tk_minus <- "-" _
+tk_minus_eq <- "-=" _
+tk_modulo <- "%" _
+tk_modulo_eq <- "%=" _
+tk_multiply <- "*" _
+tk_multiply_eq <- "*=" _
+tk_not_eq <- "!=" _
+tk_plus <- "+" _
+tk_plus_eq <- "+=" _
+tk_plus_plus <- "++" _
+tk_right_shift <- ">>" _
+tk_right_shift_eq <- ">>=" _
+
+#expr_unary
+tk_tilde <- "~" _
+tk_not <- "!" _
+
+#expr_close_token
+tk_colon <- ":" _
+#tk_docblock
+#tk_end_lambda
+tk_end_tag <- "?>" _
+#tk_eof
+tk_left_curly <- "{" _
+tk_right_curly <- "}" _
+tk_left_bracket <- "[" _
+tk_right_bracket <- "]" _
+tk_left_parenth <- "(" _
+tk_right_parenth <- ")" _
+tk_three_dots <- "..." _
+tk_two_dots <- ".." _
+
+tk_tuple_open <- "<[" _
+tk_tuple_close <- "]>" _
+
+tk_semi <- ";" _
+tk_dot <- "." _
+tk_comma <- "," _
+tk_arrow <- "=>" _
+tk_typecast_parenth <- "@(" _
+tk_scoop <- "$"[0-9] _
+
+TK_int_literal <- <[0-9]+> _
+TK_char_literal <- "'" ('\\'[0-9]{1,3} / '\\x'[0-9A-Fa-f]{1,3} / '\\' . / !("'" / '\r' / '\n' / '\\') .) "'" _
+TK_float_literal <- [0-9]+"."[0-9]+ _
+
+KW <-
+	<( "__dir__"
+	| "__file__"
+	| "__function__"
+	| "__line__"
+	| "false"
+	| "self"
+	| "true"
+	| "unit"
+	| "as"
+	| "break"
+	| "by"
+	| "case"
+	| "class"
+	| "constant"
+	| "continue"
+	| "define"
+	| "do"
+	| "elif"
+	| "else"
+	| "enum"
+	| "except"
+	| "for"
+	| "foreach"
+	| "forward"
+	| "if"
+	| "import"
+	| "in"
+	| "match"
+	| "private"
+	| "protected"
+	| "public"
+	| "raise"
+	| "return"
+	| "scoped"
+	| "static"
+	| "try"
+	| "var"
+	| "while"
+	| "with"
+	| "String"
+	| "Integer"
+	| "Double"
+	| "Boolean"
+	| "Byte"
+	| "ByteString"
+	| "Hash"
+	| "List"
+	| "Tuple" ) !W>

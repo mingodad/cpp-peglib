@@ -1,0 +1,180 @@
+    #// Setup PEG syntax parser
+Grammar <- (Spacing  (Definition)+ EndOfFile)
+    #// Codon: Support for name <- rule { cpp_code }
+Definition <-
+        ((Ignore IdentCont Parameters LEFTARROW
+TopExpression  (Instruction)?) /
+            (Ignore Identifier LEFTARROW TopExpression
+                (Instruction)?) /
+            (Ignore IdentCont Spacing CppInstr))
+TopExpression <-
+        ((SLASH)? TopChoice  ((SLASH TopChoice))*)
+TopChoice <- (Sequence  (CppInstr)?)
+Expression <- (Sequence  ((SLASH Sequence))*)
+Sequence <- ((CUT /Prefix))*
+Prefix <- (((AND /NOT))? SuffixWithLabel)
+SuffixWithLabel <-
+        (Suffix  ((LABEL Identifier))?)
+Suffix <- (Primary  (Loop)?)
+Loop <- (QUESTION /STAR /PLUS /Repetition)
+Primary <-
+        ((Ignore IdentCont Arguments
+                !(LEFTARROW)) /
+            (Ignore Identifier
+                !(((Parameters)? LEFTARROW))) /
+            (OPEN Expression CLOSE) /
+            (BeginTok Expression EndTok) /CapScope /
+            (BeginCap Expression EndCap) /BackRef /
+LiteralI /Dictionary /Literal /NegatedClassI /
+NegatedClass /ClassI /Class /DOT)
+
+Identifier <- (IdentCont Spacing)
+IdentCont <- <(IdentStart  (IdentRest)*)>
+
+
+IdentStart <- (!("↑")  !("⇑")
+                           ([a-zA-Z_%] / [0x0080-0xFFFF]))
+
+IdentRest <- (IdentStart / [0-9])
+
+Dictionary <- (LiteralD  ((PIPE LiteralD))+)
+
+    lit_ope <- (([']  <(((!([']) Char))*)>
+                           ['] Spacing) /
+                       (["]  <(((!(["]) Char))*)>
+                           ["] Spacing))
+Literal <- lit_ope
+LiteralD <- lit_ope
+
+LiteralI <-
+        (([']  <(((!([']) Char))*)>  "'i"
+Spacing) /
+            (["]  <(((!(["]) Char))*)>  "\"i"
+Spacing))
+
+    #// NOTE: The original Brian Ford's paper uses 'zom' instead of 'oom'.
+Class <- ('['  !('^')
+                      <(((!(']') Range))+)>  ']'
+Spacing)
+ClassI <- ('['  !('^')
+                       <(((!(']') Range))+)>  "]i"
+Spacing)
+
+NegatedClass <- ("[^"
+                             <(((!(']') Range))+)>  ']'
+Spacing)
+NegatedClassI <- ("[^"
+                              <(((!(']') Range))+)>
+                              "]i" Spacing)
+
+    #// NOTE: This is different from The original Brian Ford's paper, and this
+    #// modification allows us to specify `[+-]` as a valid char class.
+Range <-
+        ((Char  '-'  !(']') Char) /Char)
+
+Char <-
+        (('\\'  [fnrtv'"\[\]\\^]) /
+            ('\\'  [0-3]  [0-7]  [0-7]) /
+            ('\\'  [0-7]  ([0-7])?) /
+            ("\\x"  [0-9a-fA-F]  ([0-9a-fA-F])?) /
+            ("\\u"
+                (((('0'  [0-9a-fA-F]) / "10")
+                        ([0-9a-fA-F]{4,4})) /
+                    ([0-9a-fA-F]{4,5}))) /
+            (!('\\')  .))
+
+Repetition <-
+        (BeginBlacket RepetitionRange EndBlacket)
+RepetitionRange <- ((Number COMMA Number) /
+                                (Number COMMA) /Number /
+                                (COMMA Number))
+Number <- (([0-9])+ Spacing)
+
+CapScope <- (BeginCapScope Expression EndCapScope)
+
+LEFTARROW <- (("<-" / "←") Spacing)
+~SLASH <- ('/' Spacing)
+~PIPE <- ('|' Spacing)
+AND <- ('&' Spacing)
+NOT <- ('!' Spacing)
+QUESTION <- ('?' Spacing)
+STAR <- ('*' Spacing)
+PLUS <- ('+' Spacing)
+~OPEN <- ('(' Spacing)
+~CLOSE <- (')' Spacing)
+DOT <- ('.' Spacing)
+
+CUT <- ('^' Spacing)    #// Codon: Change from ↑ to ^
+~LABEL <- ('@' Spacing) #// Codon: Change from ⇑ to @
+
+~Spacing <- ((Space /Comment))*
+Comment <-
+        ('#'  ((!(EndOfLine)  .))* EndOfLine)
+Space <- (' ' / '\t' /EndOfLine)
+EndOfLine <- ("\r\n" / '\n' / '\r')
+EndOfFile <- !(.)
+
+~BeginTok <- ('<' Spacing)
+~EndTok <- ('>' Spacing)
+
+~BeginCapScope <- ('$'  '(' Spacing)
+~EndCapScope <- (')' Spacing)
+
+BeginCap <- ('$'  <(IdentCont)>  '<' Spacing)
+~EndCap <- ('>' Spacing)
+
+BackRef <- ('$'  <(IdentCont)> Spacing)
+
+IGNORE <- '~'
+
+Ignore <- (IGNORE)?
+Parameters <- (OPEN Identifier
+                           ((COMMA Identifier))* CLOSE)
+Arguments <- (OPEN Expression
+                          ((COMMA Expression))* CLOSE)
+~COMMA <- (',' Spacing)
+
+    #// Instruction grammars
+Instruction <-
+        (BeginBlacket
+            ((InstructionItem  ((InstructionItemSeparator
+InstructionItem))*))?
+EndBlacket)
+InstructionItem <-
+        (PrecedenceClimbing /ErrorMessage /NoAstOpt)
+~InstructionItemSeparator <- (';' Spacing)
+
+~SpacesZom <- (Space)*
+~SpacesOom <- (Space)+
+~BeginBlacket <- ('{' Spacing)
+~EndBlacket <- ('}' Spacing)
+
+    #// PrecedenceClimbing instruction
+PrecedenceClimbing <-
+        ("precedence" SpacesOom PrecedenceInfo
+            ((SpacesOom PrecedenceInfo))* SpacesZom)
+PrecedenceInfo <-
+        (PrecedenceAssoc
+            ((&(SpacesOom) PrecedenceOpe))+)
+PrecedenceOpe <-
+        (([']
+                <(((!((Space / ['])) Char))*)>
+                [']) /
+            (["]
+                <(((!((Space / ["])) Char))*)>
+                ["]) /
+            <(((!((PrecedenceAssoc /Space / '}'))
+                        .))+)>)
+PrecedenceAssoc <- [LR]
+
+    #// Error message instruction
+ErrorMessage <- ("error_message" SpacesOom
+LiteralD SpacesZom)
+
+    #// No Ast node optimazation instruction
+NoAstOpt <- ("no_ast_opt" SpacesZom)
+
+    #// Codon: C++ code support
+CppInstr <- (CppCode Spacing)
+CppCode <- <('{'  (CppChar)*  '}')>
+CppChar <- (CppCode / (!('{')  !('}')  .))

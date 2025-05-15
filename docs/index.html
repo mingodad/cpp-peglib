@@ -2,14 +2,25 @@
 <html lang="en">
 <head>
 <title>PEG Playground</title>
+<!--<meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">-->
 <link rel="stylesheet" href="style.css" media="all">
 </head>
-<body>
+<body onload="doFinalSettings()">
+<noscript>This application need WASM and JavaScript !</noscript>
 <div id="main">
   <div class="editor-container">
     <ul class="editor-header">
       <li><span><span id="grammar-validation" class="validation"></span></span></li>
       <li><span>Grammar</span></li>
+      <li class="editor-options">
+        <ul class="editor-header-options">
+          <li class="option"><label for="opt-samples">Examples </label>
+            <select id="opt-samples" onchange="load_example(this)">
+              <option>choose</option>
+            </select>
+          </li>
+        </ul>
+      </li>
     </ul>
     <pre id="grammar-editor" class="editor-area">{{syntax}}</pre>
     <div id="grammar-info" class="editor-info"></div>
@@ -17,7 +28,7 @@
   <div class="editor-container">
     <ul class="editor-header">
       <li><span><span id="code-validation" class="validation"></span></span></li>
-      <li><span>Source Code</span></li>
+      <li><span>Input source</span></li>
       <li class="editor-options">
         <ul class="editor-header-options">
           <li class="option"><label>Start Rule: </label><input id="start-rule" type="text"></li>

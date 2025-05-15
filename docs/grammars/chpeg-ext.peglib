@@ -1,0 +1,53 @@
+# Extended PEG grammar for chpeg bytecode parser/compiler, defined in its own grammar.
+#
+# This grammar is optimized for chpeg and generates the AST the compiler expects
+
+# Hierarchical syntax
+Grammar         <- S Definition+ !.
+Definition      <- Identifier S ('{' S Options S '}' S)? '<-' S Choice
+Choice          <- Sequence ('/' S Sequence)*
+Sequence        <- Element+
+Element         <- Predicate / Trim
+Predicate       <- (PredOp S)? Repeat
+Repeat          <- Primary (RepOp S / '{' S MinMax S '}' S )?
+Primary         <- Identifier S !('{' S [CSILTPR]) !'<-'
+                 / '(' S Choice ')' S
+                 / Reference S
+                 / Mark S
+                 / Literal S
+                 / CharClass S
+                 / NCharClass S
+                 / Dot S
+
+# REFS extension
+Mark            <- '$' Identifier '<' S Choice '>'
+Reference       <- '$' Identifier !'<'
+
+# TRIM extension
+Trim            <- '<' S Choice '>' S
+
+# MINMAX extension
+MinMax          <- MinMaxVal (S Comma S MinMaxVal?)?
+                 / Comma S MinMaxVal
+MinMaxVal       <- [1-9][0-9]* / '0'
+
+# Lexical syntax
+Options         <- [CSILTPR]+
+Identifier      <- [a-zA-Z_][a-zA-Z_0-9]*
+Literal         <- ['] (!['] Char)* [']
+                 / ["] (!["] Char)* ["]
+CharClass       <- '[' !'^' (!']' CharRange)+ ']'
+NCharClass      <- '[^' (!']' CharRange)+ ']'
+CharRange       <- Char '-' !']' Char / Char
+Char            <- PlainChar / HexChar / EscChar / OctChar
+EscChar         <- '\\' [ntr'"\[\]\\fvab]
+OctChar         <- '\\' [0-3][0-7][0-7]
+                 / '\\' [0-7][0-7]?
+HexChar         <- '\\x' [0-9a-fA-F][0-9a-fA-F]?
+PlainChar       <- !'\\' .
+PredOp          <- [&!]
+RepOp           <- [*+?]
+Dot             <- '.'
+Comma           <- ','
+
+~S               <- ([ \t\r\n]+ / '#' (![\r\n] .)* [\r\n]? )*

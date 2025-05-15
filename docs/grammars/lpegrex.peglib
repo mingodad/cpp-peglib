@@ -1,0 +1,48 @@
+# LPegrex/LPeg peg parser https://github.com/edubart/lpegrex
+pattern         <- S exp !.
+exp             <- grammar / alternative
+
+alternative     <- seq ('/' S seq)*
+seq             <- prefix*
+prefix          <- '&' S prefix / '!' S prefix / suffix
+suffix          <- primary S (([+*?] S
+                            / '^' [+-]? num
+                            / '->'  S (string / '{}' S / name / num)
+                            / '=>'  S name) S)*
+
+primary         <- '(' S exp  ')' S  / (string / keyword) / class / defined
+                 / '{:' (name ':' S)? exp ':}' S
+                 / '=' name
+                 / '@' exp
+                 / '{}' S
+                 / '{~' S exp '~}' S
+                 / '{|' S exp '|}' S
+                 / '{' S exp '}' S
+		 / '~?' S
+		 / '~>' S ( 'foldleft' / 'foldright' / 'rfoldleft' / 'rfoldright' ) S
+		 / '$' (string / name / num)
+                 / '.' S
+                 / name S !(asttag / arrow )
+                 / '<' S name '>' S
+		 / '^' name
+		 / '%{' S name '}' S
+
+grammar         <- definition+
+definition      <- name asttag? arrow exp
+
+class           <- <'[' item (!']' item)* ']'> S
+item            <- defined / range / .
+range           <- . '-' [^\]]
+
+~S	        <- (Space / Comment)*
+Comment		<- '--' (!EndOfLine .)* EndOfLine?
+Space		<- ' ' / '\t' / EndOfLine
+EndOfLine	<- '\r\n' / '\n' / '\r'
+
+name            <- <[A-Za-z_]([A-Za-z0-9_] / '-' !'>' )*> S
+arrow           <- <(  '<--' / '<==' / '<-|'  / '<-' )> S
+num             <- [0-9]+ S
+string          <- '"' <(!["] .)*> '"' / "'" <(!['] .)*> "'" S
+defined         <- '%' <name>
+keyword         <- '`' <(![`] .)+> '`' S
+asttag          <- ':' S name

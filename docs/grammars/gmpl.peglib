@@ -1,0 +1,545 @@
+#
+
+GMPL <-
+	_ Statement+ (T_END  T_SEMICOLON)? !.
+
+Statement <-
+	model_statement
+	/ data_statement
+	/ simple_statement
+
+model_statement <-
+	T_MODEL T_STRING? T_SEMICOLON
+
+data_statement <-
+	T_DATA (
+		T_STRING T_SEMICOLON
+		/ T_SEMICOLON data_section* (T_END  T_SEMICOLON)?
+		)
+
+data_section <-
+	set_data
+	/ parameter_data
+
+set_data <-
+	T_SET existing_set_name
+		('[' _ one_symbol (T_SEMICOLON one_symbol)* ']' _)?
+		(
+			T_COMMA?
+			(
+			T_ASSIGN
+			/ data_simple_format
+			/ T_COLON data_matrix_format
+			/ '(' _
+				(
+				"tr" _ ')' _ T_COLON? data_matrix_format
+				/ data_slice_element_list ')' _ data_simple_format?
+				)
+			)
+		)* T_SEMICOLON
+
+
+#data_read_slice <-
+#	'(' _ data_slice_element_list ')' _
+#	/ '[' _ data_slice_element_list ']' _
+
+
+data_slice_element_list <-
+	data_slice_elemnt (',' _ data_slice_elemnt)*
+
+data_slice_elemnt <-
+	one_symbol / '*' _
+
+data_simple_format <-
+	one_symbol ((',' _)? one_symbol)*
+
+data_matrix_format <-
+	data_simple_format ":=" _ (one_symbol data_matrix_element data_matrix_element*)*
+
+data_matrix_element <-
+	('+' / '-') _
+
+one_symbol_or_dot <-
+	one_symbol / '.' _
+
+parameter_data <-
+	"param" WB
+		(
+			data_default_value parameter_data_tabbing
+			/ parameter_data_tabbing
+			/ existing_param_name data_default_value?
+				(
+					(',' _)?
+					(
+						":=" _
+						/ '[' _ data_slice_element_list ']' _ one_symbol?
+						/ data_plain_format
+						/ ':' _ data_tabular_format
+						/ '(' _ "tr" _ ')' _ (':' _)? data_tabular_format
+					)
+				)*
+		) T_SEMICOLON
+
+parameter_data_tabbing <-
+	':' _ (',' _)? data_tabbing_format
+
+data_tabbing_format <-
+	existing_set_name (':' _)? # when we have ':' then it's a data_prefix?
+		((',' _)? existing_param_name)* ":=" _ (',' _)?
+			one_symbol_or_dot ((',' _)? one_symbol_or_dot)* #read_value
+
+data_plain_format <-
+	one_symbol ((',' _)? one_symbol)* #last symbol is the value
+
+data_tabular_format <-
+	one_symbol one_symbol* ":=" _ ( one_symbol one_symbol_or_dot* )*
+
+data_default_value <-
+	"default" WB one_symbol
+
+one_symbol <-
+	'-'? T_NUMBER
+	#/ T_SYMBOL
+	/ T_NQSTR
+	/ T_NAME
+	/ T_STRING
+
+simple_statement <-
+	(
+	set_statement
+	/ parameter_statement
+	/ variable_statement
+	/ constraint_statement
+	/ objective_statement
+	/ table_statement
+	/ solve_statement
+	/ check_statement
+	/ display_statement
+	/ printf_statement
+	/ break_continue_statement
+	/ let_statement
+	/ option_statement
+	) T_SEMICOLON
+	/ problem_statement
+	/ for_repeat_statement
+	/ if_statement
+
+set_statement <-
+	T_SET unique_gmpl_ident indexing_expression? (T_COMMA? set_attribute)*
+
+set_attribute <-
+	"dimen" WB T_NUMBER
+	/ (T_WITHIN / T_IN) expression_9
+	/ (T_ASSIGN
+	/ T_EQ # AMPL quirk
+	) expression_9
+	/ "default" _ expression_9
+	/ "ordered" _
+
+parameter_statement <-
+	"param" WB unique_gmpl_ident indexing_expression? (T_COMMA? parameter_attribute)*
+
+parameter_attribute <-
+	("integer" / "binary" / "logical" / "symbolic") WB
+	/ ( T_NE / T_LE / T_LT / T_EQ / T_GE / T_GT / T_ASSIGN / "default" WB) expression_5
+	/ (T_IN / T_WITHIN) expression_9
+
+variable_statement <-
+	"var" WB unique_gmpl_ident indexing_expression?  (T_COMMA? variable_attribute)*
+
+variable_attribute <-
+	("integer" / "binary" / "logical") WB
+	/ (T_GE / T_LE / T_EQ) expression_5
+	/ "default" WB expression_5
+
+objective_statement <-
+	("maximize" / "minimize") WB unique_gmpl_ident indexing_expression? ':' _ expression_5
+
+constraint_statement <-
+	T_SUBJECT_TO? unique_gmpl_ident indexing_expression? ':' _
+		expression_5
+		(',' _)? (T_LE / T_GE / T_EQ) expression_5
+		((',' _)? (T_NE / T_LE / T_LT/ T_EQ / T_GE / T_GT) expression_5)?
+
+table_statement <-
+	"table" WB  unique_gmpl_ident
+		(
+			indexing_expression? "OUT" WB table_argument_list ':' _
+				table_output_list (',' _ table_output_list)*
+			/ "IN" WB table_argument_list ':' _ (T_NAME T_INPUT)? T_LBRACKET T_NAME ((',' _)? T_NAME)* T_RBRACKET
+				(T_COMMA T_NAME (T_TILDE T_NAME)?)*
+		)
+
+table_argument_list <-
+	expression_5 ((',' _)? expression_5)*
+
+table_output_list <-
+	T_NAME expression_5 (T_TILDE T_NAME)?
+
+solve_statement <-
+	"solve" WB (
+		'.' _ solve_types existing_problem_name?
+		/ existing_problem_name solve_types? (T_COMMA existing_problem_name solve_types?)*
+	)?
+
+solve_types <-
+	("lp"
+	/ "mip"
+	/ "ip") WB
+
+check_statement <-
+	"check" WB  indexing_expression? T_COLON? expression_13
+
+display_statement <-
+	"display" WB indexing_expression? T_COLON? display_item (',' _ display_item)*  file_redirection?
+
+display_item <-
+	expression_13
+
+printf_statement <-
+	"printf" WB indexing_expression? T_COLON? expression_5 (',' _ expression_9)* file_redirection?
+
+file_redirection <-
+	( ">>" / '>') _ expression_5
+
+for_repeat_statement <-
+	("for" WB indexing_expression T_COLON? / "repeat" _) simple_or_block_stmt
+
+if_statement <-
+	T_IF expression_13 T_THEN simple_or_block_stmt (T_ELSE simple_or_block_stmt)?
+
+simple_or_block_stmt <-
+	simple_statement
+	/ T_LBRACE simple_statement* T_RBRACE
+
+break_continue_statement <-
+	("break" / "continue") WB
+
+problem_statement <-
+	"problem" WB unique_gmpl_ident (T_COLON T_NAME (',' _ T_NAME)*)?
+	    (T_SEMICOLON / T_LBRACE simple_statement* T_RBRACE)
+
+let_statement <-
+	"let" WB indexing_expression? T_COLON? object_reference T_ASSIGN expression_5
+
+option_statement <-
+	"option" WB option_elem (',' _ option_elem)*
+
+option_elem <-
+	T_NAME (T_POINT T_NAME)? (T_NAME / T_STRING / [+-]?T_NUMBER)
+
+expression_13 <-
+	expression_12 (T_OR expression_12)*
+
+expression_12 <-
+	expression_11 (T_AND expression_11)*
+
+expression_11 <-
+	T_NOT? expression_10
+
+expression_10 <-
+	expression_9 ((T_NE / T_LE / T_LT / T_EQ / T_GE / T_GT / T_IN / T_WITHIN / T_NOT (T_IN / T_WITHIN)?) expression_9)?
+
+expression_9 <-
+	expression_8 ((T_UNION / T_DIFF / T_SYMDIFF) expression_8)*
+
+expression_8 <-
+	expression_7 (T_INTER expression_7)*
+
+expression_7 <-
+	expression_6 (T_CROSS expression_6)*
+
+expression_6 <-
+	expression_5 (T_DOTS expression_5 (T_BY expression_5)?)?
+
+expression_5 <-
+	expression_4 (T_CONCAT expression_4)*
+
+expression_4 <-
+	expression_3 ((&[-+l](T_PLUS / T_MINUS / T_LESS)) expression_3)*
+
+expression_3 <-
+	expression_2 ((T_ASTERISK / T_SLASH / T_DIV / T_MOD) expression_2 )*
+
+expression_2 <-
+	(&[+-](T_PLUS / T_MINUS))? expression_1
+
+expression_1 <-
+	expression_0 (T_POWER expression_2)?
+
+expression_0 <-
+	Primary_expression
+
+Primary_expression <-
+	T_NUMBER
+	/ T_INFINITY
+	/ T_STRING
+	/ iterated_expression
+	/ function_reference
+	/ min_max_function_or_iterated_expression
+	/ object_reference
+	/ expression_list
+	/ set_expression
+	/ branched_expression
+	/ piecewise_expression
+
+object_reference <-
+	existing_ident #/*(A_INDEX / A_SET / A_PARAMETER / A_VARIABLE / A_CONSTRAINT)*/
+		subscript_list? ('.' _ T_NAME #/*("lb" / "ub" / "status" / "val" / "dual") WB*/
+			)?
+
+subscript_list <-
+	T_LBRACKET expression_5 (T_COMMA expression_5)* T_RBRACKET
+
+function_reference <-
+	(
+		("abs"
+		/ "ceil"
+		/ "floor"
+		/ "exp"
+		/ "log10"
+		/ "log"
+		/ "sqrt"
+		/ "sin"
+		/ "cos"
+		/ "tan") WB
+	) T_LEFT numeric_argument T_RIGHT
+	/ "card" WB T_LEFT elemset_argument T_RIGHT
+	/ "length" _ T_LEFT symbolic_argument T_RIGHT
+	/ ("Irand224" / "Uniform01" / "Normal01" / "gmtime" / "version") WB T_LEFT T_RIGHT
+	/ ("Uniform" / "Normal") WB T_LEFT numeric_argument ',' _ numeric_argument T_RIGHT
+	/ ("atan" / "round" / "trunc") WB T_LEFT numeric_argument (',' _ numeric_argument)? T_RIGHT
+	/ "substr" WB T_LEFT numeric_argument ',' _ numeric_argument (',' _ numeric_argument)? T_RIGHT
+	/ "str2time" WB T_LEFT symbolic_argument ',' _ symbolic_argument T_RIGHT
+	/ "time2str" WB T_LEFT numeric_argument ',' _ symbolic_argument T_RIGHT
+
+numeric_argument <-
+	expression_5
+
+symbolic_argument <-
+	expression_5
+
+elemset_argument <-
+	expression_9
+
+iterated_expression <-
+	("sum" / "prod") WB indexing_expression piecewise_expression? expression_3
+	/ ("forall" / "exists") WB indexing_expression expression_12
+	/ "setof" WB indexing_expression expression_5
+
+min_max_function_or_iterated_expression <- #// to manage ambiguity between function/iteration usage
+	("min" / "max") WB
+	(
+		T_LEFT numeric_argument (',' _ numeric_argument)* T_RIGHT
+		/ indexing_expression expression_3
+	)
+
+expression_list <-
+	T_LEFT expression_13 (',' _ expression_13)* T_RIGHT
+
+set_expression <-
+	T_LBRACE inner_indexing_expression? T_RBRACE
+
+branched_expression <-
+	T_IF expression_13 T_THEN expression_9 (T_ELSE expression_9)?
+
+indexing_expression <-
+	T_LBRACE inner_indexing_expression T_RBRACE
+
+inner_indexing_expression <-
+	indexing_expression0_list (T_COLON expression_13)?
+
+indexing_expression0_list <-
+	indexing_expression0 (',' _ indexing_expression0)*
+
+indexing_expression0 <-
+	(
+		expression_9
+		#//| literal_set
+		#//| T_LEFT  expression_9 (',' _ expression_9)* T_RIGHT
+	) (T_IN expression_9)?
+
+#literal_set <-
+#	T_LBRACE  expression_5 (',' _ expression_5)* T_RBRACE
+
+piecewise_expression <-
+	T_LAPPEND indexing_expression? expression_3 ((T_SEMICOLON / T_COMMA) indexing_expression? expression_3)* T_RAPPEND
+
+unique_gmpl_ident <-
+	#/*ident_plus_nonreserved*/
+	T_NAME #> declared_ids
+	Alias?
+
+Alias <-
+	T_STRING
+
+existing_set_name <-
+	existing_ident
+
+existing_param_name <-
+	existing_ident
+
+existing_var_name <-
+	existing_ident
+
+existing_objective_name <-
+	existing_ident
+
+existing_constraint_name <-
+	T_NAME #// it can't be "data" non reserved keyword
+
+existing_problem_name <-
+	existing_ident
+
+existing_ident <-
+	ident_plus_nonreserved #//this causes warnings for several alternatives for non reserved keywords
+
+ident_plus_nonreserved <-
+	T_NAME #//| keyword_as_ident
+
+keyword_as_ident <-
+	"data" WB
+
+T_NUMBER <-
+	<(real / integer)> _
+
+T_STRING <-
+	["] <( ESCAPE_SEQ / ( ! ( ["] / LINEBREAK ) . ) )*> ["] _
+	/ ['] <( ESCAPE_SEQ / ( ! ( ['] / LINEBREAK ) . ) )*> ['] _
+
+#T_NQSTR <- '@' [a-zA-Z_-] [a-zA-Z0-9_-]* _
+T_NQSTR <- <[a-zA-Z_] [a-zA-Z0-9_-]*> WB
+
+ESCAPE_SEQ  <-
+	 '\\'  ESCAPE
+
+ESCAPE  <-
+	 [\\'"]
+	/ ( 'n' / 't' / 'r' / 'a' / 'b' / 'v' / 'f' )
+	/ < 'x' HEX_DIGIT HEX_DIGIT >
+	/ < 'u' '{' HEX_DIGIT HEX_DIGIT+ '}' >
+	/ ( 'z' SPACE* )
+	/ <DEC_DIGIT DEC_DIGIT !DEC_DIGIT / [012] DEC_DIGIT DEC_DIGIT>
+	/ LINEBREAK
+
+integer <- DEC_DIGIT DEC_DIGIT*
+real <- DEC_NUMBER
+
+NUMBER  <-
+	 HEX_NUMBER
+	/  DEC_NUMBER
+
+HEX_NUMBER  <-
+	 '0' [xX] HEX_PREFIX  ( [pP] EXP_DIGITS  )  ?
+
+DEC_NUMBER  <-
+	 DEC_PREFIX  ( [eE] EXP_DIGITS  )  ?
+
+HEX_PREFIX  <-
+	 HEX_DIGIT  +  (  '.'  HEX_DIGIT  *  )  ?
+	/  '.'  HEX_DIGIT  +
+
+DEC_PREFIX  <-
+	 DEC_DIGIT  +  (  '.' !'.' DEC_DIGIT  *  )  ?
+	/  '.'  DEC_DIGIT  +
+
+EXP_DIGITS  <-
+	[+-] ?  DEC_DIGIT  +
+
+HEX_DIGIT  <-
+	[0-9a-fA-F]
+
+DEC_DIGIT  <-
+	[0-9]
+
+LINEBREAK <- '\n' '\r'? / '\r' '\n'?
+
+T_NAME <- &NAME_START !KEYWORDS <NAME_START NAME_CONT*> WB
+NAME_START <- [a-zA-Z]
+NAME_CONT <- [a-zA-Z0-9_]
+
+T_BY <- "by" WB # //           207   /* by */
+T_CROSS <- "cross" WB # //         208   /* cross */
+#T_DATA : T_NAME  = "data" .
+T_DIFF <- "diff" WB # //         209   /* diff */
+T_DIV <- "div" WB # //          210   /* div */
+T_ELSE <- "else" WB # //         211   /* else */
+T_IF <- "if" WB # //           212   /* if */
+T_IN <- "in" WB # //           213   /* in */
+T_INFINITY <- "Infinity" WB # //     214   /* Infinity */
+T_INTER <- "inter" WB # //       215   /* inter */
+T_LESS <- "less" WB # //         216   /* less */
+T_MOD <- "mod" WB # //          217   /* mod */
+T_NOT <- ("not" WB / '!' _ )  # //          218   /* not ! */
+T_AND <- ("and" WB / "&&" _)  #//          206   /* and && */
+T_OR <- ("or" WB / "||" _ )  # //           219   /* or || */
+#T_SPTP <- "s.t." WB # //         220   /* s.t. */
+T_SUBJECT_TO <- ("s.t." / ("subject" / "subj") WB "to") WB # //         220   /* s.t. */
+T_SYMDIFF <- "symdiff" WB # //      221   /* symdiff */
+T_THEN <- "then" WB # //         222   /* then */
+T_UNION <- "union" WB # //        223   /* union */
+T_WITHIN <- "within" WB # //       224   /* within */
+T_PLUS <- '+' _ # //          225   /* + */
+T_MINUS <- '-' _ # //        226   /* - */
+T_ASTERISK <- '*' _ # //     227   /* * */
+T_SLASH <- '/' _ # //        228   /* / */
+T_POWER <- ('^' / "**")  _ # //       229   /* ^ ** */
+T_LT <- '<' _ # //           230   /* <  */
+T_LE <- "<=" _ # //           231   /* <= */
+T_EQ <- ("==" / '=') _ # //           232   /* = == */
+T_GE <- ">=" _ # //          233   /* >= */
+T_GT <- '>' _ # //           234   /* >  */
+T_NE <- ("<>" / "!=") _ # //           235   /* <> != */
+T_CONCAT <- '&' _ # //       236   /* & */
+T_BAR <- '|' _ # //          237   /* | */
+T_POINT <- '.' _ # //        238   /* . */
+T_COMMA <- ',' _ # //        239   /* , */
+T_COLON <- ':' _ # //        240   /* : */
+T_SEMICOLON <- ';' _ # //    241   /* ; */
+T_ASSIGN <- ":=" _ # //       242   /* := */
+T_DOTS <- ".." _ # //         243   /* .. */
+T_LEFT <- '(' _ # //         244   /* ( */
+T_RIGHT <- ')' _ # //        245   /* ) */
+T_LBRACKET <- '[' _ # //     246   /* [ */
+T_RBRACKET <- ']' _ # //     247   /* ] */
+~T_LBRACE <- '{' _ # //       248   /* { */
+~T_RBRACE <- '}' _ # //       249   /* } */
+T_RAPPEND <- ">>" _ # //       250   /* >> */
+T_TILDE <- '~' _ # //        251   /* ~ */
+T_INPUT <- "<-" _ # //        252   /* <- */
+T_LAPPEND <- "<<" _ # //      253   /* << */
+
+#T_PROD : T_NAME = "prod"
+
+T_MODEL <- "model" WB
+~T_SET <- "set" WB
+T_END <- "end" WB
+T_DATA <- "data" WB
+
+SPACE <- [ \t] / LINEBREAK
+LINE_COMMENT <- '#' (!LINEBREAK .)* LINEBREAK?
+LONG_COMMENT <- '/*' (!'*/' (LINEBREAK / .))* '*/'
+
+~_ <- (SPACE+ / LINE_COMMENT / LONG_COMMENT)*
+
+~WB <- !NAME_CONT _
+
+KEYWORDS <-
+	<("and"
+	| "by"
+	| "cross"
+	| "diff"
+	| "div"
+	| "else"
+	| "if"
+	| "inter"
+	| "in"
+	| "less"
+	| "mod"
+	| "not"
+	| "or"
+	| "symdiff"
+	| "then"
+	| "union"
+	| "within"
+	) WB>

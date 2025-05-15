@@ -1,0 +1,76 @@
+#From https://github.com/studoot/licenser-cpp/blob/8a0b375f26640be9fd384c127cab0f4efa3d6367/src/license.peg
+License <- LicenseTerm (EOL LicenseTerm)* EOL*
+
+LicenseTerm <- SecretTerm / TimeTerm / LocationTerm / IdentityTerm
+
+SecretTerm <- SECRET EQUAL < REST_OF_LINE >
+REST_OF_LINE <- ( !EOL_C . )+
+
+LocationTerm <- ANYWHERE / NodeTerm
+
+NodeTerm <- NODE EQUAL NO_SPACE_STRING
+
+IdentityTerm <- ANYONE / UserTerm / DomainTerm
+
+UserTerm <- USER EQUAL NO_SPACE_STRING
+DomainTerm <- DOMAIN EQUAL NO_SPACE_STRING
+
+TimeTerm <- PerpetualTerm / ExpiryTerm
+
+PerpetualTerm <- PERPETUAL
+
+ExpiryTerm <- EXPIRY EQUAL ExpiryDate
+ExpiryDate <- TermLength / EndDate
+
+# TermLength allows specifying license term as time from 'now' (now = generation time)
+TermLength <- NATURAL TermUnit
+TermUnit <- DAY_UNIT / WEEK_UNIT / MONTH_UNIT / YEAR_UNIT
+WEEK_UNIT <- < [Ww][Ee][Ee][Kk] [Ss]? >
+MONTH_UNIT <- < [Mm][Oo][Nn][Tt][Hh] [Ss]? >
+DAY_UNIT <- < [Dd][Aa][Yy] [Ss]? >
+YEAR_UNIT <- < [Yy][Ee][Aa][rR] [Ss]? >
+
+# EndDate allows fixed end date for license, either as 'year-month-day' or 'day (month-name) year`
+EndDate <- ISO8601 / NamedDate
+
+ISO8601 <- < ISOYEAR DASH ISOMONTH DASH ISODAY >
+ISOYEAR <- DIGIT DIGIT DIGIT DIGIT
+ISOMONTH <- DIGIT DIGIT
+ISODAY <- DIGIT DIGIT
+
+NamedDate <- DAY MonthName YEAR
+MonthName <- JAN / FEB / MAR / APR / MAY / JUN / JUL / AUG / SEP / OCT / NOV / DEC
+YEAR <- < DIGIT DIGIT DIGIT DIGIT >
+JAN <- < [Jj][Aa][Nn] ( [Uu][Aa][Rr][Yy] )? >
+FEB <- < [Ff][Ee][Bb] ( [Rr][Uu][Aa][Rr][Yy] )? >
+MAR <- < [Mm][Aa][Rr] ( [Cc][Hh] )? >
+APR <- < [Aa][Pp][Rr] ( [Ii][Ll] )? >
+MAY <- < [Mm][Aa][Yy] >
+JUN <- < [Jj][Uu][Nn] ( [Ee] )? >
+JUL <- < [Jj][Uu][Ll] ( [Yy] )? >
+AUG <- < [Aa][Uu][Gg] ( [Uu][Ss][Tt] )? >
+SEP <- < [Ss][Ee][Pp] ( [Tt][Ee][Mm][Bb][Ee][Rr] )? >
+OCT <- < [Oo][Cc][Tt] ( [Oo][Bb][Ee][Rr] )? >
+NOV <- < [Nn][Oo][Vv] ( [Ee][Mm][Bb][Ee][Rr] )? >
+DEC <- < [Dd][Ee][Cc] ( [Ee][Mm][Bb][Ee][Rr] )? >
+DAY <- < DIGIT DIGIT? >
+
+# General tokens
+~DASH <- < '-' >
+DIGIT <- [0-9]
+~EQUAL <- < '=' >
+NATURAL <- < DIGIT+ >
+NO_SPACE_STRING <- < (![ \t\n\r] .)+ >
+# Keywords
+~ANYONE <- < [Aa][Nn][Yy][Oo][Nn][Ee] >
+~ANYWHERE <- < [Aa][Nn][Yy][Ww][Hh][Ee][Rr][Ee] >
+~NODE <- < [Nn][Oo][Dd][Ee] >
+~DOMAIN <- < [Dd][Oo][Mm][Aa][Ii][Nn] >
+~USER <- < [Uu][Ss][Ee][Rr] >
+~EXPIRY <- < [Ee][Xx][Pp][Ii][Rr][Yy] >
+~PERPETUAL <- < [Pp][Ee][Rr][Pp][Ee][Tt][Uu][Aa][Ll] >
+~SECRET <- < [Ss][Ee][Cc][Rr][Ee][Tt] >
+
+%whitespace <- [ \t]*
+~EOL <- < EOL_C+ >
+~EOL_C <- [\n\r]
