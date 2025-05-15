@@ -22,14 +22,14 @@ ColorQuery <- [cC] 'olor'? <[iI]?> <[:!]> ColorEx*
 FieldQuery <- String [:] RegexString / String ws? NumericExpression
 NonQuote <- !["].
 UnescapedStringListPart <- ![":<>=! ].
-String <- UnescapedStringListPart+ / ["] <NonQuote*> ["]
+String <- <UnescapedStringListPart+> / ["] <NonQuote*> ["]
 StringValue <- String / [(] StringList [)]
 StringList <- StringListString (ws? [,] ws? StringListString)*
-StringListString <- UnescapedStringListPart+
+StringListString <- <UnescapedStringListPart+>
 GenericQuery <- RegexString
 RegexString <- String
 FlexStringValue <- CompactStringSet / String / [(] StringList [)]
 CompactStringSet <- StringListString ([,+] StringListString)+
 NumericExpression <- NumericOperator ws? NumericValue
 NumericOperator <- [=:] / <[><!][=]?>
-NumericValue <- [0-9]+
+NumericValue <- <[0-9]+>
