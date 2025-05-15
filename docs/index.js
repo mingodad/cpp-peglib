@@ -173,6 +173,8 @@ function parse() {
   const optimizationMode = $('#opt-mode').val();
   const startRule = $('#start-rule').val();
   const packrat = $('#packrat').prop('checked');
+  const opt_profile = $('#show-profile').prop('checked');
+  const opt_trace = $('#show-trace').prop('checked');
 
   $grammarInfo.html('');
   $grammarValidation.hide();
@@ -194,7 +196,7 @@ function parse() {
     'background-color': 'rgba(0, 0, 0, 0.1)'
   });
   window.setTimeout(() => {
-    const data = JSON.parse(Module.lint(grammarText, codeText, mode, packrat, startRule));
+    const data = JSON.parse(Module.lint(grammarText, codeText, mode, packrat, opt_trace, startRule));
       $('#overlay').css({
         'z-index': '-1',
         'display': 'none',
@@ -206,7 +208,8 @@ function parse() {
 
       codeAst.insert(data.ast);
       codeAstOptimized.insert(data.astOptimized);
-      codeProfile.insert(data.profile);
+      if(opt_trace) codeProfile.insert(data.trace);
+      else codeProfile.insert(data.profile);
 
       if (data.source_valid) {
         $codeValidation.removeClass('validation-invalid').show();
@@ -283,6 +286,9 @@ function resizeEditorsToParent() {
   codeProfile.renderer.updateFull();
 }
 
+const ShowProfile = 'show-profile';
+const ShowTrace = 'show-trace';
+
 // Show windows
 function setupToolWindow(lsKeyName, buttonSel, codeSel) {
   let show = localStorage.getItem(lsKeyName) === 'true';
@@ -290,15 +296,30 @@ function setupToolWindow(lsKeyName, buttonSel, codeSel) {
   $(codeSel).css({ 'display': show ? 'block' : 'none' });
 
   $(buttonSel).on('change', () => {
-    show = !show;
+    show = $(buttonSel).prop('checked');;
     localStorage.setItem(lsKeyName, show);
     $(codeSel).css({ 'display': show ? 'block' : 'none' });
+    switch(lsKeyName) {
+       case ShowProfile:
+          if(show) {
+             $('#' + ShowTrace).prop('checked', false);
+             localStorage.setItem(ShowTrace, false);
+          }
+       break;
+       case ShowTrace:
+          if(show) {
+             $('#' + ShowProfile).prop('checked', false);
+             localStorage.setItem(ShowProfile, false);
+          }
+       break;
+    }
     resizeEditorsToParent();
   });
 }
 setupToolWindow('show-ast', '#show-ast', '#code-ast');
 setupToolWindow('show-ast-optimized', '#show-ast-optimized', '#code-ast-optimized');
-setupToolWindow('show-profile', '#show-profile', '#code-profile');
+setupToolWindow(ShowProfile, '#show-profile', '#code-profile');
+setupToolWindow(ShowTrace, '#show-trace', '#code-profile');
 
 // Show page
 $('#main').css({

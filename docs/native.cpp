@@ -65,12 +65,13 @@ bool parse_code(const std::string &text, peg::parser &peg, std::string &json,
 }
 
 std::string lint(const std::string &grammarText, const std::string &codeText,
-                 bool opt_mode, bool packrat, const std::string &startRule) {
+                 bool opt_mode, bool packrat, bool opt_trace, const std::string &startRule) {
   std::string grammarResult;
   std::string codeResult;
   std::string astResult;
   std::string astResultOptimized;
   std::string profileResult;
+  std::string traceResult;
 
   peg::parser peg;
   auto is_grammar_valid =
@@ -78,15 +79,18 @@ std::string lint(const std::string &grammarText, const std::string &codeText,
   auto is_source_valid = false;
 
   if (is_grammar_valid && peg) {
-    std::stringstream ss;
-    peg::enable_profiling(peg, ss);
+    std::stringstream ss_trace;
+    std::stringstream ss_profile;
+    peg::enable_profiling(peg, ss_profile);
 
     if (packrat) { peg.enable_packrat_parsing(); }
+    if (opt_trace) { enable_tracing(peg, ss_trace); }
 
     std::shared_ptr<peg::Ast> ast;
     is_source_valid = parse_code(codeText, peg, codeResult, ast);
 
-    profileResult = escape_json(ss.str());
+    profileResult = escape_json(ss_profile.str());
+    traceResult = escape_json(ss_trace.str());
 
     if (ast) {
       astResult = escape_json(peg::ast_to_s(ast));
@@ -107,6 +111,7 @@ std::string lint(const std::string &grammarText, const std::string &codeText,
     json += ",\"ast\":\"" + astResult + "\"";
     json += ",\"astOptimized\":\"" + astResultOptimized + "\"";
     json += ",\"profile\":\"" + profileResult + "\"";
+    json += ",\"trace\":\"" + traceResult + "\"";
   }
   json += "}";
 
