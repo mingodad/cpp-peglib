@@ -8,7 +8,8 @@ C++17 header-only [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar)
 Since this library only supports C++17 compilers, please make sure that the compiler option `-std=c++17` is enabled.
 (`/std:c++17 /Zc:__cplusplus` for MSVC)
 
-You can also try the online version, PEG Playground at https://yhirose.github.io/cpp-peglib.
+You can also try **the new forked** online version, PEG Playground at https://mingodad.github.io/cpp-peglib
+or try the original online version, PEG Playground at https://yhirose.github.io/cpp-peglib.
 
 The PEG syntax is well described on page 2 in the [document](http://www.brynosaurus.com/pub/lang/peg.pdf) by Bryan Ford. *cpp-peglib* also supports the following additional syntax for now:
 
