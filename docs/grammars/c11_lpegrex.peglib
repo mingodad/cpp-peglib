@@ -90,7 +90,7 @@ hexadecimal_escape_sequence      <- '\\x' hexadecimal_digit+
 #/*}*/ #$16)->tochar
 #------------------------------------------------------------------------------
 # String literals
-string_literal                   <- encoding_prefix? string_suffix+
+string_literal                   <- <encoding_prefix? string_suffix+>
 string_suffix                    <- '"' s_char_sequence? '"' SKIP
 encoding_prefix                  <- 'u8'
                                  / [uUL]
