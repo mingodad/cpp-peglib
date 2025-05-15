@@ -1,4 +1,4 @@
-//From: https://github.com/travisstaloch/pegzi/blob/99a9c312547beeef63b2b61ab79129080fd1cf9e/examples/grammar.y
+#From: https://github.com/travisstaloch/pegzi/blob/99a9c312547beeef63b2b61ab79129080fd1cf9e/examples/grammar.y
 
 Root <- skip container_doc_comment? ContainerMembers eof
 
