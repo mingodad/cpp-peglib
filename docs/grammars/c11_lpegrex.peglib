@@ -1,0 +1,488 @@
+#From: https://github.com/edubart/lpegrex/blob/477d3575553dec70fb733f96553c46b6989e4f1c/parsers/c11.lua
+
+chunk                            <- SHEBANG? SKIP translation_unit !.
+
+#^UnexpectedSyntax
+SHEBANG                          <- '#!' ( !LINEBREAK . )* LINEBREAK?
+COMMENT                          <- LONG_COMMENT
+                                 / SHRT_COMMENT
+LONG_COMMENT                     <- '/*' ( !'*/' . )* '*/'
+SHRT_COMMENT                     <- '//' ( !LINEBREAK . )* LINEBREAK?
+DIRECTIVE                        <- '#' ( '\\' LINEBREAK / !LINEBREAK . )*
+~SKIP                             <- ( [ \t\r\n\v\f]+ / COMMENT / DIRECTIVE / TK___extension__ )*
+LINEBREAK                        <- '\n\r'
+                                 / '\r\n'
+                                 / '\n'
+                                 / '\r'
+#NAME_SUFFIX                      <- identifier_suffix
+
+#------------------------------------------------------------------------------
+# Identifiers
+identifier                       <- identifier_word
+identifier_word                  <- !KEYWORD identifier_anyword
+IDENTIFER                        <- !KEYWORD <identifier_nondigit identifier_suffix?>
+identifier_anyword               <- <identifier_nondigit identifier_suffix?> SKIP
+#free_identifier                  <- identifier_word
+identifier_suffix                <- ( identifier_nondigit / digit )+
+identifier_nondigit              <- [a-zA-Z_]
+                                 / universal_character_name
+digit                            <- [0-9]
+
+#------------------------------------------------------------------------------
+# Universal character names
+universal_character_name         <- '\\u' hex_quad
+                                 / '\\U' hex_quad hex_quad
+hex_quad                         <- hexadecimal_digit hexadecimal_digit hexadecimal_digit hexadecimal_digit
+
+#------------------------------------------------------------------------------
+# Constants
+constant                         <- <( floating_constant / integer_constant / enumeration_constant / character_constant )> SKIP
+integer_constant                 <- octal_constant integer_suffix?
+                                 / hexadecimal_constant integer_suffix?
+                                 / decimal_constant integer_suffix?
+
+#/*}*/
+decimal_constant                 <- digit+
+octal_constant                   <- '0' octal_digit+
+hexadecimal_constant             <- hexadecimal_prefix hexadecimal_digit+
+hexadecimal_prefix               <- '0' [xX]
+octal_digit                      <- [0-7]
+hexadecimal_digit                <- [0-9a-fA-F]
+integer_suffix                   <- unsigned_suffix ( long_suffix long_suffix? )?
+                                 / long_suffix long_suffix? unsigned_suffix?
+unsigned_suffix                  <- [uU]
+long_suffix                      <- [lL]
+floating_constant                <- decimal_floating_constant
+                                 / hexadecimal_floating_constant
+
+#/*}*/
+decimal_floating_constant        <- ( fractional_constant exponent_part? / digit_sequence exponent_part ) floating_suffix?
+hexadecimal_floating_constant    <- hexadecimal_prefix ( hexadecimal_fractional_constant / hexadecimal_digit_sequence ) binary_exponent_part floating_suffix?
+fractional_constant              <- digit_sequence? '.' digit_sequence
+                                 / digit_sequence '.'
+exponent_part                    <- [eE] sign? digit_sequence
+sign                             <- [+-]
+digit_sequence                   <- digit+
+hexadecimal_fractional_constant  <- hexadecimal_digit_sequence? '.' hexadecimal_digit_sequence
+                                 / hexadecimal_digit_sequence '.'
+binary_exponent_part             <- [pP] sign? digit_sequence
+hexadecimal_digit_sequence       <- hexadecimal_digit+
+floating_suffix                  <- [fFlLqQ]
+enumeration_constant             <- identifier
+character_constant               <- [LUu]? '\'' c_char_sequence '\''
+c_char_sequence                  <- c_char+
+c_char                           <- !['\\\n\r] .
+                                 / escape_sequence
+escape_sequence                  <- simple_escape_sequence
+                                 / octal_escape_sequence
+                                 / hexadecimal_escape_sequence
+                                 / universal_character_name
+simple_escape_sequence           <- '\\' simple_escape_sequence_suffix
+simple_escape_sequence_suffix    <- [\\'"?]
+                                 / [abfnrtv]
+                                 / LINEBREAK
+ #(LINEBREAK $10)->tochar
+octal_escape_sequence            <- '\\' octal_digit octal_digit? octal_digit?
+
+#/*}*/ #$8)->tochar
+hexadecimal_escape_sequence      <- '\\x' hexadecimal_digit+
+
+#/*}*/ #$16)->tochar
+#------------------------------------------------------------------------------
+# String literals
+string_literal                   <- encoding_prefix? string_suffix+
+string_suffix                    <- '"' s_char_sequence? '"' SKIP
+encoding_prefix                  <- 'u8'
+                                 / [uUL]
+s_char_sequence                  <- s_char+
+s_char                           <- !["\\\n\r] .
+                                 / escape_sequence
+
+#------------------------------------------------------------------------------
+# Expressions
+primary_expression               <- string_literal
+                                 / type_name
+                                 / identifier
+                                 / constant
+                                 / statement_expression
+                                 / TK_lp expression TK_rp
+                                 / generic_selection
+statement_expression             <- '({' SKIP ( label_statement / declaration / statement )* '})' SKIP
+generic_selection                <- TK__Generic TK_lp assignment_expression TK_comma generic_assoc_list TK_rp
+generic_assoc_list               <- generic_association ( TK_comma generic_association )*
+generic_association              <- type_name TK_colon assignment_expression
+                                 / TK_default TK_colon assignment_expression
+postfix_expression               <- postfix_expression_prefix postfix_expression_suffix*
+ #~> rfoldright
+postfix_expression_prefix        <- type_initializer
+                                 / primary_expression
+type_initializer                 <- TK_lp type_name TK_rp TK_lc initializer_list? TK_comma? TK_rc
+postfix_expression_suffix        <- array_subscript
+                                 / argument_expression
+                                 / struct_or_union_member
+                                 / pointer_member
+                                 / post_increment
+                                 / post_decrement
+array_subscript                  <- TK_lb expression TK_rb
+argument_expression              <- TK_lp argument_expression_list TK_rp
+struct_or_union_member           <- TK_dot identifier_word
+pointer_member                   <- TK_arrow identifier_word
+post_increment                   <- TK_inc
+post_decrement                   <- TK_dec
+argument_expression_list         <- ( assignment_expression ( TK_comma assignment_expression )* )?
+unary_expression                 <- unary_op
+                                 / postfix_expression
+unary_op                         <- ( TK_inc / TK_dec ) unary_expression
+                                 / TK_sizeof unary_expression
+                                 / ( TK_band / TK_plus / TK_minus / TK_bnot / TK_not ) cast_expression
+                                 / TK_mul cast_expression
+                                 / ( TK_sizeof / TK__Alignof ) TK_lp type_name TK_rp
+cast_expression                  <- op_cast
+                                 / unary_expression
+op_cast                          <- TK_lp type_name TK_rp cast_expression
+multiplicative_expression        <- cast_expression op_multiplicative*
+ #~> foldleft
+op_multiplicative                <- ( TK_div / TK_mod ) cast_expression
+                                 / TK_mul cast_expression
+additive_expression              <- multiplicative_expression op_additive*
+ #~> foldleft
+op_additive                      <- ( TK_plus / TK_minus ) multiplicative_expression
+shift_expression                 <- additive_expression op_shift*
+ #~> foldleft
+op_shift                         <- ( TK_lsh / TK_rsh ) additive_expression
+relational_expression            <- shift_expression op_relational*
+ #~> foldleft
+op_relational                    <- ( TK_lteq / TK_gteq / TK_lt / TK_gt ) shift_expression
+equality_expression              <- relational_expression op_equality*
+ #~> foldleft
+op_equality                      <- ( TK_eqeq / TK_neq ) relational_expression
+AND_expression                   <- equality_expression op_AND*
+ #~> foldleft
+op_AND                           <- TK_band equality_expression
+exclusive_OR_expression          <- AND_expression op_OR*
+ #~> foldleft
+op_OR                            <- TK_xor AND_expression
+inclusive_OR_expression          <- exclusive_OR_expression op_inclusive_OR*
+ #~> foldleft
+op_inclusive_OR                  <- TK_bor exclusive_OR_expression
+logical_AND_expression           <- inclusive_OR_expression op_logical_AND*
+ #~> foldleft
+op_logical_AND                   <- TK_and inclusive_OR_expression
+logical_OR_expression            <- logical_AND_expression op_logical_OR*
+ #~> foldleft
+op_logical_OR                    <- TK_or logical_AND_expression
+conditional_expression           <- logical_OR_expression op_conditional?
+ #~> foldleft
+op_conditional                   <- TK_quest expression TK_colon conditional_expression
+assignment_expression            <- conditional_expression !assignment_operator
+                                 / unary_expression op_assignment+
+ #~> foldleft
+op_assignment                    <- assignment_operator assignment_expression
+assignment_operator              <- TK_eq
+                                 / TK_muleq
+                                 / TK_div/eq
+                                 / TK_modeq
+                                 / TK_pluseq
+                                 / TK_minuseq
+                                 / TK_lsheq
+                                 / TK_rsheq
+                                 / TK_bandeq
+                                 / TK_xoreq
+                                 / TK_boreq
+
+#/*}*/
+expression                       <- assignment_expression ( TK_comma assignment_expression )*
+constant_expression              <- conditional_expression
+
+#------------------------------------------------------------------------------
+# Declarations
+declaration                      <- ( typedef_declaration / type_declaration / static_assert_declaration ) TK_semi
+extension_specifiers             <- extension_specifier+
+extension_specifier              <- attribute
+                                 / asm
+                                 / tg_promote
+attribute                        <- ( TK___attribute__ / TK___attribute ) TK_lp TK_lp attribute_list TK_rp TK_rp
+                                 / TK_lb TK_lb attribute_list TK_rb TK_rb
+attribute_list                   <- attribute_item ( TK_comma attribute_item )*
+tg_promote                       <- TK___tg_promote TK_lp ( expression / parameter_varargs ) TK_rp
+attribute_item                   <- identifier_anyword ( TK_lp expression TK_rp )?
+asm                              <- ( TK___asm / TK___asm__ ) ( TK___volatile__ / TK_volatile )? TK_lp asm_argument ( TK_comma asm_argument )* TK_rp
+asm_argument                     <- ( string_literal / TK_colon / TK_comma / TK_lb expression TK_rb / TK_lp expression TK_rp / expression )+
+typedef_declaration              <- TK_typedef declaration_specifiers ( typedef_declarator ( TK_comma typedef_declarator )* )?
+type_declaration                 <- declaration_specifiers init_declarator_list?
+declaration_specifiers           <- ( ( type_specifier_width / declaration_specifiers_aux )* type_specifier / declaration_specifiers_aux* type_specifier_width ) ( type_specifier_width / declaration_specifiers_aux )*
+declaration_specifiers_aux       <- storage_class_specifier
+                                 / type_qualifier
+                                 / function_specifier
+                                 / alignment_specifier
+init_declarator_list             <- init_declarator ( TK_comma init_declarator )*
+init_declarator                  <- declarator ( TK_eq initializer )?
+storage_class_specifier          <- TK_extern
+                                 / TK_static
+                                 / TK_auto
+                                 / TK_register
+                                 / TK__Thread_local / TK___thread
+ #->'_Thread_local'
+type_specifier                   <- TK_void
+                                 / TK_char
+                                 / TK_int
+                                 / TK_float
+                                 / TK_double
+                                 / TK__Bool
+                                 / atomic_type_specifier
+                                 / struct_or_union_specifier
+                                 / enum_specifier
+                                 / typedef_name
+                                 / typeof
+                                 / TK___builtin_va_list
+                                 / TK___auto_type
+                                 / TK___int128
+                                 / TK__Float128
+type_specifier_width             <- TK_short
+                                 / TK_signed / TK___signed__
+                                 / TK_unsigned
+                                 / TK_long TK_long
+                                 / TK_long
+                                 / TK__Complex
+                                 / TK__Imaginary
+
+#/*}*/
+typeof                           <- ( TK_typeof / TK___typeof / TK___typeof__ ) argument_expression
+struct_or_union_specifier        <- struct_or_union extension_specifiers? ( identifier_word struct_declaration_list? / struct_declaration_list )
+struct_or_union                  <- TK_struct
+                                 / TK_union
+
+#/*}*/
+struct_declaration_list          <- TK_lc ( struct_declaration / static_assert_declaration )* TK_rc
+struct_declaration               <- specifier_qualifier_list struct_declarator_list? TK_semi
+specifier_qualifier_list         <- ( ( type_specifier_width / specifier_qualifier_aux )* type_specifier / specifier_qualifier_aux* type_specifier_width ) ( type_specifier_width / specifier_qualifier_aux )*
+specifier_qualifier_aux          <- type_qualifier
+                                 / alignment_specifier
+struct_declarator_list           <- struct_declarator ( TK_comma struct_declarator )*
+struct_declarator                <- declarator ( TK_colon constant_expression )?
+                                 / TK_colon constant_expression
+enum_specifier                   <- TK_enum extension_specifiers? ( identifier_word? TK_lc enumerator_list TK_comma? TK_rc / identifier_word )
+enumerator_list                  <- enumerator ( TK_comma enumerator )*
+enumerator                       <- enumeration_constant extension_specifiers? ( TK_eq constant_expression )?
+atomic_type_specifier            <- TK__Atomic TK_lp type_name TK_rp
+type_qualifier                   <- TK_const
+                                 / TK_restrict / TK___restrict / TK___restrict__
+                                 / TK_volatile
+                                 / TK__Atomic !TK_lp
+                                 / extension_specifier
+function_specifier               <- TK_inline / TK___inline / TK___inline__
+                                 / TK__Noreturn
+
+#/*}*/
+alignment_specifier              <- TK__Alignas TK_lp ( type_name / constant_expression ) TK_rp
+declarator                       <- pointer* direct_declarator extension_specifiers?
+typedef_declarator               <- pointer* typedef_direct_declarator extension_specifiers?
+direct_declarator                <- ( identifier / TK_lp declarator TK_rp ) direct_declarator_suffix*
+ #~> foldleft
+typedef_direct_declarator        <- ( typedef_identifier / TK_lp typedef_declarator TK_rp ) direct_declarator_suffix*
+ #~> foldleft
+direct_declarator_suffix         <- declarator_subscript
+                                 / declarator_parameters
+declarator_subscript             <- TK_lb subscript_qualifier_list? ( assignment_expression / pointer )? TK_rb
+subscript_qualifier_list         <- ( type_qualifier / &TK_static storage_class_specifier )+
+declarator_parameters            <- TK_lp parameter_type_list TK_rp
+                                 / TK_lp identifier_list? TK_rp
+pointer                          <- extension_specifiers? TK_mul type_qualifier_list?
+# /*~?*/
+type_qualifier_list              <- type_qualifier+
+parameter_type_list              <- parameter_list ( TK_comma parameter_varargs )?
+parameter_varargs                <- TK_ellipsis
+parameter_list                   <- parameter_declaration ( TK_comma parameter_declaration )*
+parameter_declaration            <- declaration_specifiers ( declarator / abstract_declarator? )
+identifier_list                  <- identifier_list_item ( TK_comma identifier_list_item )*
+identifier_list_item             <- identifier
+                                 / TK_lp type_name TK_rp
+type_name                        <- specifier_qualifier_list abstract_declarator?
+abstract_declarator              <- ( pointer+ direct_abstract_declarator? / direct_abstract_declarator ) extension_specifiers?
+direct_abstract_declarator       <- TK_lp abstract_declarator TK_rp direct_declarator_suffix*
+                                 / direct_declarator_suffix+
+ #~> foldleft
+#typedef_name                     <- <isa TypeName> _
+typedef_name                     <- TypeName _
+  #/*&(identifier => is_typedef)*/ identifier
+#typedef_identifier               <- <symbol TypeName> _
+typedef_identifier               <- TypeName _
+  #/*&(identifier => set_typedef)*/ identifier
+TypeName                         <- IDENTIFER
+initializer                      <- assignment_expression
+                                 / TK_lc initializer_list? TK_comma? TK_rc
+initializer_list                 <- initializer_item ( TK_comma initializer_item )*
+initializer_item                 <- designation
+                                 / initializer
+designation                      <- designator_list TK_eq initializer
+designator_list                  <- designator+
+designator                       <- subscript_designator
+                                 / member_designator
+subscript_designator             <- TK_lb constant_expression TK_rb
+member_designator                <- TK_dot identifier_word
+static_assert_declaration        <- TK__Static_assert TK_lp constant_expression ( TK_comma string_literal )? TK_rp
+
+#------------------------------------------------------------------------------
+# Statements
+statement                        <- label_statement
+                                 / case_statement
+                                 / default_statement
+                                 / compound_statement
+                                 / expression_statement
+                                 / if_statement
+                                 / switch_statement
+                                 / while_statement
+                                 / do_while_statement
+                                 / for_statement
+                                 / goto_statement
+                                 / continue_statement
+                                 / break_statement
+                                 / return_statement
+                                 / asm_statement
+                                 / attribute
+                                 / TK_semi
+label_statement                  <- identifier TK_colon
+case_statement                   <- TK_case constant_expression TK_colon statement?
+default_statement                <- TK_default TK_colon statement?
+#compound_statement               <- TK_lc <block ( label_statement / declaration / statement )*> TK_rc
+compound_statement               <- TK_lc ( label_statement / declaration / statement )* TK_rc
+expression_statement             <- expression TK_semi
+if_statement                     <- TK_if TK_lp expression TK_rp statement ( TK_else statement )?
+switch_statement                 <- TK_switch TK_lp expression TK_rp statement
+while_statement                  <- TK_while TK_lp expression TK_rp statement
+do_while_statement               <- TK_do statement TK_while TK_lp expression TK_rp TK_semi
+for_statement                    <- TK_for TK_lp ( declaration / expression? TK_semi ) expression? TK_semi expression? TK_rp statement
+goto_statement                   <- TK_goto constant_expression TK_semi
+continue_statement               <- TK_continue TK_semi
+break_statement                  <- TK_break TK_semi
+return_statement                 <- TK_return expression? TK_semi
+asm_statement                    <- asm TK_semi
+
+#------------------------------------------------------------------------------
+# External definitions
+translation_unit                 <- external_declaration*
+external_declaration             <- function_definition
+                                 / declaration
+                                 / TK_semi
+function_definition              <- declaration_specifiers declarator declaration_list compound_statement
+declaration_list                 <- declaration*
+
+#Tokens
+~_                                <- SKIP
+W                                <- [a-zA-Z0-9_]
+TK_xoreq                             <- '^=' _
+TK_xor                              <- '^' _
+TK_bnot                              <- '~' _
+TK_lsheq                            <- '<<=' _
+TK_lsh                             <- '<<' _
+TK_lteq                             <- '<=' _
+TK_lt                              <- '<' _
+TK_eqeq                             <- '==' _
+TK_eq                              <- '=' _
+TK_gteq                             <- '>=' _
+TK_rsheq                            <- '>>=' _
+TK_rsh                             <- '>>' _
+TK_gt                              <- '>' _
+TK_boreq                             <- '|=' _
+TK_or                             <- '||' _
+TK_bor                              <- '|' _
+TK_minuseq                             <- '-=' _
+TK_arrow                             <- '->' _
+TK_dec                             <- '--' _
+TK_minus                              <- '-' _
+TK_comma                              <- ',' _
+TK_semi                              <- ';' _
+TK_colon                              <- ':' _
+TK_neq                             <- '!=' _
+TK_not                              <- '!' _
+TK_quest                              <- '?' _
+TK_div/eq                             <- '/=' _
+TK_div                              <- '/' _
+TK_ellipsis                            <- '...' _
+TK_dot                              <- '.' _
+TK_lp                              <- '(' _
+TK_rp                              <- ')' _
+TK_lb                              <- '[' _
+TK_rb                              <- ']' _
+TK_lc                              <- '{' _
+TK_rc                              <- '}' _
+TK_muleq                             <- '*=' _
+TK_mul                              <- '*' _
+TK_bandeq                             <- '&=' _
+TK_band                              <- '&' _
+TK_and                             <- '&&' _
+TK_modeq                             <- '%=' _
+TK_mod                              <- '%' _
+TK_pluseq                             <- '+=' _
+TK_plus                              <- '+' _
+TK_inc                             <- '++' _
+TK__Alignas                       <- '_Alignas' !W _
+TK__Alignof                       <- '_Alignof' !W _
+TK___asm__                        <- '__asm__' !W _
+TK___asm                          <- '__asm' !W _
+TK__Atomic                        <- '_Atomic' !W _
+TK___attribute__                  <- '__attribute__' !W _
+TK___attribute                    <- '__attribute' !W _
+TK_auto                           <- 'auto' !W _
+TK__Bool                          <- '_Bool' !W _
+TK_break                          <- 'break' !W _
+TK_case                           <- 'case' !W _
+TK_char                           <- 'char' !W _
+TK__Complex                       <- '_Complex' !W _
+TK_const                          <- 'const' !W _
+TK_continue                       <- 'continue' !W _
+TK_default                        <- 'default' !W _
+TK_do                             <- 'do' !W _
+TK_double                         <- 'double' !W _
+TK_else                           <- 'else' !W _
+TK_enum                           <- 'enum' !W _
+TK___extension__                  <- '__extension__' !W _
+TK_extern                         <- 'extern' !W _
+TK_float                          <- 'float' !W _
+TK_for                            <- 'for' !W _
+TK__Generic                       <- '_Generic' !W _
+TK_goto                           <- 'goto' !W _
+TK_if                             <- 'if' !W _
+TK__Imaginary                     <- '_Imaginary' !W _
+TK___inline__                     <- '__inline__' !W _
+TK___inline                       <- '__inline' !W _
+TK_inline                         <- 'inline' !W _
+TK_int                            <- 'int' !W _
+TK_long                           <- 'long' !W _
+TK__Noreturn                      <- '_Noreturn' !W _
+TK_register                       <- 'register' !W _
+TK___restrict__                   <- '__restrict__' !W _
+TK___restrict                     <- '__restrict' !W _
+TK_restrict                       <- 'restrict' !W _
+TK_return                         <- 'return' !W _
+TK_short                          <- 'short' !W _
+TK___signed__                     <- '__signed__' !W _
+TK_signed                         <- 'signed' !W _
+TK_sizeof                         <- 'sizeof' !W _
+TK__Static_assert                 <- '_Static_assert' !W _
+TK_static                         <- 'static' !W _
+TK_struct                         <- 'struct' !W _
+TK_switch                         <- 'switch' !W _
+TK___tg_promote                   <- '__tg_promote' !W _
+TK__Thread_local                  <- '_Thread_local' !W _
+TK___thread                       <- '__thread' !W _
+TK_typedef                        <- 'typedef' !W _
+TK___typeof__                     <- '__typeof__' !W _
+TK___typeof                       <- '__typeof' !W _
+TK_typeof                         <- 'typeof' !W _
+TK_union                          <- 'union' !W _
+TK_unsigned                       <- 'unsigned' !W _
+TK_void                           <- 'void' !W _
+TK___volatile__                   <- '__volatile__' !W _
+TK_volatile                       <- 'volatile' !W _
+TK_while                          <- 'while' !W _
+TK___builtin_va_list              <- '__builtin_va_list' !W _
+TK___auto_type                    <- '__auto_type' !W _
+TK___int128                       <- '__int128' !W _
+
+#TK__Float32 <- '_Float32' !W _
+#TK__Float32x <- '_Float32x' !W _
+#TK__Float64 <- '_Float64' !W _
+#TK__Float64x <- '_Float64x' !W _
+TK__Float128                      <- '_Float128' !W _
+KEYWORD                          <- <( '_Alignas' | '_Alignof' | '__asm__' | '__asm' | '_Atomic' | '__attribute__' | '__attribute' | 'auto' | '_Bool' | 'break' | 'case' | 'char' | '_Complex' | 'const' | 'continue' | 'default' | 'do' | 'double' | 'else' | 'enum' | '__extension__' | 'extern' | 'float' | 'for' | '_Generic' | 'goto' | 'if' | '_Imaginary' | '__inline__' | '__inline' | 'inline' | 'int' | 'long' | '_Noreturn' | 'register' | '__restrict__' | '__restrict' | 'restrict' | 'return' | 'short' | '__signed__' | 'signed' | 'sizeof' | '_Static_assert' | 'static' | 'struct' | 'switch' | '__tg_promote' | '_Thread_local' | '__thread' | 'typedef' | '__typeof__' | '__typeof' | 'typeof' | 'union' | 'unsigned' | 'void' | '__volatile__' | 'volatile' | 'while' | '__builtin_va_list' | '__auto_type' | '__int128' | '_Float128' ) !W>

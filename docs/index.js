@@ -54,6 +54,7 @@ const sampleList = [
 	["bass parser", "bass-grammar.peglib", "test.bass", "ace/mode/asm"],
 	["bc calculator parser", "bc.peglib", "test.bc", "ace/mode/text"],
 	["bison parser", "bison.peglib", "test.bison", "ace/mode/yaml"],
+	["c11-lpegrex parser", "c11_lpegrex.peglib", "test.c", "ace/mode/c_cpp"],
 	["c99-mouse parser", "c99-mouse-dict.peglib", "test.c", "ace/mode/c_cpp"],
 	["chpeg parser", "chpeg-ext.peglib", "test.chpeg-ext", "ace/mode/yaml"],
 	["clunc parser", "clunc.peglib", "test.clunc", "ace/mode/c_cpp"],
@@ -296,22 +297,20 @@ function setupToolWindow(lsKeyName, buttonSel, codeSel) {
   $(codeSel).css({ 'display': show ? 'block' : 'none' });
 
   $(buttonSel).on('change', () => {
-    show = $(buttonSel).prop('checked');;
+    show = $(buttonSel).prop('checked');
     localStorage.setItem(lsKeyName, show);
     $(codeSel).css({ 'display': show ? 'block' : 'none' });
-    switch(lsKeyName) {
-       case ShowProfile:
-          if(show) {
+    if(show) {
+      switch(lsKeyName) {
+        case ShowProfile:
              $('#' + ShowTrace).prop('checked', false);
              localStorage.setItem(ShowTrace, false);
-          }
-       break;
-       case ShowTrace:
-          if(show) {
+        break;
+        case ShowTrace:
              $('#' + ShowProfile).prop('checked', false);
              localStorage.setItem(ShowProfile, false);
-          }
-       break;
+        break;
+      }
     }
     resizeEditorsToParent();
   });
