@@ -65,6 +65,7 @@ const sampleList = [
 	//["Css parser", "CssParser.peglib", "style.css", "ace/mode/css"],
 	//["exprtk parser", "exprtk.peglib", "test.exprtk", "ace/mode/c_cpp"],
 	["filter string parser", "filter_string.peglib", "test.filter_string", "ace/mode/text"],
+	["fluenc parser", "fluenc.peglib", "test.fluenc", "ace/mode/text"],
 	["fluid-fltk parser", "fluid.peglib", "test.fluid", "ace/mode/text"],
 	["gams parser", "gams.peglib", "test.gams", "ace/mode/text"],
 	["gmpl parser", "gmpl.peglib", "test.gmpl", "ace/mode/text"],
