@@ -1,0 +1,28 @@
+// comment one
+/* comment two */
+/*
+multi-line comment
+*/
+/** tricky comment **/
+syntax = "proto3";
+import "path/to/some/file";
+package timmerov;
+message FooBar {
+	int x = 1;
+	double y = 2;
+	google.protobuf.any z = 3;
+	repeated int.int.int a = 4;
+	oneof fred {
+		int b = 5;
+		double c = 6;
+	}
+	map<string, string> d = 7;
+	message sub {
+		int x = 8;
+	}
+	enum Wilma {
+		f = 0;
+		g = 1;
+	}
+}
+// comment at end of file

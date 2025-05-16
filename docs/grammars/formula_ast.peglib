@@ -1,0 +1,23 @@
+#From: https://github.com/cms-tau-pog/correctionlib/blob/571cdea4add4ae24655433a2076888c4ce50ca58/src/formula_ast.cc#L46C1-L67C1
+
+EXPRESSION  <- ATOM (BINARYOP ATOM)* {
+	  precedence
+	    L == !=
+	    L > < >= <=
+	    L - +
+	    L / *
+	    R ^
+	}
+UNARYOP     <- < '-' >
+BINARYOP    <- < '==' | '!=' | '>' | '<' | '>=' | '<=' | '-' | '+' | '/' | '*' | '^' >
+UNARYF      <- < 'log' | 'log10' | 'exp' | 'erf' | 'sqrt' | 'abs' | 'cos' | 'sin' | 'tan' | 'acos' | 'asin' | 'atan' | 'cosh' | 'sinh' | 'tanh' | 'acosh' | 'asinh' | 'atanh' >
+BINARYF     <- < 'atan2' | 'pow' | 'max' | 'min' >
+PARAMETER   <- '[' < [0-9]+ > ']'
+VARIABLE    <- < [xyzt] >
+LITERAL     <- < '-'? [0-9]+ ('.' [0-9]*)? ('e' '-'? [0-9]+)? >
+CALLU       <- UNARYF '(' EXPRESSION ')'
+CALLB       <- BINARYF '(' EXPRESSION ',' EXPRESSION ')'
+ATOM        <- LITERAL / UATOM
+UATOM       <- UNARYOP? ( CALLU / CALLB / NAME / '(' EXPRESSION ')' )
+NAME        <- PARAMETER / VARIABLE
+%whitespace <- [ \t]*

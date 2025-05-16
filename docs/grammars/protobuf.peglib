@@ -1,0 +1,42 @@
+#From: https://github.com/timmerov/technomancy/blob/eeba3c921721be9d9c39d639b7483f3fb9e3a96c/peg/src/main.cc#L64
+
+#/** protobuf statements **/
+statements <- statement*
+statement <-
+	"syntax" '=' string ';' /
+	"import" string ';' /
+	"package" token ';' /
+	enum_statement /
+	message_statement
+
+#/** protobuf enum **/
+enum_statement <- "enum" token '{' enum_decl* '}'
+enum_decl <- token '=' number ';'
+
+#/** protobuf message **/
+message_statement <- "message" token '{' field* '}'
+field <-
+	type_decl /
+	"repeated" type token '=' number ';' /
+	"oneof" token '{' type_decl* '}' /
+	"map" '<' type ',' type '>' token '=' number ';' /
+	message_statement /
+	enum_statement
+
+type_decl <- type token '=' number ';'
+type <- token ('.' token)*
+
+#/** terminating symbols **/
+%word <- token / number
+string <- < '"' (!'"' .)* '"' >
+token  <- < [a-zA-Z_][a-zA-Z0-9_]* >
+number <- < [0-9]+ >
+
+#/** fold comments into whitespace **/
+%whitespace <- (' ' / '\t' / end_of_line / comment)*
+comment <-
+	"//" (!end_of_comment .)* end_of_comment /
+	"/*" (!"*/" .)* "*/"
+end_of_comment <- end_of_line / end_of_file
+end_of_line <- '\r\n' / '\r' / '\n'
+end_of_file <- !.

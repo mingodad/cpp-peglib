@@ -1,0 +1,48 @@
+Entity QuadraticEquation {
+
+# Declare parameters (int or string should work)
+# The idea is that you may explore different values of the parameters by changing just a few lines here.
+
+Parameter wE = 17;
+Parameter wF = 7;
+
+
+# Declare the FloPoCo operators you will use, using command-line syntax
+# The same operator may be used several times, instances in the VHDL will have a unique id appended
+# Here the idea is that you may explore different variants of the operators easily
+
+Operator Mul     : FPMult wE = $wE wF = $wF;
+Operator Square  : FPMult  wE = $wE wF = $wF; # to replace with a squarer
+Operator Mul4    : FPConstMult constant=4 wE = $wE wF = $wF ;
+Operator Mul2    : FPConstMult constant=2	 wE = $wE wF = $wF ;
+Operator Add     : FPAdd wE = $wE wF = $wF;
+Operator Sub     : FPAdd wE = $wE wF = $wF sub=1;
+Operator Div     : FPDiv wE = $wE wF = $wF;
+Operator Sqrt    : FPSqrt wE = $wE wF = $wF;
+Operator InConv  : InputIEEE wEIn = $wE wFIn = $wF wEOut = $wE wFOut = $wF;
+Operator OutConv : OutputIEEE wEIn = $wE wFIn = $wF wEOut = $wE wFOut = $wF;
+
+# Declare Input/Output signals -- these will be the IOs of the top-level entity
+
+Input inA, inB, inC;
+Output outmX1, outX2;
+
+# Assemble the operators
+# the following is the tree version of b*b-4*a*c
+# It involves several intermediate signals (example Delta below);
+# You don't need to declare them, their bit size is inferred.
+
+A <= InConv(inA);
+B <= InConv(inB);
+C <= InConv(inC);
+Delta  <= Sub(Square(B, B),  Mul4(Mul(A,C)));
+SqrtDelta <= Sqrt(Delta);
+TwoA <= Mul2(A);
+mX1 <= Div(Add(B, SqrtDelta), TwoA);    # -(b+sqrt(delta))/2a
+X2  <= Div(Sub(SqrtDelta, B), TwoA);    # -b+sqrt(delta)/2a
+# Seems we miss a Neg operator, or an option to FPAdd.
+# So wrong formula, we output -X1 but never mind, this is a toy example anyway
+
+outmX1 <= OutConv(mX1);
+outX2 <= OutConv(X2);
+}

@@ -1,0 +1,44 @@
+#From: https://github.com/dmitry-vlasov/sfl/blob/7dcb48c801fca7ed73572a29880ac38fffa0dd57/src/sfl/sfl_parser.cpp#L13C1-L55C1
+
+# SFL grammar
+
+SOURCE      <- STAT_SEQ
+STATEMENT   <- STAT_ASSIGN / STAT_IF / '{' STAT_SEQ '}' / STAT_WHILE / STAT_PRINT /STAT_EXPR
+STAT_SEQ    <- COMMENT* STATEMENT COMMENT* (';' COMMENT* STATEMENT COMMENT*)* ';' ? COMMENT*
+STAT_ASSIGN <- ID '=' EXPR / VAR_DECL '=' EXPR
+STAT_IF     <- 'if' COND 'then' STATEMENT 'else' STATEMENT
+STAT_WHILE  <- 'while' COND 'do' STATEMENT
+STAT_PRINT  <- 'print' EXPR
+STAT_EXPR   <- EXPR
+COND        <- EXPR COND_OP EXPR
+COND_OP     <- '<=' / '>=' / '<' / '>' / '='
+
+EXPR         <- EX_INT / EX_BINARY / EX_UNARY / EX_ARR_ACCESS  / EX_ARR_MAKE / EX_ARR_LEN / EX_FUN_CALL / EX_LAMBDA / EX_VAR
+EX_INT       <- < [0-9]+ >
+EX_VAR       <- ID
+EX_BINARY    <- '(' EXPR BINARY_OP EXPR ')'
+BINARY_OP    <- '+' / '*' / '-' / '/' / '%'
+EX_UNARY     <- UNARY_OP EXPR
+UNARY_OP     <- '-'
+EX_ARR_ACCESS<- '[' EXPR '[' EXPR ']' ']'
+EX_ARR_MAKE  <- '[' EXPR (',' EXPR )* ']'
+EX_ARR_LEN   <- '|' EXPR '|'
+EX_FUN_CALL  <- '(' EXPR '(' CALL_ARGS ? ')' ')'
+CALL_ARGS    <- EXPR (',' EXPR)*
+EX_LAMBDA    <- '/\\' LAMBDA_ARGS ? '->' STATEMENT
+LAMBDA_ARGS  <- VAR_DECL (',' VAR_DECL)*
+VAR_DECL     <- ID ':' TYPE
+
+TYPE      <- TP_INT / TP_ARRAY / TP_FUNC
+TP_INT    <- 'int'
+TP_ARRAY  <- '[' TYPE ']'
+TP_FUNC   <- '(' TP_ARGS ? ')' '->' TYPE
+TP_ARGS   <- TYPE (',' TYPE)*
+
+ID          <- < [a-zA-Z] [a-zA-Z0-9_]* >
+
+~COMMENT    <- COMMENT_ML / COMMENT_SL
+~COMMENT_ML <- '/*' < (!'*/' .)* > '*/'
+~COMMENT_SL <- '//' < (![\n$] .)+ >
+
+%whitespace <- [ \t\r\n]*

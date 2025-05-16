@@ -1,0 +1,15 @@
+#From: https://github.com/fjnl/CHARM-SYCL/blob/09588fc57caf968e886b28c916ecf5c3628da967/internal/xcml/xml_spec.cpp#L8
+
+TopLevel <- Spec*
+Spec <- '(' Name '(' Attr* ')' SpecBody* ')'
+Name <- !'.' Symbol
+Attr <- '(' Name '.test' ')'
+      / '(' Name ')'
+SpecBody <- '(' '.for-each' Name ')'
+          / '(' '.nodes' Name ')'
+          / '(' '.node' Name ')'
+          / '(' '.if' Name SpecBody* ')'
+          / Spec
+          / Name
+Symbol <- < [^ () \r\n\t\v]+ >
+%whitespace <- [ \r\n]*

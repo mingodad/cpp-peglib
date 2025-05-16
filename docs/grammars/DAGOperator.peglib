@@ -1,0 +1,29 @@
+#From: https://github.com/Activation-Functions/flopoco/blob/d97e3e4d3d52fccc33553024cc729a2663e192b1/code/VHDLOperators/src/DAG/DAGOperator.cpp#L83
+
+DAG                  <- EntityDeclaration
+EntityDeclaration   <- 'Entity' EntityName '{' Command* '}'
+Command              <- ParameterDeclaration  / OperatorDeclaration / IODeclaration / Assignment / Comment
+ParameterDeclaration <- 'Parameter' paramName '='  ConstantValue ';'
+OperatorDeclaration  <- 'Operator' InstanceName ':' EntityName NameValuePair* ';'
+NameValuePair        <- Name '=' Value
+IODeclaration     <-  IOType  SignalName ( ','  SignalName)* ';'
+IOType            <-  'Input' / 'Output'
+
+Assignment     <-  SignalName '<=' Arg ';'
+Arg            <-  Instance / SignalName
+Instance       <-  InstanceName  '('  Arg (','  Arg)* ')'
+
+ConstantValue   <- String / Integer
+InstanceName    <- Name
+EntityName      <- Name
+paramName       <- Name
+SignalName      <- Name
+Value           <- ConstantValue / ParamValue
+String          <-  < '"' (!'"' .)* '"' >
+Integer         <- < '-'? [0-9]+ >
+Name            <- < [a-zA-Z] [a-zA-Z0-9-_]* >
+ParamValue      <- '$' Name
+
+Comment         <- < '#' [^\n]* '\n' >
+
+%whitespace     <- [ \t\r\n]*

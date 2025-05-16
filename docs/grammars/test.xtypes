@@ -1,0 +1,24 @@
+struct Inner {
+    long a;
+};
+
+struct Outer {
+    long b;
+    Inner c;
+};
+
+const float C_FLOAT = 3.141592;
+
+struct Test01
+{
+    long my_long;
+    short my_short;
+    long long my_long_long;
+};
+
+#include "include/test_include.idl"
+
+struct Test02
+{
+    include::TestInclude my_include;
+};
