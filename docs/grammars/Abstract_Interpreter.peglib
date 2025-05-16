@@ -1,0 +1,24 @@
+#From: https://github.com/HliasGit/Abstract_Interpreter/blob/c9f410d69e84245bc71fe435b0521ead6f782167/include/parser.hpp#L21
+
+Program     <- Statements*
+Statements  <- DeclareVar / Assignment / Increment / IfElse / WhileLoop / Block / PreCon / PostCon / Comment
+Integer     <- < [+-]? [0-9]+ >
+Identifier  <- < [a-zA-Z_][a-zA-Z0-9_]* >
+SeqOp       <- '+' / '-'
+PreOp       <- '*' / '/'
+LogicOp     <- '<=' / '>=' / '==' / '!=' / '<' / '>'
+DeclareVar  <- 'int' Identifier ('=' Integer / ',' Identifier)* ';'
+PreCon      <- '/*!npk' Identifier 'between' Integer 'and' Integer '*/'
+PostCon     <- 'assert' '(' Expression ')' ';'
+Assignment  <- Identifier '=' Expression ';'
+Increment   <- Identifier '++' ';'
+Block       <- ('void main' '(' ')')? '{' Statements* '}'
+IfElse      <- 'if' '(' Expression ')' (Block / Statements) ('else' (Block / Statements))?
+WhileLoop   <- 'while' '(' Expression ')' (Block / Statements)
+
+Expression  <- Term ((SeqOp / LogicOp) Term)*
+Term        <- Factor (PreOp Factor)*
+Factor      <- '-' Factor / Integer / Identifier / '(' Expression ')'
+
+~Comment    <- '//' [^\n\r]* [ \n\r\t]*
+%whitespace <- [ \n\r\t]*

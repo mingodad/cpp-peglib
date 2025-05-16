@@ -1,0 +1,37 @@
+import "printlist.by"
+import "random_list.by"
+
+extern func list_has_next = List[Int] -> Bool
+extern func is_null = List[Int] -> Bool
+
+func main = args: List[String] -> Int {
+    let list = build_list(20, 128);
+    let list4 = printlist_int(list);
+    let sorted = quickSort(list4);
+    printlist_int(sorted);
+    0
+}
+
+func quickSort = list: List[Int] -> List[Int] {
+    if !list_has_next(list) {
+        list : Null
+    }
+    else {
+	    let pivot : tail = list;
+        sortedHelper(tail, Null, Null, pivot)
+    }
+}
+
+func sortedHelper = list: List[Int], lower: List[Int], heigher: List[Int], pivot: Int -> List[Int] {
+    if is_null(list) {
+        quickSort(lower) : (pivot : quickSort( heigher))
+    }
+    else {
+        let value : tail = list;
+        if value >= pivot {
+            sortedHelper(tail, lower, (value : heigher), pivot)
+        } else {
+            sortedHelper(tail, (value : lower), heigher, pivot)
+        }
+    }
+}

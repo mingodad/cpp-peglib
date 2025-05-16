@@ -1,0 +1,68 @@
+#From: https://github.com/lattice-land/lala-parsing/blob/c80b469756c733dd58413807f313bfde1423f28d/include/lala/flatzinc_parser.hpp#L73C1-L139C1
+
+Statements  <- (PredicateDecl / VariableDecl / VarArrayDecl / ParameterDecl / ConstraintDecl / SolveItem / Comment)+
+
+Literal      <- Boolean / Real / Integer / ArrayAccess / VariableLit / Set
+RangeLiteral <- SetRange / Literal
+InnerRangeLiteral <- InnerSetRange / Literal
+
+VariableLit <- Identifier
+Identifier  <- < [a-zA-Z_][a-zA-Z0-9_]* >
+Boolean     <- < 'true' / 'false' >
+Real        <- < (
+   'inf'
+ / '-inf'
+ / [+-]? [0-9]+ (('.' (&'..' / !'.') [0-9]*) / ([Ee][+-]?[0-9]+)) ) >
+Integer     <- < [+-]? [0-9]+ >
+Set         <- '{' '}' / '{' InnerRangeLiteral (',' InnerRangeLiteral)* '}'
+InnerSetRange    <- Literal '..' Literal
+SetRange <- InnerSetRange
+ArrayAccess <- Identifier '[' (VariableLit / Integer) ']'
+
+VariableDecl <- 'var' ValueType ':' Identifier Annotations ('=' Literal)? ';'
+VarArrayDecl <- 'array' '[' IndexSet ']' 'of' 'var' ValueType ':' Identifier Annotations ('=' LiteralArray)? ';'
+
+SetValue <- 'set' 'of' (SetRange / Set)
+
+ValueType <- Type
+        / SetValue
+        / SetRange
+        / Set
+
+IntType <- 'int'
+RealType <- 'float' / 'real'
+BoolType <- 'bool'
+SetType <- 'set' 'of' Type
+Type <- IntType / RealType / BoolType / SetType
+
+Annotation <- Identifier ('(' Parameter (',' Parameter)* ')')?
+Annotations <- ('::'  Annotation)*
+
+ConstraintDecl <- 'constraint' (PredicateCall / Boolean) Annotations ';'
+
+LiteralInExpression <- RangeLiteral !'('
+FunctionCall <-  Identifier '(' Parameter (',' Parameter )* ')'
+Parameter <- LiteralInExpression / FunctionCall / LiteralArray
+PredicateCall <- Identifier '(' Parameter (',' Parameter)* ')'
+
+PredicateDecl <- 'predicate' Identifier '(' (!')' .)* ')' ';'
+
+MinimizeItem <- 'minimize' RangeLiteral
+MaximizeItem <- 'maximize' RangeLiteral
+SatisfyItem <- 'satisfy'
+SolveItem <- 'solve' SearchAnnotations (MinimizeItem / MaximizeItem / SatisfyItem) ';'
+
+SearchAnnotations <- ('::' SearchAnnotation)*
+SearchAnnotation <- SeqSearch / BaseSearch
+SeqSearch <- 'seq_search' '(' '[' SearchAnnotation (',' SearchAnnotation)* ']' ')'
+BaseSearch <- ('int_search' / 'bool_search' / 'set_search') '(' (VariableLit / LiteralArray) ',' Identifier ',' Identifier ',' Identifier ')'
+
+LiteralArray <- '[]' / '[' RangeLiteral (',' RangeLiteral)* ']'
+ParameterExpr <- RangeLiteral / LiteralArray
+IndexSet <- '1' '..' Integer
+ArrayType <- 'array' '[' IndexSet ']' 'of' Type
+ParameterType <- Type / ArrayType
+ParameterDecl <- ParameterType ':' Identifier '=' ParameterExpr ';'
+
+~Comment    <- '%' [^\n\r]* [ \n\r\t]*
+%whitespace <- [ \n\r\t]*
