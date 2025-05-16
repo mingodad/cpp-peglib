@@ -97,6 +97,7 @@ const sampleList = [
 	["virgil parser", "virgil.peglib", "test.virgil", "ace/mode/c_cpp"],
 	["xcml parser", "xcml-xml_spec.peglib", "test.xcml-xml_spec", "ace/mode/lisp"],
 	["xtypes parser", "xtypes.peglib", "test.xtypes", "ace/mode/c_cpp"],
+	["waxeye parser", "waxeye.peglib", "test.waxeye", "ace/mode/text"],
 	["zig parser", "zig.peglib", "test.zig", "ace/mode/c_cpp"],
 ];
 
