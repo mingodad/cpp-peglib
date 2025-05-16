@@ -51,6 +51,7 @@ onbeforeunload= function(event) { updateLocalStorage(); };
 const sampleList = [
 	//title, grammar, input, input ace syntax
 	["antlr4 parser", "Antlr4-naked.peglib", "test.antlr4", "ace/mode/yaml"],
+	["ards parser", "ards_compiler.peglib", "test.ards_compiler", "ace/mode/text"],
 	["bass parser", "bass-grammar.peglib", "test.bass", "ace/mode/asm"],
 	["bc calculator parser", "bc.peglib", "test.bc", "ace/mode/text"],
 	["bison parser", "bison.peglib", "test.bison", "ace/mode/yaml"],

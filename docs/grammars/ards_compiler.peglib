@@ -1,0 +1,157 @@
+#From: https://github.com/tiberiusbrown/abc/blob/ec32ae5e4bfea2f207b1167ce9a150a8bdf2c041/src/ards_compiler_parse.cpp#L59C1-L214C1
+
+program             <- global_stmt*
+
+global_stmt         <- import_stmt /
+                       struct_stmt /
+                       enum_stmt   /
+                       decl_stmt   /
+                       func_stmt   /
+                       directive
+import_stmt         <- 'import' import_path ';'
+import_path         <- ident ('.' ident)*
+decl_stmt           <- 'constexpr' type_name decl_stmt_item_list ';' /
+                       'saved' type_name decl_stmt_item_list ';' /
+                       type_name decl_stmt_item_list ';'
+decl_stmt_item_list <- decl_stmt_item (',' decl_stmt_item)*
+decl_stmt_item      <- ident ('=' expr)?
+struct_stmt         <- 'struct' ident '{' struct_decl_stmt* '}' ';'
+struct_decl_stmt    <- type_name ident (',' ident)* ';'
+enum_stmt           <- 'enum' ident? '{' enum_item_list? '}' ';'
+enum_item_list      <- enum_item (',' enum_item)* ','?
+enum_item           <- ident ('=' expr)?
+func_stmt           <- type_name ident '(' arg_decl_list? ')' compound_stmt
+directive           <- directive_keyword string_literal
+directive_keyword   <- '#' < [a-zA-Z_]+ >
+
+compound_stmt       <- '{' stmt* '}'
+stmt                <- compound_stmt /
+                       return_stmt   /
+                       if_stmt       /
+                       while_stmt    /
+                       do_while_stmt /
+                       for_stmt      /
+                       break_stmt    /
+                       continue_stmt /
+                       switch_stmt   /
+                       decl_stmt     /
+                       expr_stmt
+if_stmt             <- 'if' '(' expr ')' stmt ('else' stmt)?
+while_stmt          <- 'while' '(' expr ')' stmt
+do_while_stmt       <- 'do' stmt 'while' '(' expr ')'
+for_stmt            <- 'for' '(' for_init_stmt expr ';' expr ')' stmt
+for_init_stmt       <- decl_stmt / expr_stmt
+expr_stmt           <- ';' / expr ';'
+return_stmt         <- 'return' expr? ';'
+break_stmt          <- 'break' ';'
+continue_stmt       <- 'continue' ';'
+switch_stmt         <- 'switch' '(' expr ')' '{' switch_case* '}'
+switch_case         <- 'case' '(' switch_case_item (',' switch_case_item)* ')' stmt /
+                       'default' stmt
+switch_case_item    <- expr ('...' expr)?
+
+# right-associative binary assignment operator
+expr                <- '{' '}' /
+                       '{' expr (',' expr)* ','? '}' /
+                       postfix_expr assignment_op expr /
+                       conditional_expr
+
+# ternary conditional operator
+conditional_expr    <- logical_or_expr ('?' expr ':' conditional_expr)?
+
+# left-associative binary operators
+logical_or_expr     <- logical_and_expr    ('||'              logical_and_expr   )*
+logical_and_expr    <- bitwise_or_expr     ('&&'              bitwise_or_expr    )*
+bitwise_or_expr     <- bitwise_xor_expr    ('|'               bitwise_xor_expr   )*
+bitwise_xor_expr    <- bitwise_and_expr    ('^'               bitwise_and_expr   )*
+bitwise_and_expr    <- equality_expr       ('&'               equality_expr      )*
+equality_expr       <- relational_expr     (equality_op       relational_expr    )*
+relational_expr     <- shift_expr          (relational_op     shift_expr         )*
+shift_expr          <- additive_expr       (shift_op          additive_expr      )*
+additive_expr       <- multiplicative_expr (additive_op       multiplicative_expr)*
+multiplicative_expr <- unary_expr          (multiplicative_op unary_expr         )*
+
+unary_expr          <- '++' unary_expr /
+                       '--' unary_expr /
+                       unary_op unary_expr /
+                       postfix_expr
+postfix_expr        <- primary_expr postfix*
+postfix             <- '(' arg_expr_list? ')' /
+                       '[' expr (slice_op expr)? ']' /
+                       '.' ident /
+                       '++' /
+                       '--'
+slice_op            <- < '+:' / ':' >
+
+primary_expr        <- hex_literal /
+                       float_literal /
+                       decimal_literal /
+                       bool_literal /
+                       char_literal /
+                       sprites_literal /
+                       font_literal /
+                       tones_literal /
+                       music_literal /
+                       tilemap_literal /
+                       ident /
+                       '(' expr ')' /
+                       string_literal
+
+type_name           <- ident type_name_postfix*
+type_name_postfix   <- '[' expr ']' / '&' / 'prog' / '[' ']' 'prog' '&' / '[' ']' '&'
+arg_decl_list       <- type_name ident (',' type_name ident)*
+arg_expr_list       <- expr (',' expr)*
+
+equality_op         <- < '==' / '!=' >
+shift_op            <- < '<<' / '>>' >
+additive_op         <- < [+-] >
+multiplicative_op   <- < [*/%] >
+relational_op       <- < '<=' / '>=' / '<' / '>' >
+assignment_op       <- < '=' / [*/%&|^+-]'=' / '<<=' / '>>=' >
+unary_op            <- < '!' / '-' / '~' >
+
+sprites_literal     <- 'sprites' '{' string_literal '}' /
+                       'sprites' '{' decimal_literal 'x' decimal_literal sprite_data '}'
+sprite_data         <- string_literal / sprite_row+
+sprite_row          <- < [^\n}]+ >
+
+# TODO: change to float literal for font size
+font_literal        <- 'font' '{' decimal_literal string_literal '}'
+
+music_literal       <- 'music' '{' string_literal '}'
+
+tones_literal       <- 'tones' '{' string_literal '}' /
+                       'tones' '{' (tones_note decimal_literal)+ '}' /
+                       'tones' '{'
+                            ([^:=]* ':')?
+                            'd' '=' decimal_literal ','
+                            'o' '=' decimal_literal ','
+                            'b' '=' decimal_literal ':'
+                            tones_rtttl_item (',' tones_rtttl_item)* ','? '}'
+tones_note          <- < [A-G0-9b#-]+ >
+tones_rtttl_item    <- < [0-9a-hpA-HP#_.]+ >
+
+tilemap_literal     <- 'tilemap' '{' string_literal '}' /
+                       'tilemap' '{' decimal_literal 'x' decimal_literal tilemap_data '}'
+tilemap_data        <- expr (',' expr)* ','?
+
+decimal_literal     <- < [0-9]+'u'? >
+float_literal       <- < [0-9]*'.'[0-9]+('e'[+-]?[0-9]+)? > /
+                       < [0-9]+'.'[0-9]*('e'[+-]?[0-9]+)? > /
+                       < [0-9]+'e'[+-]?[0-9]+ >
+hex_literal         <- < '0x'[0-9a-fA-F]+'u'? >
+char_literal        <- < '\'' < string_literal_char > '\'' >
+bool_literal        <- < 'true' / 'false' >
+ident               <- < '$'?[a-zA-Z_][a-zA-Z_0-9]* >
+
+string_literal      <- string_literal_part+
+string_literal_part <- < '"' < string_literal_char* > '"' >
+string_literal_char <- char_escape /
+                       [^\\"\n]
+char_escape         <- '\\x'[0-9a-fA-F][0-9a-fA-F] /
+                       '\\'[nr\\t"']
+
+%whitespace         <- ([ \t\r\n] / comment / multiline_comment)*
+comment             <- '//' (!linebreak .)* linebreak
+linebreak           <- [\n\r]
+multiline_comment   <- '/*' (! '*/' .)* '*/'
