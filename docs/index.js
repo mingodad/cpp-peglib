@@ -56,6 +56,7 @@ const sampleList = [
 	["bison parser", "bison.peglib", "test.bison", "ace/mode/yaml"],
 	["c11-lpegrex parser", "c11_lpegrex.peglib", "test.c", "ace/mode/c_cpp"],
 	["c99-mouse parser", "c99-mouse-dict.peglib", "test.c", "ace/mode/c_cpp"],
+	["cinamon parser", "cinamon.peglib", "test.cinamon", "ace/mode/text"],
 	["chpeg parser", "chpeg-ext.peglib", "test.chpeg-ext", "ace/mode/yaml"],
 	["clunc parser", "clunc.peglib", "test.clunc", "ace/mode/c_cpp"],
 	["com parser", "com-parser-grammar.peglib", "test.com-parser-grammar", "ace/mode/c_cpp"],

@@ -1,0 +1,332 @@
+#From: https://gitlab.com/mqnc/cinnamon
+
+Cinnamon <- Skip (GlobalStatement Skip)*   # -> concat
+SyntaxError <- (!NewLine .)* NewLine   # -> special action
+NewLine <- '\r\n' / '\n'   # -> '\n'
+LineBreak <- LineEndComment? NewLine   # -> concat
+Ellipsis <- '...'   # -> ' '
+LineContinue <- Ellipsis _ LineBreak   # -> concat
+WhiteSpace <- [ \t]+   # -> ' '
+Space <- (WhiteSpace / InlineComment / LineContinue)+   # -> concat
+~_ <- Space?   # -> concat
+Semicolon <- ';'   # -> ''
+~SilentTerminal <- LineBreak / Semicolon   # -> special action
+Terminal <- SilentTerminal   # -> ';{1}'
+~Skip <- _ (LineBreak _)*   # -> concat
+LineEndComment <- '//' (!NewLine .)*   # -> match
+InlineComment <- MultiLineComment / NestableComment   # -> concat
+MultiLineComment <- '/*' (!'*/' .)* '*/'   # -> match
+NestableComment <- '(*' <(!'*)' (NestableComment / .))*> '*)'   # -> special action
+Word <- AsciiWord / Utf8Word   # -> special action
+AsciiWord <- <AsciiWordStart AsciiWordMid*> WordEnd   # -> match
+AsciiWordStart <- [a-zA-Z_]   # (no action)
+AsciiWordMid <- [a-zA-Z_0-9]   # (no action)
+WordEnd <- !Utf8WordMid   # -> ''
+Utf8Word <- <Utf8WordStart Utf8WordMid*> WordEnd   # -> special action
+Utf8WordStart <- [a-zA-Z_\x80-\xFF]   # (no action)
+Utf8WordMid <- [a-zA-Z_0-9\x80-\xFF]   # (no action)
+Identifier <- !Keyword Word   # -> special action
+#IdentifierList <- Identifier (_ Comma _ Identifier)*   # -> listFilter
+IdentifierListMulti <- Identifier _ Comma _ Identifier (_ Comma _ Identifier)*   # -> listFilter
+Point <- '.'   # -> '.'
+Comma <- ','   # -> ','
+LParen <- '('   # -> '('
+RParen <- ')'   # -> ')'
+LBracket <- '['   # -> '['
+RBracket <- ']'   # -> ']'
+LBrace <- '{'   # -> '{'
+RBrace <- '}'   # -> '}'
+#DoubleQuote <- '"'   # -> '"'
+#Colon <- ':'   # -> ':'
+Asterisk <- '*'   # -> '*'
+DblColon <- '::'   # -> '::'
+#SilentComma <- ','   # -> ''
+#SilentLParen <- '('   # -> ''
+#SilentRParen <- ')'   # -> ''
+#SilentLBracket <- '['   # -> ''
+#SilentRBracket <- ']'   # -> ''
+#SilentLBrace <- '{'   # -> ''
+#SilentRBrace <- '}'   # -> ''
+InsertComma <- ''   # -> ','
+#InsertLParen <- ''   # -> '('
+#InsertRParen <- ''   # -> ')'
+#InsertLBracket <- ''   # -> '['
+#InsertRBracket <- ''   # -> ']'
+#InsertLBrace <- ''   # -> '{'
+#InsertRBrace <- ''   # -> '}'
+Empty <- ''   # -> special action
+EndKeyword <- 'end'   # (no action)
+ScopedObjectOrSpecializedTypeOrFunction <- ObjectOrSpecializedTypeOrFunction / Self / TypeofExpression   # -> special action
+Self <- "self"   # -> '(*this)'
+AssertMacro <- "assert"   # -> 'assert'
+ScopedResolvedObject <- ScopedObjectOrSpecializedTypeOrFunction (_ ScopeResolutionOperator _ ObjectOrSpecializedTypeOrFunction)*   # -> concat_and_tree
+ResolvedObject <- ObjectOrSpecializedTypeOrFunction (_ ScopeResolutionOperator _ ObjectOrSpecializedTypeOrFunction)*   # -> concat_and_tree
+CallChainAppendix <-  Ignore Point  Ignore _ ResolvedObject / Subscript / Call / KwargsCall   # -> special action
+ObjectOrSpecializedTypeOrFunction <- Identifier _ (TemplateArguments / Empty)   # -> special action
+TypeofExpression <- Typeof _ LParen _ Expression _ RParen   # -> special action
+Typeof <- "typeof"   # (no action)
+ScopeResolutionOperator <- "::"   # -> '::'
+TemplateArguments <- LTemplateBrace _ OptionalExpressionList _ RTemplateBrace   # -> concat
+LTemplateBrace <- LBrace   # -> '<'
+RTemplateBrace <- RBrace   # -> '>'
+Call <- LParen _ OptionalExpressionList _ RParen   # -> special action
+Subscript <- (LBracket _ Empty _ RBracket / LBracket _ ExpressionList _ RBracket) !(_ AssignOperator)   # -> special action
+KwargsCall <- LParen _ KwargsList _ RParen   # -> special action
+KwargsList <- (Expression _ Comma _)* KwargAssignment (_ Comma _ KwargAssignment)*   # -> listFilter
+KwargAssignment <- Identifier  Ignore _  Ignore AssignOperator  Ignore _ Expression   # -> tree
+Chain <- Atomic ( Ignore _ CallChainAppendix)*   # -> special action
+BooleanLiteral <- "true" / "false"   # -> match
+CharLiteral <- '\'' (('\\' .) / .) '\''   # -> match
+StringLiteral <- '"' (('\\' .) / (!'"' .))* '"'   # -> 'std::string({match})'
+FloatLiteral <- [0-9]+ '.' [0-9]+ (('e' / 'E') '-'? [0-9]+)?   # -> match
+IntegerLiteral <- [0-9]+   # -> match
+HexLiteral <- '0' ('x' / 'X') [0-9]+   # -> match
+Literal <- <(BooleanLiteral / CharLiteral / StringLiteral / FloatLiteral / IntegerLiteral / HexLiteral)> WordEnd   # -> special action
+LocalVariableDeclaration <- VariableDeclaration   # -> special action
+GlobalVariableDeclaration <- VariableDeclaration   # -> special action
+VariableDeclaration <- VariableDeclaree _ TemplateParameters _ AssignOperator _ Assigned _ VariableSpecifiers _ Terminal    # -> tree
+VariableDeclaree <- ConstSpecifier _ (IdentifierListMulti / Identifier)   # -> special action
+Assignment <- TieToValues / AssignToSubscript / AssignToValue   # -> concat
+AssignToSubscript <- Expression _ LBracket _ (InsertComma ExpressionList / Empty Empty) _ RBracket _ AssignOperator _ Assigned _ Terminal   # -> 'm0n_assign_to_subscript({12}, {1}{5} {6}){14}'
+AssignToValue <- Expression _ AssignOperator _ Assigned _ Terminal   # -> concat
+TieToValues <- ExpressionListMulti _ AssignOperator _ Assigned _ Terminal   # -> special action
+Assigned <- AssignedTuple / Expression   # -> concat
+AssignedTuple <- ExpressionListMulti   # -> 'std::make_tuple({1})'
+ConstSpecifier <- ConstantType / VariableType   # -> special action
+#InsertAuto <- ''   # -> ' auto'
+ConstantType <- 'const'   # -> 'const'
+VariableType <- 'var'   # -> ''
+AssignOperator <- ':='   # -> '='
+TypeDeclareOperator <- ':'   # -> '='
+VariableSpecifiers <- VariableSpecifierList / Empty   # -> special action
+VariableSpecifierList <- SpecifierIndicator _ SomeVariableSpecifiers   # -> special action
+SomeVariableSpecifiers <- VariableSpecifier (_ Comma _ VariableSpecifier)*   # -> listFilter
+VariableSpecifier <- VariableExport / VariableStatic   # -> special action
+VariableExport <- "export"   # -> 'export'
+VariableStatic <- "persistent"   # -> 'persistent'
+FunctionDeclaration <- FunctionKeyword _ Identifier _ TemplateParameters _ Parameters _ ReturnDeclaration _ FunctionSpecifiers _ Terminal FunctionBody EndFunctionKeyword   # -> special action
+FunctionKeyword <- 'function'   # -> special action
+FunctionSpecifiers <- FunctionSpecifierList / Empty   # -> special action
+FunctionSpecifierList <- SpecifierIndicator _ SomeFunctionSpecifiers   # -> special action
+SomeFunctionSpecifiers <- FunctionSpecifier (_ Comma _ FunctionSpecifier)*   # -> listFilter
+FunctionSpecifier <- FunctionInline / FunctionKwargs / FunctionExport   # -> match
+FunctionInline <- "inline"   # (no action)
+FunctionKwargs <- "kwargs"   # (no action)
+FunctionExport <- "export"   # (no action)
+SpecifierIndicator <- "|"   # (no action)
+ReturnDeclaration <- ExplicitReturnDeclaration / DeduceReturnType   # -> special action
+DeduceReturnType <- ''   # (no action)
+ExplicitReturnDeclaration <- ReturnOperator _ ReturnType   # -> special action
+ReturnOperator <- '->'   # (no action)
+ReturnType <- ReturnTuple / ReturnStruct / ScopedObjectOrSpecializedTypeOrFunction  # -> special action
+ReturnTuple <- SpecifiedType _ Comma _ SpecifiedType (_ Comma _ SpecifiedType)*   # -> listFilter
+SpecifiedType <- ScopedObjectOrSpecializedTypeOrFunction   # -> special action
+ReturnStruct <- ReturnStructField _ Comma _ ReturnStructField (_ Comma _  ReturnStructField)*   # -> listFilter
+ReturnStructField <- Identifier _ TypeDeclareOperator _ ScopedObjectOrSpecializedTypeOrFunction   # -> special action
+FunctionBody <- Skip (!EndKeyword LocalStatement Skip)*   # -> concat
+ReturnStatement <- ReturnKeyword _ Returnee _ Terminal   # -> special action
+Returnee <- Assigned / ReturnNothing   # -> special action
+ReturnNothing <- ''   # -> ''
+ReturnKeyword <- 'return'   # -> 'return'
+EndFunctionKeyword <- 'end'   # -> special action
+TemplateParameters <- (LTemplateBrace _ ParameterDeclarationList _ RTemplateBrace)?   # -> special action
+NoTemplateParameters <- ""   # -> special action
+Parameters <- ParameterList / NoParameters   # -> special action
+NoParameters <- (LParen _ RParen)?   # -> special action
+ParameterList <- LParen _ ParameterDeclarationList _ RParen   # -> special action
+BracketParameters <- BracketParameterList / NoBracketParameters   # -> special action
+NoBracketParameters <- LBracket _ RBracket   # -> special action
+BracketParameterList <- LBracket _ ParameterDeclarationList _ RBracket   # -> special action
+ParameterDeclaration <- ParameterKind _ Identifier _ ( Ignore TypeDeclareOperator  Ignore _ ObjectOrSpecializedTypeOrFunction / Empty) _ ( Ignore AssignOperator  Ignore _ Expression / Empty)   # -> special action
+ParameterDeclarationList <- (ParameterDeclaration (_ Comma _ ParameterDeclaration)*)?   # -> listFilter
+ParameterKind <- TypeParameter / ValueParameter / ReferenceParameter / MutableReferenceParameter / VariableParameter / ConstantParameter   # -> special action
+TypeParameter <- 'type'   # -> 'typename'
+ValueParameter <- 'val'   # -> 'auto'
+VariableParameter <- 'var'   # -> 'T'
+ConstantParameter <- ''   # -> 'const auto'
+ReferenceParameter <- 'ref'   # -> 'const auto&'
+MutableReferenceParameter <- 'mutref'   # -> 'auto&'
+IfStatement <- IfPart (ElseIfPart)* ElsePart?  Ignore EndScope   # -> concat
+IfPart <-  Ignore IfKeyword _ Expression _ SilentTerminal IfBody   # -> 'if( {1}{2}{3} ){4}{\n{5}\n}\n'
+IfKeyword <- 'if'   # -> special action
+IfBody <- Skip (!ElseIfKeyword !ElseKeyword !EndKeyword LocalStatement Skip)*   # -> concat
+ElseIfPart <-  Ignore ElseIfKeyword _ Expression _ SilentTerminal IfBody   # -> 'else if( {1}{2}{3} ){4}{\n{5}\n}\n'
+ElseIfKeyword <- 'elseif'   # (no action)
+ElsePart <-  Ignore ElseKeyword _ SilentTerminal IfBody   # -> 'else {1}{2}{\n{3}\n}\n'
+ElseKeyword <- 'else'   # (no action)
+SwitchStatement <- SwitchPart Skip CaseList  Ignore EndScope   # -> '{1}{2}{\n{3}\n}'
+SwitchPart <-  Ignore SwitchKeyword _ Expression _ SilentTerminal   # -> 'switch( {1}{2}{3} ){4}'
+SwitchKeyword <- 'switch'   # -> special action
+CaseList <- Skip (Case Skip)*   # -> concat
+Case <- (CaseConditionList / DefaultKeyword) _ SilentTerminal CaseBody Skip   # -> concat
+CaseConditionList <-  Ignore CaseKeyword _ CaseCondition (_ ',' _ CaseCondition)*   # -> concat
+CaseCondition <- Expression / DefaultKeyword   # -> special action
+CaseKeyword <- 'case'   # (no action)
+FallKeyword <- 'fall'   # (no action)
+OptionalFallStatement <- (FallKeyword _ SilentTerminal)?   # -> special action
+DefaultKeyword <- 'default'   # -> 'default: '
+CaseBody <- Skip (!CaseKeyword !DefaultKeyword !FallKeyword !EndKeyword LocalStatement Skip)* OptionalFallStatement Skip   # -> concat
+Range <- RangeL _ Expression _ RangeOperator _ (Expression _ RangeOperator _ )? Expression? _ RangeR   # -> special action
+RangeL <- LBracket / LParen   # -> special action
+RangeR <- RBracket / RParen   # -> special action
+RangeOperator <- ".."   # (no action)
+WhileStatement <- WhileKeyword _ Expression _ SilentTerminal LoopBody EndScope   # -> special action
+RepeatStatement <- RepeatKeyword _ SilentTerminal LoopBody RepeatCondition ImplicitEndScope   # -> special action
+ForStatement <- ForKeyword _ (VariableDeclaree / Expression) _ InKeyword _ Expression _ SilentTerminal LoopBody EndScope   # -> special action
+LoopBody <- IterationBody (BetweenKeyword IterationBody)?   # -> tree
+IterationBody <- Skip (!BetweenKeyword !EndKeyword !RepWhileKeyword !UntilKeyword LocalStatement Skip)*   # -> concat
+RepeatCondition <- RepWhileCondition / UntilCondition   # -> tree
+RepWhileCondition <- RepWhileKeyword _ Expression _ SilentTerminal   # -> '!({3})'
+UntilCondition <- UntilKeyword _ Expression _ SilentTerminal   # -> '{3}'
+WhileKeyword <- 'while'   # -> special action
+BetweenKeyword <- 'between'   # (no action)
+RepeatKeyword <- 'repeat'   # -> special action
+RepWhileKeyword <- 'whilst'   # (no action)
+UntilKeyword <- 'until'   # (no action)
+ForKeyword <- 'for'   # -> special action
+InKeyword <- 'in'   # (no action)
+BreakKeyword <- 'break'   # -> 'break'
+BreakStatement <- BreakKeyword _ Terminal   # -> concat
+ClassDeclaration <- ClassKeyword _ ClassName _ ClassTemplateParameters _ OptionalInheritance _ ClassSpecifiers _ SilentTerminal ClassBody EndClassKeyword   # -> special action
+ClassKeyword <- "class"   # -> special action
+ClassName <- Identifier   # -> special action
+ClassTemplateParameters <- TemplateParameters   # -> special action
+OptionalInheritance <- Inheritance / NoInheritance   # -> special action
+NoInheritance <- ""   # (no action)
+Inheritance <- InheritKeyword _ InheritanceList   # -> special action
+InheritKeyword <- "inherits"   # (no action)
+InheritanceList <- InheritanceListItem (_ Comma _ InheritanceListItem)*   # -> listFilter
+InheritanceListItem <- PublicInheritanceItem / ProtectedInheritanceItem / PrivateInheritanceItem   # -> concat
+PublicInheritanceItem <- ObjectOrSpecializedTypeOrFunction   # -> 'public {1}'
+ProtectedInheritanceItem <- LBracket _ ObjectOrSpecializedTypeOrFunction _ RBracket   # -> 'protected {3}'
+PrivateInheritanceItem <- LParen _ ObjectOrSpecializedTypeOrFunction _ RParen   # -> 'private {3}'
+ClassSpecifiers <- ClassSpecifierList / Empty   # -> special action
+ClassSpecifierList <- SpecifierIndicator _ SomeClassSpecifiers   # -> special action
+SomeClassSpecifiers <- ClassSpecifier (_ Comma _ ClassSpecifier)*   # -> listFilter
+ClassSpecifier <- ClassExport   # -> match
+ClassExport <- "export"   # (no action)
+ClassBody <- Skip (!EndKeyword ClassMemberDeclaration Skip)*   # -> concat
+ClassMemberDeclaration <- CppGlobal / CppExpression / FieldDeclaration / MethodDeclaration / OperatorDeclaration / ScopeInspector / SyntaxError   # -> concat
+OperatorDeclaration <- CtorDeclaration / DtorDeclaration / CallDeclaration / SubscriptDeclaration   # -> concat
+MemberSpecifiers <- SomeMemberSpecifiers / NoMemberSpecifiers   # -> special action
+SomeMemberSpecifiers <- SpecifierIndicator _ MemberSpecifierList   # -> special action
+NoMemberSpecifiers <- ""   # (no action)
+MemberSpecifierList <- MemberSpecifier (_ Comma _ MemberSpecifier)*   # -> listFilter
+MemberSpecifier <- MemberConst / MemberVirtual / MemberOverride / MemberInline / MemberStatic / MemberKwargs   # -> special action
+MemberConst <- "const"   # -> 'const'
+MemberVirtual <- "virtual"   # -> 'virtual'
+MemberOverride <- "override"   # -> 'override'
+MemberInline <- "inline"   # -> 'inline'
+MemberStatic <- "shared"   # -> 'static'
+MemberKwargs <- "kwargs"   # -> 'kwargs'
+MethodDeclaration <- MethodAccess _ Identifier _ TemplateParameters _ Parameters _ ReturnDeclaration _ MemberSpecifiers _ Terminal FunctionBody EndFunctionKeyword   # -> special action
+MethodAccess <- PublicMethod / ProtectedMethod / PrivateMethod   # -> special action
+PublicMethod <- MethodKeyword   # (no action)
+ProtectedMethod <- LBracket _ MethodKeyword _ RBracket   # (no action)
+PrivateMethod <- LParen _ MethodKeyword _ RParen   # (no action)
+MethodKeyword <- "method"   # (no action)
+CallDeclaration <- MethodAccess _ Empty _ NoTemplateParameters _ Parameters _ ReturnDeclaration _ MemberSpecifiers _ Terminal FunctionBody EndFunctionKeyword   # -> special action
+SubscriptDeclaration <- MethodAccess _ Empty _ NoTemplateParameters _ BracketParameters _ (SubscriptAssignment / ReturnDeclaration) _ MemberSpecifiers _ Terminal FunctionBody EndFunctionKeyword   # -> special action
+SubscriptAssignment <- AssignOperator _ ParameterDeclaration   # -> tree
+CtorDeclaration <- CtorAccess _ Empty _ NoTemplateParameters _ Parameters _ Empty _ MemberSpecifiers _ Terminal CtorBody EndScope   # -> special action
+CtorBody <- Skip Inits CtorDtorBody   # -> tree
+Inits <- InitList / Delegation / NoInits   # -> special action
+NoInits <- ""   # (no action)
+CtorAccess <- PublicCtor / ProtectedCtor / PrivateCtor   # -> special action
+PublicCtor <- CtorKeyword   # (no action)
+ProtectedCtor <- LBracket _ CtorKeyword _ RBracket   # (no action)
+PrivateCtor <- LParen _ CtorKeyword _ RParen   # (no action)
+CtorKeyword <- "ctor"   # -> special action
+InitList <- InitKeyword _ Terminal _ FieldAssignmentList _ EndKeyword   # -> special action
+InitKeyword <- "init"   # (no action)
+FieldAssignmentList <- FieldAssignment _ Terminal (_ FieldAssignment _ Terminal)*   # -> listFilter
+FieldAssignment <- Self _ Point _ Identifier _ AssignOperator _ Assigned   # -> '{5}{{9}}'
+Delegation <- CtorKeyword _ LParen _ ExpressionList _ RParen _ SilentTerminal   # -> concat
+CtorDtorBody <- Skip (!EndKeyword LocalStatement Skip)*   # -> concat
+DtorDeclaration <- DtorAccess _ Empty _ NoTemplateParameters _ NoParameters _ Empty _ MemberSpecifiers _ Terminal CtorDtorBody EndScope   # -> special action
+DtorAccess <- PublicDtor / ProtectedDtor / PrivateDtor   # -> special action
+PublicDtor <- DtorKeyword   # (no action)
+ProtectedDtor <- LBracket _ DtorKeyword _ RBracket   # (no action)
+PrivateDtor <- LParen _ DtorKeyword _ RParen   # (no action)
+DtorKeyword <- "dtor"   # -> special action
+FieldDeclaration <- FieldAccess _ Identifier _ AssignOperator _ Assigned _ FieldSpecifiers _ Terminal   # -> special action
+FieldAccess <- PublicField / ProtectedField / PrivateField   # -> special action
+PublicField <- ConstSpecifier   # -> 'public: {1}'
+ProtectedField <- LBracket _ ConstSpecifier _ RBracket   # -> 'protected: {3}'
+PrivateField <- LParen _ ConstSpecifier _ RParen   # -> 'private: {3}'
+FieldSpecifiers <- SomeFieldSpecifiers / Empty   # -> special action
+SomeFieldSpecifiers <- SpecifierIndicator _ FieldSpecifierList   # -> special action
+FieldSpecifierList <- FieldSpecifier (_ Comma _ FieldSpecifier)*   # -> listFilter
+FieldSpecifier <- MemberStatic   # -> special action
+EndClassKeyword <- 'end'   # -> special action
+ImportStatement <- ImportKeyword _ Identifier _ (ImportAlias / Empty) _ (ImportExport / Empty) _ Terminal   # -> special action
+FromImportStatement <- FromKeyword _ ScopeResChain _ ImportKeyword _ (ImportTokenList / Asterisk) _ (ImportExport / Empty) _ Terminal   # -> special action
+ImportTokenList <- ImportToken (_ Comma _ ImportToken)*   # -> listFilter
+ImportToken <- Identifier _ (ImportAlias / Empty)   # -> special action
+ImportAlias <- As _ Identifier   # -> special action
+As <- "as"   # (no action)
+ScopeResChain <- Identifier (_ DblColon _ Identifier)*   # -> special action
+ImportExport <- SpecifierIndicator _ FunctionExport   # (no action)
+ImportKeyword <- "import"   # (no action)
+FromKeyword <- "from"   # (no action)
+CppExpression <- CppKeyword _ (Terminal/Empty) _ LBrace CppCode RBrace   # -> special action
+#CppMember <- CppKeyword _ MemberKeyword _ (Terminal/Empty) _ LBrace CppCode RBrace   # -> special action
+#MemberKeyword <- "member"   # (no action)
+CppGlobal <- CppKeyword _ CppSection _ (Terminal/Empty) _ LBrace CppCode RBrace   # -> special action
+CppSection <- Identifier   # -> match
+CppKeyword <- 'C++'   # (no action)
+CppCode <- (CppComment / CppStringLiteral / CppScope / CppAnything)*   # -> match
+CppComment <- CppLineEndComment / CppMultiLineComment   # (no action)
+CppLineEndComment <- '//' (!'\n' .)* '\n'   # (no action)
+CppMultiLineComment <- '/*' (!'*/' .)* '*/'   # (no action)
+CppStringLiteral <- CppCharConstant / CppSimpleString / CppRawString   # (no action)
+CppCharConstant <- '\'' (('\\' .) / .) '\''   # (no action)
+CppSimpleString <- '"' (('\\' .) / (!'"' .))* '"'   # (no action)
+CppRawString <- 'R"' <[a-zA-Z_0-9]*> '(' (!(')' '"') .)* ')' '"'   # (no action)
+CppScope <- '{' CppCode '}'   # (no action)
+CppAnything <- !'}' .   # (no action)
+Scope <- ScopeKeyword _ Terminal ScopeBody EndScope   # -> '{\n{4}\n}\n'
+ScopeKeyword <- "scope"   # -> special action
+ScopeInspector <- "@"   # -> special action
+ScopeBody <- FunctionBody   # -> special action
+EndScope <- EndKeyword   # -> special action
+ImplicitEndScope <- ''   # -> special action
+Element <- Chain   # -> special action
+Expression <- Conditional  # -> concat
+OptionalExpressionList <- ExpressionList?   # -> concat
+ExpressionList <- Expression (_ Comma _ Expression)*   # -> special action
+ExpressionListMulti <- Expression _ Comma _ Expression (_ Comma _ Expression)*   # -> special action
+ParenthesizedExpression <- LParen _ Expression _ RParen   # -> concat
+BracedList <- LBrace _ ExpressionList _ RBrace   # -> concat
+PrefixUnary <- ('+') / ('-') / ('not' WordEnd) / ('bitnot' WordEnd) / ('sizeof' WordEnd) / ('#')  # -> unary
+Prefix <- ( PrefixUnary  Ignore _ )* Element  # -> rtlOperation
+ExponentiationBinary <- ('^')  # -> binary
+Exponentiation <- Prefix (  Ignore _ ExponentiationBinary  Ignore _ Prefix )*  # -> rtlOperation
+MultiplicationBinary <- ('*') / ('/') / ('div' WordEnd) / ('mod' WordEnd)  # -> binary
+Multiplication <- Exponentiation (  Ignore _ MultiplicationBinary  Ignore _ Exponentiation )*  # -> ltrOperation
+AdditionBinary <- ('+') / ('-')  # -> binary
+Addition <- Multiplication (  Ignore _ AdditionBinary  Ignore _ Multiplication )*  # -> ltrOperation
+ShiftingBinary <- ('<<') / ('>>')  # -> binary
+Shifting <- Addition (  Ignore _ ShiftingBinary  Ignore _ Addition )*  # -> ltrOperation
+BitConjunctionBinary <- ('bitand' WordEnd)  # -> binary
+BitConjunction <- Shifting (  Ignore _ BitConjunctionBinary  Ignore _ Shifting )*  # -> ltrOperation
+BitExclusiveDisjunctionBinary <- ('bitxor' WordEnd)  # -> binary
+BitExclusiveDisjunction <- BitConjunction (  Ignore _ BitExclusiveDisjunctionBinary  Ignore _ BitConjunction )*  # -> ltrOperation
+BitDisjunctionBinary <- ('bitor' WordEnd)  # -> binary
+BitDisjunction <- BitExclusiveDisjunction (  Ignore _ BitDisjunctionBinary  Ignore _ BitExclusiveDisjunction )*  # -> ltrOperation
+ComparisonBinary <- ('==') / ('!=') / ('<=') / ('>=') / ('<') / ('>')  # -> binary
+Comparison <- BitDisjunction (  Ignore _ ComparisonBinary  Ignore _ BitDisjunction )*  # -> ltrOperation
+ConjunctionBinary <- ('and' WordEnd)  # -> binary
+Conjunction <- Comparison (  Ignore _ ConjunctionBinary  Ignore _ Comparison )*  # -> ltrOperation
+ExclusiveDisjunctionBinary <- ('xor' WordEnd)  # -> binary
+ExclusiveDisjunction <- Conjunction (  Ignore _ ExclusiveDisjunctionBinary  Ignore _ Conjunction )*  # -> ltrOperation
+DisjunctionBinary <- ('or' WordEnd)  # -> binary
+Disjunction <- ExclusiveDisjunction (  Ignore _ DisjunctionBinary  Ignore _ ExclusiveDisjunction )*  # -> ltrOperation
+ConditionalBinary <- ('?'  Ignore _ Expression  Ignore _ ':')  # -> binary
+Conditional <- Disjunction (  Ignore _ ConditionalBinary  Ignore _ Disjunction )*  # -> rtlOperation
+Keyword <- (EndKeyword / Self / AssertMacro / Typeof / BooleanLiteral / ConstSpecifier / FunctionKeyword / FunctionInline / FunctionKwargs / IfKeyword / ElseIfKeyword / ElseKeyword / SwitchKeyword / CaseKeyword / FallKeyword / DefaultKeyword / WhileKeyword / BetweenKeyword / RepeatKeyword / RepWhileKeyword / UntilKeyword / ForKeyword / InKeyword / BreakKeyword / 'C++' / Scope ) WordEnd  # -> special action
+Atomic <- AssertMacro / ScopedResolvedObject / Literal / Range / CppExpression / ParenthesizedExpression / BracedList  # -> special action
+GlobalStatement <- GlobalVariableDeclaration / FunctionDeclaration / ClassDeclaration / ImportStatement / FromImportStatement / CppGlobal / ScopeInspector / SyntaxError  # -> concat
+LocalStatement <- LocalVariableDeclaration / Assignment / ReturnStatement / IfStatement / SwitchStatement / WhileStatement / RepeatStatement / ForStatement / BreakStatement / Scope / ScopeInspector / Expression _ Terminal / SyntaxError  # -> concat
+
+Ignore <- ' ~ '

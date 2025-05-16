@@ -1,0 +1,182 @@
+
+class Empty
+end
+
+class Jazz
+end
+
+class Fields
+	var x := 1.0
+	const i := 2
+	(var) s := "string" // private
+	[const] q := 'q' // protected
+end
+
+class Demo{type T} inherits Fields, (Empty), [Jazz] // () for private, [] for protected
+	var m_x := 0
+	var m_y := 0
+	var t := T()
+
+	ctor(x:T, y:T)
+		init // colon initialization
+			self.m_x := x
+			self.m_y := y
+		end
+	end
+
+	ctor()
+		ctor(1, 2) // delegation
+	end
+
+	(ctor)(a, b, c) | inline
+	end
+
+	dtor | inline
+	end
+
+	(method) doStuff() | inline, const
+		print(self.m_x, self.m_y)
+	end
+
+	[method] doOtherStuff()
+		print(7)
+	end
+
+	method(); println("()"); end
+	method(a); println(a); end
+	method(a, b); println(a, b); end
+	method(a, b, c); println(a, b, c); end
+
+	method[]; println("[]"); end
+	method[a]; println("[", a, "]"); end
+	method[a, b]; println("[", a, b, "]"); end
+	method[a, b, c]; println("[", a, b, c, "]"); end
+
+	method[] := rhs; println("[]:=", rhs); end
+	method[a] := rhs; println("[", a, "]:=", rhs); end
+	method[a, b] := rhs; println("[", a, b, "]:=", rhs); end
+	method[a, b, c] := rhs; println("[", a, b, c, "]:=", rhs); end
+
+	method[a, b, c, d] := tuple
+		const e, f := tuple
+		println("[", a, b, c, d, "]:=", e, f)
+	end
+end
+
+class Quark
+	ctor(a, b) | kwargs
+		print(a, b)
+	end
+
+	method ab(a, b) | kwargs
+		print(a, b)
+	end
+
+	method sab(a, b) | kwargs, shared
+		print(a, b)
+	end
+
+	// method[] and method() not yet implemented with kwargs
+end
+
+class Asterisk
+	var field := 0
+
+	C++{
+		public:
+		int& operator*(){
+			std::cout << "Hi from indirection!\n";
+			return field;
+		}
+	}
+
+	method[] := i
+		assert(false)
+	end
+
+	method[]
+		assert(false)
+	end
+end
+
+class PrivateAsterisk
+	var field := 0
+
+	C++{
+		private:
+		void operator*(){
+			assert(false);
+		}
+	}
+
+	method[] := i
+		print("Hi from subscript assignment!\n")
+		self.field := i
+	end
+
+	method[]
+		print("Hi from subscript call!\n")
+		return self.field
+	end
+
+end
+
+
+var x := "R"
+
+function fun()
+	print("?")
+end
+
+class SelfTest
+	var x := 0
+
+	ctor
+		init
+			self.x := 2
+		end
+
+		print(x)
+		print(self.x)
+	end
+
+	method(x)
+		print(x)
+		print(self.x)
+		fun()
+		self.fun()
+	end
+
+	method fun()
+		println("!")
+	end
+end
+
+
+function main
+	var obj := Demo(3, 4)
+	obj()
+	obj[] := 17
+	obj[1]
+	obj[1, 2]
+
+	obj [1,2,3,4] := 12.34, "cm"
+
+	var q := Quark(a:='a', b:='b')
+	q.ab('a', 'b')
+	q.sab('a', 'b')
+	Quark::sab('a', 'b')
+	print()
+
+	var a := Asterisk()
+	a[] := 41
+	println(a[])
+
+	var pa := PrivateAsterisk()
+	pa[] := 43
+	println(pa[])
+
+	var st := SelfTest()
+	st("D")
+
+end
