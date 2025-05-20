@@ -56,6 +56,7 @@ const sampleList = [
 	["bass parser", "bass-grammar.peglib", "test.bass", "ace/mode/asm"],
 	["bc calculator parser", "bc.peglib", "test.bc", "ace/mode/text"],
 	["bison parser", "bison.peglib", "test.bison", "ace/mode/yaml"],
+	["bnf parser", "bnf-node-ebnf.peglib", "test.bnf", "ace/mode/yaml"],
 	["bython2 parser", "bython_2.peglib", "test.bython_2", "ace/mode/text"],
 	["c11-lpegrex parser", "c11_lpegrex.peglib", "test.c", "ace/mode/c_cpp"],
 	["c99-mouse parser", "c99-mouse-dict.peglib", "test.c", "ace/mode/c_cpp"],
@@ -108,6 +109,7 @@ const sampleList = [
 	["virgil parser", "virgil.peglib", "test.virgil", "ace/mode/c_cpp"],
 	["xcml parser", "xcml-xml_spec.peglib", "test.xcml-xml_spec", "ace/mode/lisp"],
 	["xtypes parser", "xtypes.peglib", "test.xtypes", "ace/mode/c_cpp"],
+	["w3cebnf parser", "w3cebnf-node-ebnf.peglib", "test.w3cebnf", "ace/mode/text"],
 	["waxeye parser", "waxeye.peglib", "test.waxeye", "ace/mode/text"],
 	["zig parser", "zig.peglib", "test.zig", "ace/mode/c_cpp"],
 ];

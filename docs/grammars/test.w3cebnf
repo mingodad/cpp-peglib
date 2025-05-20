@@ -1,0 +1,16 @@
+Grammar	::=	Production*
+Production	::=	NCName '::=' Choice
+NCName	::=	[http://www.w3.org/TR/xml-names/#NT-NCName]
+Choice	::=	SequenceOrDifference ( '|' SequenceOrDifference )*
+SequenceOrDifference	::=	(Item ( '-' Item | Item* ))?
+Item	::=	Primary ( '?' | '*' | '+' )?
+Primary	::=	NCName | StringLiteral | CharCode | CharClass | '(' Choice ')'
+StringLiteral	::=	'"' [^"]* '"' | "'" [^']* "'"
+CharCode	::=	'#x' [0-9a-fA-F]+
+CharClass	::=	'[' '^'? ( RULE_Char | CharCode | CharRange | CharCodeRange )+ ']'
+RULE_Char	::=	[http://www.w3.org/TR/xml#NT-RULE_Char]
+CharRange	::=	RULE_Char '-' ( RULE_Char - ']' )
+CharCodeRange	::=	CharCode '-' CharCode
+RULE_WHITESPACE	::=	RULE_S | Comment
+RULE_S	::=	#x9 | #xA | #xD | #x20
+Comment	::=	'/*' ( [^*] | '*'+ [^*/] )* '*'* '*/'

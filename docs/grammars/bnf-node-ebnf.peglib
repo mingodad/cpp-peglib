@@ -1,0 +1,17 @@
+#From: https://github.com/lys-lang/node-ebnf/blob/1406198f46f4267b4b0741f5be3261aa6437f5d5/src/Grammars/BNF.ts#L4
+syntax <- RULE_EOL* rule+
+rule <- " "* "<" rule_name ">" " "* "::=" firstExpression otherExpression* " "* RULE_EOL+ " "*
+firstExpression <- " "* list
+otherExpression <- " "* "|" " "* list
+RULE_EOL <- "\r" / "\n"
+list <- term " "* list / term
+term <- literal / "<" rule_name ">"
+literal <- <'"' RULE_CHARACTER1* '"' / "'" RULE_CHARACTER2* "'">
+RULE_CHARACTER <- " " / RULE_LETTER / RULE_DIGIT / RULE_SYMBOL
+RULE_LETTER <- [A-Za-z]
+RULE_DIGIT <- [0-9]
+RULE_SYMBOL <- "-" / "_" / "!" / "#" / "$" / "%" / "&" / "(" / ")" / "*" / "+" / "," / "-" / "." / "/" / ":" / ";" / "<" / "=" / ">" / "?" / "@" / "[" / "\\" / "]" / "^" / "_" / "`" / "{" / "|" / "}" / "~"
+RULE_CHARACTER1 <- RULE_CHARACTER / "'"
+RULE_CHARACTER2 <- RULE_CHARACTER / '"'
+rule_name <- <RULE_LETTER RULE_CHAR*>
+RULE_CHAR <- RULE_LETTER / RULE_DIGIT / "_" / "-"
