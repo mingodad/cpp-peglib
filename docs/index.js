@@ -87,6 +87,7 @@ const sampleList = [
 	["leg parser", "leg.peglib", "test.leg", "ace/mode/text"],
 	["lpegrex parser", "lpegrex.peglib", "test.lpegrex", "ace/mode/text"],
 	["lua parser", "lua.peglib", "test.lua", "ace/mode/lua"],
+	["lys-lang parser", "lys-lang.peglib", "test.lys-lang", "ace/mode/text"],
 	["nelua parser", "nelua.peglib", "test.nelua", "ace/mode/lua"],
 	["nez parser", "nez-peg.peglib", "test.nez", "ace/mode/text"],
 	["peg-piumarta parser", "peg-piumarta.peglib", "test.peg-piumarta", "ace/mode/text"],
