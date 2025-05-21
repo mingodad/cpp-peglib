@@ -1,0 +1,136 @@
+#From: https://github.com/bruceiv/egg/blob/d93c0c77bbdf93705eda17e9ce5f116a018596b9/egg.egg
+
+# Egg grammar for Egg grammars.
+#
+# Author: Aaron Moss
+
+
+#/*
+# * Copyright (c) 2013 Aaron Moss
+# *
+# * Permission is hereby granted, free of charge, to any person obtaining a copy
+# * of this software and associated documentation files (the "Software"), to deal
+# * in the Software without restriction, including without limitation the rights
+# * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# * copies of the Software, and to permit persons to whom the Software is
+# * furnished to do so, subject to the following conditions:
+# *
+# * The above copyright notice and this permission notice shall be included in
+# * all copies or substantial portions of the Software.
+# *
+# * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# * THE SOFTWARE.
+# */
+
+
+grammar <-
+			_ (out_action  )?
+			(rule )+
+			(out_action )? end_of_file
+
+out_action <-
+		OUT_BEGIN < ( !OUT_END . )* >  OUT_END _
+
+rule <-
+		rule_lhs  choice
+
+rule_lhs <-
+		identifier
+			( BIND type_id  )?
+			( err_string  )?
+			( "%no-memo" _  )?
+			EQUAL
+
+identifier <-
+		< [A-Za-z_][A-Za-z_0-9]* >  _
+
+type_id <-
+		< identifier ( "::" _ type_id )*
+			( '<' _ type_id ( ',' _ type_id )* '>' _ )? >
+
+err_string <-
+		'`' < ( "\\\\" / "\\`" / ![`\t\n\r] . )* > '`' _
+
+choice <-
+		sequence
+			( PIPE sequence  )*
+
+sequence <-
+			( expression  / action  )+
+
+expression <-
+		AND primary
+		/ NOT primary
+		/ primary
+			( OPT
+			/ STAR
+			/ PLUS
+			/ EXPECT err_string )?
+
+primary <-
+		( !rule_lhs identifier   # Make sure to not match next rule definition
+			( BIND identifier )? ) #@`nonterminal expression`
+		/ ( OPEN choice CLOSE  ) #@`parenthesized subexpression`
+		/ char_literal
+		/ str_literal
+		/ char_class
+		    ( BIND identifier  )?
+		/ ANY
+		    ( BIND identifier  )?
+		/ EMPTY
+		/ ( BEGIN sequence  END BIND identifier  ) #@`capturing expression`
+		/ EXPECT (
+		    char_literal
+		    / str_literal )
+		/ FAIL err_string
+
+action <-
+		!OUT_BEGIN '{' < ( action / !'}' . )* >  '}' _
+
+char_literal <-
+		'\'' character  '\'' _
+
+str_literal <-
+		'\"' < character* >  '\"' _
+
+char_class <-
+		<'[' ( !']' characters  )* ']'> _
+
+characters <-
+		character '-' character
+		/ character
+
+character <-
+		'\\' [nrt\'\"\\]
+		/ ![\'\"\\] .
+
+OUT_BEGIN <-		"{%"
+OUT_END <-		"%}"
+BIND <-			':' _
+EQUAL <-			'=' _
+PIPE <-			'|' _
+AND <-			'&' _
+NOT <-			'!' _
+OPT <-			'?' _
+STAR <-			'*' _
+PLUS <-			'+' _
+OPEN <-			'(' _
+CLOSE <-			')' _
+ANY <-			'.' _
+EMPTY <-			';' _
+BEGIN <-			'<' _
+END <-			'>' _
+EXPECT <-		'@' _
+FAIL <-			'~' _
+
+~_ <-		 		( space / comment )*
+space <-			' ' / '\t' / end_of_line
+comment <-		'#' ( !end_of_line . )* end_of_line
+end_of_line <- 	"\r\n" / '\n' / '\r'
+
+end_of_file <- !.

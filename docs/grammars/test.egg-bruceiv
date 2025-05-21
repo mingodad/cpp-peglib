@@ -1,0 +1,153 @@
+# Egg grammar for Egg grammars.
+#
+# Author: Aaron Moss
+
+{%
+/*
+ * Copyright (c) 2013 Aaron Moss
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include <string>
+
+#include "ast.hpp"
+#include "utils/strings.hpp"
+%}
+
+grammar: ast::grammar_ptr `` %no-memo =
+		{ psVal = ast::make_ptr<ast::grammar>(); }
+			_ (out_action : s { psVal->pre = s; })?
+			(rule : r { *psVal += r; })+
+			(out_action : s { psVal->post = s; } )? end_of_file
+
+out_action: std::string `out action` %no-memo =
+		OUT_BEGIN < ( !OUT_END . )* > : psVal OUT_END _
+
+rule: ast::grammar_rule_ptr `` %no-memo =
+		rule_lhs : psVal choice : m { psVal->m = m; }
+
+rule_lhs: ast::grammar_rule_ptr =
+		identifier : s { psVal = ast::make_ptr<ast::grammar_rule>(s); }
+			( BIND type_id : t { psVal->type = t; } )?
+			( err_string : t { psVal->error = t.empty() ? s : t; } )?
+			( @"%no-memo" _ { psVal->memo = false; } )?
+			EQUAL
+
+identifier: std::string `` =
+		< [A-Za-z_][A-Za-z_0-9]* > : psVal _
+
+type_id: std::string `type ID` =
+		< identifier ( "::" _ type_id )*
+			( '<' _ type_id ( ',' _ type_id )* '>' _ )? > : psVal
+
+err_string: std::string `error string` =
+		'`' < ( "\\\\" | "\\`" | ![`\t\n\r] . )* > : s '`' _
+			{ psVal = strings::unescape_error(s); }
+
+choice: ast::alt_matcher_ptr =
+		sequence : m { psVal = ast::make_ptr<ast::alt_matcher>(); *psVal += m; }
+			( PIPE sequence : m { *psVal += m; } )*
+
+sequence: ast::seq_matcher_ptr =
+		{ psVal = ast::make_ptr<ast::seq_matcher>(); }
+			( expression : e { *psVal += e; } | action : a { *psVal += a; } )+
+
+expression: ast::matcher_ptr `` =
+		AND primary : m { psVal = ast::make_ptr<ast::look_matcher>(m); }
+		| NOT primary : m { psVal = ast::make_ptr<ast::not_matcher>(m); }
+		| primary : m { psVal = m; } (
+			OPT { psVal = ast::make_ptr<ast::opt_matcher>(m); }
+			| STAR { psVal = ast::make_ptr<ast::many_matcher>(m); }
+			| PLUS { psVal = ast::make_ptr<ast::some_matcher>(m); }
+			| EXPECT err_string : s { psVal = ast::make_ptr<ast::named_matcher>(m, s); } )?
+
+primary: ast::matcher_ptr =
+		( !rule_lhs identifier : s  # Make sure to not match next rule definition
+			{ psVal = ast::make_ptr<ast::rule_matcher>(s); }
+			( BIND identifier : s
+				{ ast::as_ptr<ast::rule_matcher>(psVal)->var = s; } )? )@`nonterminal expression`
+		| ( OPEN choice : am CLOSE { psVal = am; } )@`parenthesized subexpression`
+		| char_literal : cm { psVal = cm; }
+		| str_literal : sm { psVal = sm; }
+		| char_class : rm { psVal = rm; }
+		    ( BIND identifier : s
+		        { ast::as_ptr<ast::range_matcher>(psVal)->var = s; } )?
+		| ANY { psVal = ast::make_ptr<ast::any_matcher>(); }
+		    ( BIND identifier : s
+		        { ast::as_ptr<ast::any_matcher>(psVal)->var = s; } )?
+		| EMPTY { psVal = ast::make_ptr<ast::empty_matcher>(); }
+		| ( BEGIN sequence : bm END BIND identifier : s
+		    { psVal = ast::make_ptr<ast::capt_matcher>(bm, s); } )@`capturing expression`
+		| EXPECT (
+		    char_literal : cm
+		        { psVal = ast::make_ptr<ast::named_matcher>(cm, strings::quoted_escape(cm->c)); }
+		    | str_literal : sm
+		        { psVal = ast::make_ptr<ast::named_matcher>(sm, strings::quoted_escape(sm->s)); } )
+		| FAIL err_string : s { psVal = ast::make_ptr<ast::fail_matcher>(s); }
+
+action: ast::action_matcher_ptr `` =
+		!OUT_BEGIN '{' < ( action | !'}' . )* > : s '}' _
+			{ psVal = ast::make_ptr<ast::action_matcher>(s); }
+
+char_literal: ast::char_matcher_ptr `character literal` =
+		'\'' character : c '\'' _
+			{ psVal = ast::make_ptr<ast::char_matcher>(c); }
+
+str_literal: ast::str_matcher_ptr `string literal` =
+		'\"' < character* > : s '\"' _
+			{ psVal = ast::make_ptr<ast::str_matcher>(strings::unescape(s)); }
+
+char_class: ast::range_matcher_ptr `character class` =
+		'[' { psVal = ast::make_ptr<ast::range_matcher>(); }
+			( !']' characters : r { *psVal += r; } )* ']' _
+
+characters: ast::char_range =
+		character : f '-' character : t { psVal = ast::char_range(f,t); }
+		| character : c { psVal = ast::char_range(c); }
+
+character: char =
+		'\\' [nrt\'\"\\] : c { psVal = strings::unescaped_char(c); }
+		| ![\'\"\\] . : psVal
+
+OUT_BEGIN =		@"{%"
+OUT_END =		@"%}"
+BIND =			@':' _
+EQUAL =			@'=' _
+PIPE =			@'|' _
+AND =			@'&' _
+NOT =			@'!' _
+OPT =			@'?' _
+STAR =			@'*' _
+PLUS =			@'+' _
+OPEN =			@'(' _
+CLOSE =			@')' _
+ANY =			@'.' _
+EMPTY =			@';' _
+BEGIN =			@'<' _
+END =			@'>' _
+EXPECT =		@'@' _
+FAIL =			@'~' _
+
+_ =		 		( space | comment )*
+space =			' ' | '\t' | end_of_line
+comment =		'#' ( !end_of_line . )* end_of_line
+end_of_line = 	"\r\n" | '\n' | '\r'
+
+end_of_file `end of input` = !.
