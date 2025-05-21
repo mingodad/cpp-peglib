@@ -1,0 +1,192 @@
+#From: https://github.com/DanielXMoore/Hera/blob/88c39d8610bd1cb48fb1b478ffc60297e35fde12/samples/hera_v0_8.hera
+
+Grammar <-
+  Statement*
+
+Statement <-
+  EOS? CodeBlock
+  / EOS? Rule
+
+CodeBlock <-
+  TripleBacktick CodeBody TripleBacktick
+
+Rule <-
+  Name EOS RuleBody
+
+RuleBody <-
+  ( Indent Choice )+
+
+Choice <-
+  Sequence Handling
+
+Sequence <-
+  Expression SequenceExpression+
+  / Expression ChoiceExpression+
+  / Expression
+
+SequenceExpression <-
+  Space Expression
+
+ChoiceExpression <-
+  Space "/" Space Expression
+
+ParameterName <-
+  ":" Name
+
+Expression <-
+  PrefixOperator? Suffix ParameterName?
+
+PrefixOperator <-
+  [$&!]
+
+Suffix <-
+  Primary SuffixOperator?
+
+SuffixOperator <-
+  [+?*]
+
+Primary <-
+  Name
+  / Literal
+  / OpenParenthesis Sequence CloseParenthesis
+
+Literal <-
+  StringLiteral
+  / RegExpLiteral
+
+Handling <-
+  EOS
+  / Space* TypeAnnotation? Arrow HandlingExpression
+
+HandlingExpression <-
+  EOS HandlingExpressionBody EOS?
+  / StructuralMapping EOS
+
+HandlingExpressionBody <-
+  HandlingExpressionLine+
+
+HandlingExpressionLine <-
+  Indent Indent ( <[^\n\r]*> NonCommentEOS )
+
+StructuralMapping <-
+  StringValue
+  / NumberValue
+  / BooleanValue
+  / NullValue
+  / Variable
+  / JSArray
+  / JSObject
+
+JSArray <-
+  OpenBracket ArrayItem* CloseBracket
+
+ArrayItem <-
+  StructuralMapping (',' _ / _ )
+
+JSObject <-
+  OpenBrace ObjectField* CloseBrace
+
+ObjectField <-
+  ( StringValue / Name ) (':' [ \t]* StructuralMapping (',' _ / _ ))
+  / Name (',' _ / _ )
+
+Variable <-
+  "$" [0-9]
+  / Name
+
+BooleanValue <-
+  "true"
+  / "false"
+
+NullValue <-
+  "null"
+  / "undefined"
+
+NumberValue <-
+  <"0x"[0-9a-fA-F]+
+  / [-+]?[0-9]+("."[0-9]+)?>
+
+StringValue <-
+  <"\"" DoubleStringCharacter* "\"">
+
+DoubleStringCharacter <-
+  [^"\\]+
+  / EscapeSequence
+
+EscapeSequence <-
+  ( Backslash . )
+
+StringLiteral <-
+  StringValue
+
+RegExpLiteral <-
+  <"/" !Space RegExpCharacter* "/">
+  / CharacterClassExpression
+  / "."
+
+CharacterClassExpression <-
+  CharacterClass+
+
+RegExpCharacter <-
+  [^/\\]+
+  / EscapeSequence
+
+CharacterClass <-
+  <"[" CharacterClassCharacter* "]" Quantifier?>
+
+CharacterClassCharacter <-
+  [^\]\\]+
+  / EscapeSequence
+
+Quantifier <-
+  [?+*] / '{' [0-9]+(',' [0-9]+)?'}'
+
+Name <-
+  <[_a-zA-Z][_a-zA-Z0-9]*>
+
+Arrow <-
+  "->" Space*
+
+Backslash <-
+  "\\"
+
+OpenBrace <-
+  '{' _
+
+CloseBrace <-
+  '}'[ \t]*
+
+OpenBracket <-
+  '[' _
+
+CloseBracket <-
+  ']' [ \t]*
+
+OpenParenthesis <-
+  '(' [ \t]*
+
+CloseParenthesis <-
+  [ \t]* ')'
+
+~Indent <-
+  "  "
+
+~Space <-
+  [ \t]+
+
+~_ <- (Space / '\n')*
+
+~NonCommentEOS <-
+  ([ \t]*('\n' / "\r\n" / '\r'))+
+
+~EOS <-
+  ([ \t]*('#'[^\n\r]*)?('\n' / "\r\n" / '\r'))+
+
+TripleBacktick <-
+  "```"
+
+TypeAnnotation <-
+  <"::" (!"->" .)*>
+
+CodeBody <-
+  <(('`' !"``") / [^`])*>

@@ -84,6 +84,7 @@ const sampleList = [
 	["Javascript tolmasky parser", "javascript-tolmasky.peglib", "test.js", "ace/mode/javascript"],
 	["JsonPath parser", "JsonPath.peglib", "test.JsonPath", "ace/mode/text"],
 	["Jlang parser", "jlang.peglib", "test.jlang", "ace/mode/text"],
+	["Hera parser", "Hera.peglib", "test.Hera", "ace/mode/text"],
 	["kotlin parser", "kotlin-perf.peglib", "test.kotlin", "ace/mode/text"],
 	["leg parser", "leg.peglib", "test.leg", "ace/mode/text"],
 	["lpegrex parser", "lpegrex.peglib", "test.lpegrex", "ace/mode/text"],
