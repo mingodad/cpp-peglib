@@ -1,0 +1,55 @@
+digraph </*Ultimate <br/>
+\ntest*/> {
+	Node [shape="box", style="rounded"]
+	node [shape="box", style="rounded"]
+	charset="UTF-8" // The graph attr.
+	first_node
+	"{record | type}" [shape=record]
+	{3.00.3.14E8}->-1.
+	graph [bgcolor="lightgray"]
+	html [label = <The
+		edge <BR ALIGN="LEFT"/>from <BR ALIGN="CENTER"/>\ \\ \\\ \\\\ <BR ALIGN="RIGHT"/>subgraph html>]
+	O unicode O -> {
+		"The edge \lto \n\ \\ \\\ \\\\ \rsubgraph quoted" ->
+		subgraph "3-rd level" {
+			node [label=0label = <&#x72;&#x65;&#x64; default
+			label<br align="left"/>\G>,style=<#> ; color
+			= "&#x72;&#x65;&#x64;" , none=<//> , ]
+			"q\"q"<q"q><q&quot;q>"q&quot;q"# Expect 2 nodes.
+		} ->
+		html->{}->
+		<
+		Last
+		Time
+		>"
+		Another
+		Time"
+	} ->"Same"->"End" [dir=none]
+	"Sa\
+me"->"En\d"
+	subgraph "1-st level\G" {
+		< and \ \\nod&#x65;\l\G> [label="\G\N\L"] //Hmm, "...\L" differ from <...\L>
+		" and \ \\nod&#x65;\l\G" -> <html<like>"<label<"><id/>>>
+	}
+	node [label="De\ fault &amp;gt; |<cen\
+ter>label|"+/*Comments are like empty space.*/
+"{is|re
+cord}" style=""]
+	first_node
+	second_node
+	node [shape=record]
+	last_node
+	node ["sha\
+pe"=Mrecord]
+	west [label=<Go | from "&#x5C;N"\L>]
+	second_node->"west":w
+	->last_node:
+	center/*port*/
+	:s
+	"q\"q"[label="red "+"not "+"sub'
+s "+"label\l\G"]
+		"
+		Last
+		Time
+		"[label=<\N3>]
+}

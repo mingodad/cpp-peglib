@@ -72,6 +72,7 @@ const sampleList = [
 	["CAN bus parser", "dbc_grammar.peglib", "test.dbc_grammar", "ace/mode/text"],
 	["culebra parser", "culebra.peglib", "test.culebra", "ace/mode/text"],
 	["DAGOperator parser", "DAGOperator.peglib", "test.DAGOperator", "ace/mode/text"],
+	["dot parser", "dot-obermann.peglib", "test.dot-obermann", "ace/mode/text"],
 	["egg parser", "egg-bruceiv.peglib", "test.egg-bruceiv", "ace/mode/text"],
 	["filter string parser", "filter_string.peglib", "test.filter_string", "ace/mode/text"],
 	["formula_ast parser", "formula_ast.peglib", "test.formula_ast", "ace/mode/text"],

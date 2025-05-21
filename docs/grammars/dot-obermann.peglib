@@ -1,0 +1,42 @@
+#From: https://github.com/obermann/PEG4DOT/blob/0dd708b0523adacbde2cd4dc6041eb61c4f0becc/dot.peg
+
+file          <- _ graph+
+graph         <- ('strict' _)? ('graph' / 'digraph') _ ID? '{' _ stmt_list '}' _
+stmt_list     <- (stmt (';' _)?)*
+stmt          <- attr_stmt
+               / edge_stmt
+               / subgraph
+               / ID '=' _ ID
+               / node_stmt
+attr_stmt     <- ('graph' / 'node' / 'edge') _ attr_list
+attr_list     <- ('[' _ attr* ']' _)+
+attr          <- ID '=' _ ID ([;,] _)?
+edge_stmt     <- (subgraph / node_id) edgeRHS attr_list?
+edgeRHS       <- (edgeop (subgraph / node_id))+
+node_stmt     <- node_id attr_list?
+node_id       <- ID port? port?
+port          <- ':' _ ID
+subgraph      <- ('subgraph' _ ID?)? '{' _ stmt_list '}' _
+edgeop        <- ('--' / '->') _
+ID            <- HTML
+               / QUOTED
+               / NUMERAL
+               / STRING
+HTML          <- '<' (![<>] . / HTML)* '>' _
+QUOTED        <- <'"' ESCAPED* '"' _ ('+' _ '"' ESCAPED* '"' _)*>
+ESCAPED       <- ESC_QUOTE
+               / ESC_EOL
+               / '\\' .
+               / !'"' .
+ESC_QUOTE     <- '\\"'
+ESC_EOL       <- '\\' EOL
+NUMERAL       <- <'-'? ([0-9]+ ('.' [0-9]*)? / '.' [0-9]+)> _
+STRING        <- [A-Z_a-z\u0080-\uFFFF] [0-9A-Z_a-z\u0080-\uFFFF]* _
+~_             <- ([ \t] / EOL / COMMENT)*
+COMMENT       <- COMMENT_HASH
+               / COMMENT_SLASH
+               / COMMENT_BLOCK
+COMMENT_HASH  <- '#' (!EOL .)*
+COMMENT_SLASH <- '//' (!EOL .)*
+COMMENT_BLOCK <- '/*' (!'*/' .)* '*/'
+EOL           <- '\r\n' / '\n' / '\r'
