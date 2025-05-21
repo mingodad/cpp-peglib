@@ -1,0 +1,127 @@
+#From: https://github.com/berke/aurochs/blob/dd6d1cd331de64a6e5fa6cd3ac4b52134a5091cd/syntax/grammar.peg
+
+start <- grammar EOF
+
+EOF <- !.
+
+left_comment <- "(*"
+right_comment <- "*)"
+op_appending <- space "appending" space
+op_prepending <- space "prepending" space
+op_prefixing <- space "prefixing" space
+op_suffixing <- space "suffixing" space
+op_outfixing <- space "outfixing" space
+op_surrounding <- space "surrounding" space
+op_do <- space "do" space
+op_done <- space "done" space
+op_position <- space "position" space
+keyword <- <("position"|"prepending"|"appending"|"prefixing"|"suffixing"|"outfixing"|"surrounding"|"done"|"do"|"sigma"|"epsilon"|"EOF"|"BOF") !alpha>
+comment <- left_comment ((comment / ((! right_comment) .)))* right_comment
+core_space <- comment / [ \t\n\r]
+~space <- core_space*
+alpha <- [a-zA-Z]
+decimal <- [0-9]
+numeric_escape <- [0-9][0-9][0-9] / 'x' [0-9a-fA-F][0-9a-fA-F]
+bracketed_escape <- '\\' ([nrtb\\\[\]-] / numeric_escape)
+char_escape <- '\\' ([nrtb'\\] / numeric_escape)
+string_escape <- '\\' ([nrtb"\\] / numeric_escape)
+any_ident <- <(alpha / '_') ((alpha / decimal / '_'))*>
+sp <- core_space+ / !alpha / EOF
+core_ident <- !(keyword sp) any_ident
+ident <- space core_ident space
+
+op_sigma <- space "sigma" sp
+op_epsilon <- space "epsilon" sp
+op_eof <- space "EOF" sp
+op_bof <- space "BOF" sp
+op_or <- space '|' space
+op_and <- space '&' space
+op_not <- space '~' space
+op_star <- space '*' space
+op_tightstar <- space ".*" space
+op_plus <- space '+' space
+op_tightplus <- space ".+" space
+op_option <- space '?' space
+op_sharp <- space "#" space
+op_produces <- space "::=" space
+#op_prod_pref <- space ":(" space
+#op_prod_suf <- space "):=" space
+op_colon <- space ':' space
+op_semicolon <- space ';' space
+op_l_bracket <- space '[' (! '^')
+op_l_n_bracket <- space '[' '^'
+op_r_bracket <- ']' space
+op_l_paren <- space '(' space
+op_r_paren <- space ')' space
+op_l_brace <- space '{' space
+op_r_brace <- space '}' space
+op_dot <- space '.' space
+
+opening_tag <- space ('<' any_ident '>') space
+
+closed_tag <- space ('<' any_ident "/>") space
+
+closing_tag <- space ("</" any_ident '>') space
+
+expr <-
+  sequencable op_or expr
+/ suffixable_expr op_and expr
+/ sequencable
+
+sequencable <-
+  suffixable_expr sequencable
+/ suffixable_expr op_dot sequencable
+/ suffixable_expr
+
+suffixable_expr <-
+  simple_expr op_option
+/ simple_expr op_tightplus
+/ simple_expr op_tightstar
+/ simple_expr op_plus
+/ simple_expr op_star
+/ op_not suffixable_expr
+/ simple_expr
+
+string_expr <- space <('"' (((! '"') (string_escape / [^"])))* '"')> space
+
+simple_expr <-
+  (op_l_paren expr op_r_paren)
+/ op_position
+/ opening_tag expr closing_tag
+/ closed_tag
+/ op_l_brace expr op_r_brace
+/ op_epsilon
+/ op_eof
+/ op_bof
+/ op_sigma
+/ ident op_colon suffixable_expr
+/ op_sharp string_expr
+/ string_expr '^' 'i'
+/ string_expr
+/ space ('\'' (char_escape / ((! char_escape) .)) '\'') space
+/ ident / characters
+
+bracketed_char_spec <-
+  char_spec '-' char_spec
+/ char_spec
+
+char_spec <- bracketed_escape / [^\[\\\]\n\t\r-]
+
+characters <-
+  <op_l_bracket bracketed_char_spec* op_r_bracket>
+/ <op_l_n_bracket bracketed_char_spec* op_r_bracket>
+
+modifier <-
+  op_prefixing
+/ op_prepending
+/ op_appending
+/ op_suffixing
+/ op_surrounding
+/ op_outfixing
+
+
+production <-
+  ident op_produces expr op_semicolon
+/ modifier expr op_do production+ op_done op_semicolon
+
+grammar <- production+

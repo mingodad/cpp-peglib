@@ -1,0 +1,89 @@
+#From: https://github.com/berke/aurochs/blob/dd6d1cd331de64a6e5fa6cd3ac4b52134a5091cd/examples/markup.peg
+
+start <-  header   body  EOF
+
+EOF <- !.
+
+~empty_line <- ' '* '\n'
+
+paragraph <-  empty_line empty_line+
+
+token <- [^\n]*
+
+line <- token '\n'
+
+header <-  line  (attribute '\n')*
+
+comma <- space? ',' space?
+
+attribute <-
+     "#tags" space tag (comma tag)*
+  /  "#date" space date
+  /  "#" [a-z]+ (space token)?
+
+
+date <-  ( [0-9][0-9][0-9][0-9] ) '-' ([0-1][0-9]) '-' ([0-3][0-9])
+
+tag <-  [a-zA-Z0-9_]+
+
+body <- section*
+
+section <- quote / h3 / h2 / h1 / list1 / definition1 / paragraph / text / verbatim
+
+quote <-
+
+    "``"
+      section*
+    "''"
+
+
+
+h1 <-  <line>  "===" '='*
+h2 <-  <line>  "---" '-'*
+h3 <-  <line>  "~~~" '~'*
+
+definition1 <-  data_definition1+
+data_definition1 <- space?  (!("::"|'\n') .)+  "::" !':'  text indented?  / definition2
+
+definition2 <-  data_definition2+
+data_definition2 <- space?  (!(":::"|'\n') .)+  ":::" !':'  text indented?  / definition3
+
+definition3 <-  data_definition3+
+data_definition3 <- space?  (!("::::"|'\n') .)+  "::::"  text indented?
+
+list1 <-  list_element1+
+list_element1 <- space? "-" space  text indented?  / list2
+
+list2 <-  list_element2+
+list_element2 <- space? "--" space  text indented?  / list3
+
+list3 <-  list_element3+
+list_element3 <- space? "---" space  text indented?
+
+text <- segment* '\n'
+
+indented <- !(list1 / list2 / list3 / definition1 / definition2 / definition3) ' '+ segment* '\n'
+
+segment <-
+  link
+/ tt
+/ em
+/ <(!"http://" [^%{+\[\n])+>
+
+
+verbatim <-
+  "%{"
+  <([^%]+ / !"%}" "%")*>
+  "%}"
+
+
+
+tt <-  <'{' [^}]* '}'>
+
+em <-  <'+' [^+]* '+'>
+
+~space <- [ \t]+
+
+link <-
+     <'[' [^\]]+ ']' '(' [^)]+ ')'>
+  /  <("http://"[^ \n\t]+)>
