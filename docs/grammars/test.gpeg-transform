@@ -1,0 +1,15 @@
+--[[
+
+Based on the grammar:
+
+CSV     <- { RECORD+ }
+RECORD  <- { FIELD ( COMMA FIELD )* } '\n'
+COMMA   <- { ',' }
+FIELD   <- { ( '\\' . / [^,\n] )* }
+
+]]
+
+FIELD   : '    <field>'  $_ '</field>\n'
+COMMA   : ''
+RECORD  : '  <record>\n' $_ '  </record>'
+CSV     : '<db>\n'       $_ '</db>\n'

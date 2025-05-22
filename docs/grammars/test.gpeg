@@ -1,0 +1,118 @@
+-- GPEG Grammar Grammar
+
+GRAMMAR            <- ( DEFINITION+ / EXPRESSION ) END
+
+S                  <- %s+
+
+MULTILINECOMMENT   <- '--[[' ( !']]' .)* ']]'
+
+COMMENT            <- '--' [^\n]* '\n'
+
+__prefix           <- ( MULTILINECOMMENT / COMMENT / S )*
+
+END                <- !.
+
+DEFINITION         <- RULE / IMPORTDECL
+
+RULE               <- IDENT LEFTARROW EXPRESSION
+
+EXPRESSION         <- TERMS { OR TERMS }*
+
+TERMS              <- TERM+
+
+TERM               <- SCANMATCHER / QUANTIFIEDMATCHER
+
+SCANMATCHER        <- ( NOT / AND ) MATCHER
+
+QUANTIFIEDMATCHER  <- MATCHER QUANTIFIER?
+
+QUANTIFIER         <- Q_ZEROORONE /
+                      Q_ONEORMORE /
+                      Q_ZEROORMORE /
+                      Q_FROMTO /
+                      Q_UNTIL /
+                      Q_FROM /
+                      Q_SPECIFIC /
+                      Q_VAR
+
+Q_ZEROORONE        <- '?'
+Q_ONEORMORE        <- '+'
+Q_ZEROORMORE       <- '*'
+Q_FROMTO           <- '^' { [0-9]+ } '-' { [0-9]+ }
+Q_UNTIL            <- '^' '-' { [0-9]+ }
+Q_FROM             <- '^' { [0-9]+ } '-'
+Q_SPECIFIC         <- '^' { [0-9]+ }
+Q_VAR              <- '^' BOPEN VARREFERENCE BCLOSE
+
+MATCHER            <- ANY /
+                      SET /
+                      STRING /
+                      BITMASK /
+                      HEXLITERAL /
+                      VARCAPTURE /
+                      CAPTURE /
+                      GROUP /
+                      MACRO /
+                      ENDFORCE /
+                      VARREFERENCE /
+                      REFERENCE /
+                      LIMITEDCALL
+
+BITMASK            <- '|' [01_]^1-32 '|'
+
+VARCAPTURE         <- CBOPEN COLON IDENT CAPTURETYPE? COLON
+                      EXPRESSION CBCLOSE
+
+CAPTURETYPE        <- SEMICOLON TYPE
+
+TYPE               <- 'uint32' / 'int32'
+
+CAPTURE            <- CBOPEN EXPRESSION CBCLOSE
+
+GROUP              <- BOPEN EXPRESSION BCLOSE
+
+SET                <- ABOPEN { '^' }? (
+                        { '\\' ([nrtv\\\]\-] / '0x' [0-9a-fA-F]^2) / [^\\\]] }
+                          '-'
+                        { '\\' ([nrtv\\\]\-] / '0x' [0-9a-fA-F]^2) / [^\\\]] }
+                        /
+                        { '\\' ([nrtv\\\]\-] / '0x' [0-9a-fA-F]^2) / [^\\\]] }
+                      )+ ABCLOSE
+
+VARREFERENCE       <- '$' ( IDENT / NUMBER ) ('-' BITMASK )?
+
+REFERENCE          <- !( KW_IMPORT ) IDENT !LEFTARROW
+
+LIMITEDCALL        <- '<' LCMODES COLON LCPARAM COLON IDENT %s* '>'
+LCMODES            <- 'ruint32'
+LCPARAM            <- [^: \n\r\t\v]*
+
+LEFTARROW          <- '<-'
+NOT                <- '!'
+AND                <- '&'
+MACRO              <- '%' [a-zA-Z] [a-zA-Z0-9]*
+ENDFORCE           <- '__end' S NUMBER
+HEXLITERAL         <- '0x' [0-9a-fA-F]^2
+NUMBER             <- [0-9]+
+STRING             <- STRINGLITERAL 'i'?
+OR                 <- '/'
+ANY                <- '.'
+
+IMPORTDECL         <- KW_IMPORT STRINGLITERAL OPTNAMESPACE SEMICOLON
+KW_IMPORT          <- 'import'
+OPTNAMESPACE       <- (KW_AS IDENT)?
+KW_AS              <- 'as'
+
+STRINGLITERAL      <- '\''
+                      { ( '\\' ([nrtv\\'] / 'x' [0-9a-fA-F]^2) / [^'\\] )* }
+                      '\''
+
+IDENT              <- [a-zA-Z_][a-zA-Z0-9_]^0-63
+BOPEN              <- '('
+BCLOSE             <- ')'
+CBOPEN             <- '{'
+CBCLOSE            <- '}'
+ABOPEN             <- '['
+ABCLOSE            <- ']'
+COLON              <- ':'
+SEMICOLON          <- ';'

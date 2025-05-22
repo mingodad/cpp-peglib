@@ -1,0 +1,86 @@
+#From: https://github.com/kjhermans/gpeg/blob/5415dd5ac03119e23cffba303999da3c4dc91546/src/gen1/lib/assembler/assembly.gpeg
+
+# Naigama Assembly Grammar
+
+TOP                <- INSTRUCTIONS
+
+S                  <- [ \t\r\n\f\v]+
+MULTILINECOMMENT   <- '--[[' ( !']]' .)* ']]'
+COMMENT            <- '--' [^\n]* '\n'
+
+#__prefix
+%whitespace <- ( MULTILINECOMMENT / COMMENT / S )*
+
+INSTRUCTIONS       <- INSTRUCTION+ END
+INSTRUCTION        <- RULEINSTR /
+                      LABELDEF
+
+RULEINSTR          <- ANYINSTR / BACKCOMMITINSTR / CALLINSTR /
+                      CATCHINSTR / CHARINSTR / BITMASKINSTR /
+                      CLOSECAPTUREINSTR / COMMITINSTR /
+                      INTRPCAPTUREINSTR /
+                      ENDINSTR / FAILTWICEINSTR / FAILINSTR /
+                      JUMPINSTR / NOOPINSTR / TRAPINSTR /
+                      OPENCAPTUREINSTR / PARTIALCOMMITINSTR /
+                      QUADINSTR /
+                      RETINSTR / SETINSTR / RANGEINSTR /
+                      SKIPINSTR / SPANINSTR / TESTANYINSTR /
+                      TESTCHARINSTR / TESTQUADINSTR /
+                      TESTSETINSTR / VARINSTR /
+                      COUNTERINSTR / CONDJUMPINSTR
+
+END                <- !.
+
+ANYINSTR           <- 'any'
+BACKCOMMITINSTR    <- 'backcommit'  LABEL
+CALLINSTR          <- 'call'  LABEL
+CATCHINSTR         <- ( 'catch' / 'choice' )  LABEL
+CHARINSTR          <- 'char'  HEXBYTE
+BITMASKINSTR       <- 'bitmask'  UNSIGNED  HEXQUAD  HEXQUAD  HEXQUAD
+CLOSECAPTUREINSTR  <- 'closecapture'  SLOT
+COMMITINSTR        <- 'commit'  LABEL
+ENDINSTR           <- 'end'  CODE
+FAILINSTR          <- 'fail'
+FAILTWICEINSTR     <- 'failtwice'
+INTRPCAPTUREINSTR  <- 'intrpcapture'  INTRPCAPTURETYPES
+                                          ( SLOT / 'default' )
+JUMPINSTR          <- 'jump'  LABEL
+NOOPINSTR          <- 'noop'
+TRAPINSTR          <- 'trap'
+OPENCAPTUREINSTR   <- 'opencapture'  SLOT
+PARTIALCOMMITINSTR <- 'partialcommit'  LABEL
+QUADINSTR          <- 'quad'  QUAD
+RETINSTR           <- 'ret'
+SETINSTR           <- 'set'  SET
+RANGEINSTR         <- 'range'  HEXBYTE  HEXBYTE
+SKIPINSTR          <- 'skip'  UNSIGNED
+SPANINSTR          <- 'span'  SET
+TESTANYINSTR       <- 'testany'  LABEL
+TESTCHARINSTR      <- 'testchar'  HEXBYTE  LABEL
+TESTQUADINSTR      <- 'testquad'  QUAD  LABEL
+TESTSETINSTR       <- 'testset'  SET  LABEL
+VARINSTR           <- 'var'  SLOT
+COUNTERINSTR       <- 'counter'  REGISTER  UNSIGNED
+CONDJUMPINSTR      <- 'condjump'  REGISTER  LABEL
+
+LABELDEF           <- LABEL COLON
+
+# terminals
+
+CODE               <- UNSIGNED
+HEXBYTE            <- <[0-9a-fA-F]{2}>
+HEXQUAD            <- <[0-9a-fA-F]{1,8}>
+LABEL              <- <[a-zA-Z0-9_]{1,64}>
+UNSIGNED           <- <[0-9]+>
+#NUMBER             <- <'-'? [0-9]+>
+QUAD               <- <[0-9a-fA-F]{8}>
+SET                <- <[0-9a-fA-F]{64}>
+SLOT               <- UNSIGNED
+REGISTER           <- UNSIGNED
+#TYPE               <- UNSIGNED
+COLON              <- ':'
+#AMPERSAND          <- '&'
+
+#STRINGLITERAL      <- <'\'' ( '\\' ([nrtv\\'] / [0-9]{3}) / [^'\\] )* '\''>
+
+INTRPCAPTURETYPES  <- 'ruint32'
