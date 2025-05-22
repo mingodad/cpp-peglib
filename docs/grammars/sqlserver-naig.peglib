@@ -1,0 +1,173 @@
+#From: https://github.com/kjhermans/naigama/blob/cabd3877d79378a4d842af0c8614ba0b967bb2b1/src/demos/sqlserver/grammar/grammar.naig
+
+# SQL
+
+TOP              <- SQL !.
+
+%whitespace <- ([ \t\r\n]+ / '--'[^\n]*)*
+
+#TOP              <- SQL __prefix !.
+#__prefix         <- ( '--' [^\n]* '\n' / %s+ )*
+#__prefix         <- ( '--' [^\n]* '\n' )*
+
+SQL              <- STMT+
+STMT             <- (
+                      SELECT /
+                      INSERT /
+                      UPDATE /
+                      DELETE /
+                      CREATETABLE /
+                      DROPTABLE /
+                      CREATESEQUENCE /
+                      DROPSEQUENCE /
+                      GRANT
+                    ) SEMICOLON
+
+SELECT           <- KW_SELECT SELECTFIELDLIST KW_FROM SET ( KW_WHERE CONDITION )?
+INSERT           <- KW_INSERT KW_INTO TABLENAME
+                    ( BOPEN INSERTFIELDLIST BCLOSE KW_VALUES )?
+                    BOPEN INSERTVALUELIST BCLOSE
+UPDATE           <- KW_UPDATE TABLENAME KW_SET UPDATEFIELDLIST ( KW_WHERE CONDITION )?
+DELETE           <- KW_DELETE KW_FROM TABLENAME ( KW_WHERE CONDITION )?
+CREATETABLE      <- KW_CREATE KW_TABLE TABLENAME
+                    BOPEN CREATEFIELDLIST BCLOSE
+DROPTABLE        <- KW_DROP KW_TABLE TABLENAME
+GRANT            <- KW_GRANT PRIVLIST KW_ON KW_TABLE TABLENAME KW_TO USERNAME
+CREATESEQUENCE   <- KW_CREATE KW_SEQUENCE SEQNAME
+DROPSEQUENCE     <- KW_DROP KW_SEQUENCE SEQNAME
+
+SELECTFIELDLIST  <- SELECTFIELD ( COMMA SELECTFIELD )*
+SELECTFIELD      <- STAR / FIELDNAME KW_AS IDENT / FIELDNAME
+INSERTFIELDLIST  <- INSERTFIELD ( COMMA INSERTFIELD )*
+INSERTFIELD      <- FIELDNAME
+FIELDNAME        <- IDENT
+INSERTVALUELIST  <- INSERTVALUE ( COMMA INSERTVALUE )*
+INSERTVALUE      <- EXPRESSION
+UPDATEFIELDLIST  <- UPDATEFIELD ( COMMA UPDATEFIELD )*
+UPDATEFIELD      <- FIELDNAME EQUALS EXPRESSION
+CREATEFIELDLIST  <- CREATEFIELD ( COMMA CREATEFIELD )*
+CREATEFIELD      <- FIELDNAME FIELDTYPE FIELDCONSTRAINTS?
+FIELDCONSTRAINTS <- FIELDCONSTRAINT*
+FIELDCONSTRAINT  <- PRIMARYKEY / NOTNULL / REFERENCES / DEFAULT
+PRIMARYKEY       <- KW_PRIMARY KW_KEY
+NOTNULL          <- KW_NOT KW_NULL
+REFERENCES       <- KW_REFERENCES TABLENAME BOPEN FIELDNAME BCLOSE
+DEFAULT          <- KW_DEFAULT EXPRESSION
+PRIVLIST         <- PRIV ( COMMA PRIV )*
+PRIV             <- KW_INSERT / KW_SELECT / KW_UPDATE / KW_DELETE
+
+SET              <- SETELT ( COMMA SETELT )*
+SETELT           <- BOPEN SELECT BCLOSE / TABLENAME
+
+TABLENAME        <- IDENT
+USERNAME         <- IDENT
+SEQNAME          <- IDENT
+
+CONDITION        <- EXPRESSION
+
+EXPRESSION       <- EXPR2 (( AND / OR ) EXPR2 )*
+EXPR2            <- EXPR3 (( BITAND / BITOR / BITXOR ) EXPR3 )*
+EXPR3            <- EXPR4 (( EQUALS / NEQUALS / LTEQ / LT / GTEQ / GT ) EXPR4 )*
+EXPR4            <- EXPR5 (( POW / MUL / DIV ) EXPR5 )*
+EXPR5            <- EXPR6 (( ADD / SUB ) EXPR6 )*
+EXPR6            <- ( UNARY )* TERM
+UNARY            <- ( NOT / INC / DEC )
+TERM             <- LITERAL /
+                    FUNCTIONCALL /
+                    VARREF /
+                    BOPEN ( EXPRESSION ) BCLOSE /
+                    SELECT
+
+FUNCTIONCALL     <- IDENT BOPEN ( EXPRESSION ( COMMA EXPRESSION )* )? BCLOSE
+VARREF           <- IDENT
+
+KW_SELECT        <- 'select'i
+KW_INSERT        <- 'insert'i
+KW_INTO          <- 'into'i
+KW_VALUES        <- 'values'i
+KW_UPDATE        <- 'update'i
+KW_DELETE        <- 'delete'i
+KW_CREATE        <- 'create'i
+KW_DROP          <- 'drop'i
+KW_FROM          <- 'from'i
+KW_WHERE         <- 'where'i
+KW_AS            <- 'as'i
+KW_SET           <- 'set'i
+KW_TABLE         <- 'table'i
+KW_SEQUENCE      <- 'sequence'i
+KW_NOT           <- 'not'i
+KW_NULL          <- 'null'i
+KW_PRIMARY       <- 'primary'i
+KW_KEY           <- 'key'i
+KW_REFERENCES    <- 'references'i
+KW_DEFAULT       <- 'default'i
+KW_GRANT         <- 'grant'i
+KW_ON            <- 'on'i
+KW_TO            <- 'to'i
+KW_WITH          <- 'with'i
+KW_TIME          <- 'time'i
+KW_ZONE          <- 'zone'i
+
+KW_VARCHAR       <- 'varchar'i
+KW_CHAR          <- 'char'i
+KW_INTEGER       <- 'integer'i
+KW_BOOLEAN       <- 'boolean'i
+KW_TIMESTAMP     <- 'timestamp'i
+TIMESTAMPWTZ     <- KW_TIMESTAMP KW_WITH KW_TIME KW_ZONE
+
+FIELDTYPE        <- (
+                      KW_VARCHAR / KW_CHAR / KW_INTEGER /
+                      KW_BOOLEAN / TIMESTAMPWTZ / KW_TIMESTAMP
+                    ) FIELDNUMBER?
+FIELDNUMBER      <- BOPEN INTLITERAL BCLOSE
+
+IDENT            <- <[a-zA-Z_][a-zA-Z0-9_]{0,63}>
+
+BOPEN            <- '('
+BCLOSE           <- ')'
+ABOPEN           <- '['
+ABCLOSE          <- ']'
+CBOPEN           <- '{'
+CBCLOSE          <- '}'
+
+AND              <- 'and'i / '&&'
+OR               <- 'or'i / '||'
+BITAND           <- '&'
+BITOR            <- '|'
+BITXOR           <- '^'
+EQUALS           <- '=' / 'is'i
+NEQUALS          <- '!='
+LTEQ             <- '<='
+LT               <- '<'
+GTEQ             <- '>='
+GT               <- '>'
+POW              <- '**'
+MUL              <- '*'
+DIV              <- '/'
+ADD              <- '+'
+SUB              <- '-'
+NOT              <- '!' / 'not'i
+INC              <- '++'
+DEC              <- '--'
+
+LITERAL          <- STRINGLITERAL /
+                    HASHLITERAL /
+                    LISTLITERAL /
+                    FLOATLITERAL /
+                    INTLITERAL /
+                    BOOLEANLITERAL
+STRINGLITERAL    <- <'\'' ( '\\' ([nrtv\\'] / [0-9]{3}) / [^'\\] )* '\''>
+HASHLITERAL      <- CBOPEN ( HASHELT ( COMMA HASHELT )* )? CBCLOSE
+HASHELT          <- HASHKEY COLON HASHVALUE
+HASHKEY          <- TERM
+HASHVALUE        <- TERM
+LISTLITERAL      <- ABOPEN ( LISTELT ( COMMA LISTELT )* )? ABCLOSE
+LISTELT          <- TERM
+FLOATLITERAL     <- <[0-9]* '.' [0-9]+>
+INTLITERAL       <- <[0-9]+>
+BOOLEANLITERAL   <- 'true' / 'false'
+
+COLON            <- ':'
+SEMICOLON        <- ';'
+COMMA            <- ','
+STAR             <- '*'

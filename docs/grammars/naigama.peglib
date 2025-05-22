@@ -1,0 +1,285 @@
+#From: https://github.com/kjhermans/naigama/blob/cabd3877d79378a4d842af0c8614ba0b967bb2b1/src/gen6/grammar/grammar.naig
+#see also https://github.com/kjhermans/gpeg
+
+# Naigama Grammar Grammar
+
+#TOP                <- GRAMMAR #=> compile
+
+GRAMMAR            <- ( DEFINITION+ / SINGLE_EXPRESSION ) END
+
+S                  <- [ \t\r\n\f\v]+
+
+MULTILINECOMMENT   <- '--[[' ( !']]' .)* ']]'
+
+COMMENT            <- '--' [^\n]* '\n'?
+
+%whitespace            <- ( MULTILINECOMMENT / COMMENT / S )*
+#__prefix           <- ( MULTILINECOMMENT / COMMENT / S )*
+
+END                <- !.
+
+DEFINITION         <- GLOBALVARDECL /
+                      FUNCDECL /
+                      IMPORTDECL /
+                      TYPEDECL /
+                      RULE
+
+IMPORTDECL         <- KW_IMPORT STRING SEMICOLON
+
+SINGLE_EXPRESSION  <- EXPRESSION
+
+RULE               <- IDENT LEFTARROW EXPRESSION
+
+EXPRESSION         <- ALTERNATIVES /
+                      TERMS
+
+ALTERNATIVES       <- TERMS OR EXPRESSION
+
+TERMS              <- TERM+
+
+TERM               <- SCANMATCHER / QUANTIFIEDMATCHER
+
+SCANMATCHER        <- ( NOT / AND ) MATCHER
+
+QUANTIFIEDMATCHER  <- MATCHER QUANTIFIER?
+
+QUANTIFIER         <- Q_ZEROORONE /
+                      Q_ONEORMORE /
+                      Q_ZEROORMORE /
+                      Q_FROMTO /
+                      Q_UNTIL /
+                      Q_FROM /
+                      Q_SPECIFIC /
+                      Q_VAR
+
+Q_ZEROORONE        <- '?'
+Q_ONEORMORE        <- '+'
+Q_ZEROORMORE       <- '*'
+Q_FROMTO           <- <'^' [0-9]+ '-' [0-9]+>
+Q_UNTIL            <- <'^' '-' [0-9]+>
+Q_FROM             <- <'^' [0-9]+ '-'>
+Q_SPECIFIC         <- <'^' [0-9]+>
+Q_VAR              <- <'^' BOPEN VARREFERENCE BCLOSE>
+
+MATCHER            <- ANY /
+                      SET /
+                      STRING /
+                      BITMASK /
+                      HEXLITERAL /
+                      VARCAPTURE /
+                      CAPTURE /
+                      GROUP /
+                      MACRO /
+                      ENDFORCE /
+                      VARREFERENCE /
+                      REFERENCE
+
+BITMASK            <- '|' [0-9a-fA-F]{2} '|' [0-9a-fA-F]{2} '|'
+
+VARCAPTURE         <- CBOPEN COLON IDENT CAPTURETYPE? COLON
+                      EXPRESSION CBCLOSE CAPTUREEND
+
+CAPTURETYPE        <- SEMICOLON TYPE
+
+TYPE               <- 'uint32' / 'int32'
+
+CAPTURE            <- CBOPEN EXPRESSION CBCLOSE CAPTUREEND
+
+GROUP              <- BOPEN EXPRESSION BCLOSE
+
+CAPTUREEND         <- ( REPLACE / RECYCLE )?
+
+SET                <- ABOPEN SETNOT? (
+                         '\\' ([nrtv\\\]-] / [0-9]{3}) / [^\\\]]  '-'
+                         '\\' ([nrtv\\\]-] / [0-9]{3}) / [^\\\]]
+                        /
+                        '\\' ([nrtv\\\]-] / [0-9]{3}) / [^\\\]]
+                      )+ ABCLOSE
+
+VARREFERENCE       <- '$' ( IDENT / NUMBER ) MASK?
+
+MASK               <- '|'  [0-9A-Fa-f]{2}
+
+REFERENCE          <- !( KW_FUNCTION / KW_VAR / KW_IMPORT ) IDENT !LEFTARROW
+
+REPLACE            <- RIGHTARROW REPLACETERMS
+
+REPLACETERMS       <- REPLACETERM+
+
+REPLACETERM        <- STRINGLITERAL / HEXLITERAL / VARREFERENCE
+
+RECYCLE            <- FATARROW IDENT
+
+LEFTARROW          <- '<-'
+RIGHTARROW         <- '->'
+FATARROW           <- '=>'
+NOT                <- '!'
+AND                <- '&'
+MACRO              <- <'%' [a-zA-Z] [a-zA-Z0-9]*>
+ENDFORCE           <- '__end'  NUMBER
+HEXLITERAL         <- <'0x' [0-9a-fA-F]{2}>
+NUMBER             <- <[0-9]+>
+STRING             <- STRINGLITERAL 'i'?
+OR                 <- '/'
+ANY                <- '.'
+SETNOT             <- '^'
+
+# scripting engine
+
+TYPEDECL       <- KW_TYPE  IDENT
+                  ABOPEN
+                  ( VARDECL / TYPEDECL )+
+                  ABCLOSE
+
+FUNCDECL       <- KW_FUNCTION  IDENT FUNCPARAMDECL FUNCBODY
+
+FUNCPARAMDECL  <- BOPEN ( PARAMDECL ( COMMA PARAMDECL )* )? BCLOSE
+
+PARAMDECL      <- SCR_TYPE  IDENT / IDENT
+
+FUNCBODY       <- CBOPEN LOWSTMT* CBCLOSE
+
+GLOBALVARDECL  <- VARDECL
+
+LOWSTMT        <- ST_IF /
+                  ST_WHILE /
+                  ST_CATCH /
+                  ST_RETURN /
+                  ST_OTHER /
+                  VARDECL /
+                  ASSIGNMENT /
+                  SCR_EXPRESSION? SEMICOLON
+
+ST_IF          <- KW_IF BOPEN SCR_EXPRESSION BCLOSE
+                    IF_BODY
+                    IF_ELSIF*
+                    IF_ELSE?
+
+IF_BODY        <- CBOPEN LOWSTMT* CBCLOSE
+
+IF_ELSIF       <- KW_ELSIF BOPEN SCR_EXPRESSION BCLOSE IF_BODY
+
+IF_ELSE        <- KW_ELSE IF_BODY
+
+ST_WHILE       <- KW_WHILE BOPEN SCR_EXPRESSION BCLOSE
+                    CBOPEN LOWSTMT* CBCLOSE
+
+ST_CATCH       <- KW_CATCH CBOPEN LOWSTMT* CBCLOSE
+
+ST_RETURN      <- KW_RETURN SCR_EXPRESSION? SEMICOLON
+
+ST_OTHER       <- ( KW_BREAK / KW_CONTINUE ) SEMICOLON
+
+VARDECL        <- KW_VAR ( SCR_TYPE  IDENT / IDENT )
+                    ( ASSIGN SCR_EXPRESSION )? SEMICOLON
+
+ASSIGNMENT     <- SCR_REFERENCE ASSIGN SCR_EXPRESSION SEMICOLON
+
+SCR_TYPE       <- IDENT
+
+# Operator precedence from
+# https://en.cppreference.com/w/c/language/operator_precedence
+
+SCR_EXPRESSION <- BINOP_P12
+
+BINOP_P12      <- BINOP_P11 ( ( LOGOR )
+                  BINOP_P11 )*
+BINOP_P11      <- BINOP_P10 ( ( LOGAND )
+                  BINOP_P10 )*
+BINOP_P10      <- BINOP_P09 ( ( BITOR )
+                  BINOP_P09 )*
+BINOP_P09      <- BINOP_P08 ( ( BITXOR )
+                  BINOP_P08 )*
+BINOP_P08      <- BINOP_P07 ( ( BITAND )
+                  BINOP_P07 )*
+BINOP_P07      <- BINOP_P06 ( ( EQUALS / NEQUALS )
+                  BINOP_P06 )*
+BINOP_P06      <- BINOP_P05 ( ( LTEQ / LT / GTEQ / GT )
+                  BINOP_P05 )*
+BINOP_P05      <- BINOP_P04 ( ( LSHIFT / RSHIFT )
+                  BINOP_P04 )*
+BINOP_P04      <- BINOP_P03 ( ( ADD / SUB )
+                  BINOP_P03 )*
+BINOP_P03      <- ( SCR_TERM ) ( ( MUL / DIV / POW )
+                  ( SCR_TERM ) )*
+
+UNOP           <- LOGNOT / BITNOT
+
+SCR_TERM       <- FUNCTIONCALL /
+                  BOPEN SCR_EXPRESSION BCLOSE /
+                  LITERAL /
+                  UNOP* SCR_REFERENCE
+
+FUNCTIONCALL   <- IDENT ARGSLIST
+
+ARGSLIST       <- BOPEN
+                  ( SCR_EXPRESSION ( COMMA SCR_EXPRESSION )* )?
+                  BCLOSE
+
+SCR_REFERENCE  <- IDENT ( INDEX* ( DOT SCR_REFERENCE )* )
+
+INDEX          <- ABOPEN SCR_EXPRESSION ABCLOSE
+
+LITERAL        <- STRINGLITERAL /
+                  HASHLITERAL /
+                  LISTLITERAL /
+                  FLOATLITERAL /
+                  INTLITERAL /
+                  BOOLEANLITERAL
+
+STRINGLITERAL  <- <'\'' ( '\\' ([nrtv\\'] / [0-9]{3}) / [^'\\] )* '\''>
+HASHLITERAL    <- CBOPEN ( HASHELT ( COMMA HASHELT )* )? CBCLOSE
+HASHELT        <- HASHKEY COLON HASHVALUE
+HASHKEY        <- SCR_TERM
+HASHVALUE      <- SCR_TERM
+LISTLITERAL    <- ABOPEN ( LISTELT ( COMMA LISTELT )* )? ABCLOSE
+LISTELT        <- SCR_TERM
+FLOATLITERAL   <- <[0-9]* '.' [0-9]+>
+INTLITERAL     <- <[0-9]+>
+BOOLEANLITERAL <- 'true' / 'false'
+
+KW_TYPE        <- 'type'
+KW_IMPORT      <- 'import'
+KW_FUNCTION    <- 'function'
+KW_VAR         <- 'var'
+KW_WHILE       <- 'while'
+KW_RETURN      <- 'return'
+KW_IF          <- 'if'
+KW_ELSIF       <- 'elsif'
+KW_ELSE        <- 'else'
+KW_BREAK       <- 'break'
+KW_CONTINUE    <- 'continue'
+KW_CATCH       <- 'catch'
+
+IDENT          <- <[a-zA-Z_][a-zA-Z0-9_]{0,63}>
+BOPEN          <- '('
+BCLOSE         <- ')'
+CBOPEN         <- '{'
+CBCLOSE        <- '}'
+ABOPEN         <- '['
+ABCLOSE        <- ']'
+ASSIGN         <- '='
+EQUALS         <- '=='
+NEQUALS        <- '!='
+LT             <- '<' !'='
+GT             <- '>' !'='
+LTEQ           <- '<='
+GTEQ           <- '>='
+SEMICOLON      <- ';'
+COLON          <- ':'
+POW            <- '**'
+MUL            <- '*' !'*'
+DIV            <- '/'
+ADD            <- '+'
+SUB            <- '-'
+LOGAND         <- '&&'
+LOGOR          <- '||'
+LOGNOT         <- '!'
+BITAND         <- '&'
+BITOR          <- '|'
+BITXOR         <- '^'
+BITNOT         <- '~'
+COMMA          <- ','
+DOT            <- '.'
+LSHIFT         <- '<<'
+RSHIFT         <- '>>'

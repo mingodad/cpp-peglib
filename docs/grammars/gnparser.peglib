@@ -1,0 +1,350 @@
+#From: https://github.com/gnames/gnparser/blob/a2bee074a6d9f6b23be70c0d760540863645fa74/ent/parser/grammar.peg
+
+#changes to parse multiple lines
+SciNameLines <- SciName* END
+SciName <- _? Name Tail
+Tail <- ((_ / ';' / ','))?
+
+#SciName <- _? Name Tail END
+#Tail <- ((_ / ';' / ',') .*)?
+
+Name <- NamedGenusGraftChimera / GraftChimeraFormula / NamedHybrid /
+        HybridFormula / CandidatusName / SingleName
+
+HybridFormula <- SingleName (_ (HybridFormulaPart / HybridFormulaFull))+
+
+HybridFormulaFull <- HybridChar (_ SingleName)?
+
+HybridFormulaPart <- HybridChar _ SpeciesEpithet (_ InfraspGroup)?
+
+NamedHybrid <- NamedGenusHybrid / NamedSpeciesHybrid
+
+NamedGenusHybrid <- HybridChar _? (NamedSpeciesHybrid / SingleName)
+
+NamedSpeciesHybrid <- GenusWord (_ Subgenus)? (_ Comparison)? _ HybridChar _?
+  SpeciesEpithet (_ InfraspGroup)?
+
+GraftChimeraFormula <- SingleName (_ (GraftChimeraFormulaPart / GraftChimeraFormulaFull))+
+
+GraftChimeraFormulaFull <- GraftChimeraChar (_ SingleName)?
+
+GraftChimeraFormulaPart <- GraftChimeraChar _ SpeciesEpithet (_ InfraspGroup)?
+
+NamedGenusGraftChimera <- GraftChimeraChar _? SingleName
+
+CandidatusName <- Candidatus _ SingleName
+
+Candidatus <- 'Candidatus'
+
+SingleName <- NameComp / NameApprox / NameSpecies / NameUninomial
+
+NameUninomial <- (UninomialCombo / Uninomial) (_ CultivarWordGroup)?
+
+NameApprox <- GenusWord (_ SpeciesEpithet)? _ Approximation ApproxNameIgnored
+
+NameComp <- NameCompIsp / NameCompSp
+
+NameCompSp <- GenusWord _ Comparison (_ SpeciesEpithet)?
+
+NameCompIsp <- GenusWord _ SpeciesEpithet _ Comparison (_ InfraspEpithet)?
+
+NameSpecies <- GenusWord (_? ( Subgenus / SubgenusOrSuperspecies))?
+               _ SpeciesEpithet (_ InfraspGroup)? (_ CultivarWordGroup)?
+
+GenusWord <- (AbbrGenus / UninomialWord) !(_ AuthorWord)
+
+InfraspGroup <- InfraspEpithet (_ InfraspEpithet)?  (_ InfraspEpithet)?
+
+InfraspEpithet <- (Rank _?)? !(AuthorEx / AuthorIn) Word (_ IgnoredWord)? (_? Authorship)?
+
+CultivarWordGroup <-  ((RankCultivar _)? CultivarApostrophe
+                      CultivarRecursive CultivarApostrophe) /
+                      (RankCultivar _ Cultivar)
+
+Cultivar <- NotHybridChar+
+
+RankCultivar <- 'cv' '.'?
+
+NotHybridChar <- (!(_ HybridChar) .)
+
+# Recursive, one character at a time
+CultivarRecursive <- NotHybridChar CultivarRecursive / &CultivarApostrophe
+
+CultivarApostrophe <- '\'' / '‘' / '’' / '"' / '“' / '”'
+
+SpeciesEpithet <- !(AuthorEx / AuthorIn) Word (_ IgnoredWord)? (_? Authorship)?
+
+IgnoredWord <- 'mihi.' / 'mihi'
+
+Comparison <- 'cf' '.'? &(SpaceCharEOI)
+
+Rank <- (RankForma / RankVar / RankSsp / RankOther / RankOtherUncommon /
+  RankAgamo / RankNotho) (_? LowerGreek ('.' / &(SpaceCharEOI)))?
+
+RankNotho <- (('notho' ('var' / 'fo' / 'f' / 'subsp' / 'ssp' / 'sp' /
+  'morth' / 'supsp' / 'su' )) / 'nvar') ('.' / &(SpaceCharEOI))
+
+RankOtherUncommon <- ('*' / 'natio' / 'nat.' / 'nat' / 'unr.' / 'f.sp' /
+  'prol.' / 'α' / 'ββ' / 'β' / 'γ' / 'δ' / 'ε' / 'φ' / 'θ' / 'μ' / 'a.' /
+  'b.' / 'c.' / 'd.' / 'e.' / 'g.' / 'k.' / 'mut.') &(SpaceCharEOI)
+
+RankOther <- ('morph' / 'convar' / 'pseudovar' / 'sect' /
+  'ser' / 'subvar' / 'subf' / 'race' / 'pv' / 'pathovar' /
+   ('ab.' (_? 'n.')?) / 'st') ('.' / &(SpaceCharEOI))
+
+RankVar <- ('variety' / '[var.]' / 'var') ('.' / &(SpaceCharEOI))
+
+RankForma <- ('fa' / 'forma' / 'fma' / 'fm' / 'form' / 'fo' / 'f') ('.' / &(SpaceCharEOI))
+
+RankSsp <- ('ssp' / 'subspec' / 'subsp') ('.' / &(SpaceCharEOI))
+
+RankAgamo <- ('agamosp' / 'agamossp' / 'agamovar') ('.' / &(SpaceCharEOI))
+
+SubgenusOrSuperspecies <- '(' _? NameLowerChar+ _? ')'
+
+UninomialCombo <- UninomialCombo1 / UninomialCombo2
+
+UninomialCombo1 <- UninomialWord _? Subgenus (_? Authorship)?
+
+UninomialCombo2 <- (Uninomial _)? RankUninomial _ Uninomial
+
+Subgenus <- Subgenus2 / Subgenus1
+
+Subgenus2 <- '(' _? AbbrSubgenus _? ')' !(_? Authorship)
+
+Subgenus1 <- '(' _? UninomialWord _? ')'
+
+RankUninomial <- RankUninomialPlain / RankUninomialNotho
+
+RankUninomialPlain <- ('sect' / 'subsect' / 'trib' / 'tr' / 'subtrib' /
+  'subtr' / 'subser' / 'ser' / 'subgen' / 'subg' / 'fam' / 'subfam' / 'div' /
+  'supertrib' / 'unr') ('.' / &(SpaceCharEOI))
+
+RankUninomialNotho <- ('notho' _? ('sect' / 'gen' / 'ser' / 'subgeen' /
+  'subgen' / 'subg' / 'subsect' / 'subtrib')) ('.' / &(SpaceCharEOI))
+
+Uninomial <- UninomialWord (_ Authorship
+  !(_ LowerCharExtended LowerCharExtended LowerCharExtended))?
+
+UninomialWord <- CapWord / TwoLetterGenus
+
+AbbrSubgenus <- UpperChar LowerChar* '.'
+
+AbbrGenus <- UpperChar LowerChar? '.'
+
+CapWord <- CapWordWithDash / CapWord1
+
+CapWord1 <- <NameUpperChar NameLowerChar NameLowerChar+ '?'?>
+
+CapWordWithDash <- (CapWord1 / TwoLetterGenusDashedSegment) Dash WordAfterDash (Dash WordAfterDash)?
+
+TwoLetterGenusDashedSegment <- ('De' / 'Eu' / 'Le' / 'Ne')
+
+WordAfterDash <- (UpperAfterDash / LowerAfterDash)
+
+UpperAfterDash <- CapWord1
+
+LowerAfterDash <- Word1
+
+TwoLetterGenus <- ('Ca' / 'Do' / 'Ea' / 'Ge' / 'Ia' / 'Io' / 'Ix' / 'Lo' /
+  'Oa' / 'Oo' / 'Nu' / 'Ra' / 'Ty' / 'Ua' / 'Aa' / 'Ja' / 'Zu' / 'La' / 'Qu' /
+  'As' / 'Ba')
+
+Word <- !(('ex' / 'et' / 'and' / 'apud' / 'pro' / 'cv' / 'cultivar' /
+  AuthorPrefix / RankUninomial / Approximation / Word4) SpaceCharEOI)
+  (WordApostr / WordStartsWithDigit / MultiDashedWord / Word2 /
+  Word1) &(SpaceCharEOI / '(')
+
+Word1 <- <((DotPrefix / LowerASCII) Dash)? NameLowerChar NameLowerChar+>
+
+WordStartsWithDigit <- [123456789] Nums? ('.' / Dash)? NameLowerChar NameLowerChar
+  NameLowerChar NameLowerChar+
+
+Word2 <- NameLowerChar+ Dash? (WordApostr / NameLowerChar+)
+
+WordApostr <- NameLowerChar NameLowerChar* Apostrophe Word1
+
+Word4 <- NameLowerChar+ '.' NameLowerChar
+
+DotPrefix <- 'st.'
+
+MultiDashedWord <- NameLowerChar+ Dash NameLowerChar+ Dash NameLowerChar+ (Dash NameLowerChar+)?
+
+HybridChar <- '×' / [xX] &_ / [xX] &UninomialWord / [xX] &END
+
+GraftChimeraChar <- '+'
+
+ApproxNameIgnored <- .*
+
+Approximation <- ('sp.' _? 'nr.' / 'sp.' _? 'aff.' / 'monst.' /
+  '?' / (('spp' / 'nr' / 'sp' / 'aff' / 'species') (&(SpaceCharEOI) / '.')))
+
+Authorship <- (AuthorshipCombo / OriginalAuthorship) &(SpaceCharEOI / ';' / ',')
+
+AuthorshipCombo <- OriginalAuthorshipComb (_? CombinationAuthorship)?
+
+OriginalAuthorship <- AuthorsGroup
+
+OriginalAuthorshipComb <- BasionymAuthorshipYearMisformed /
+                          BasionymAuthorship /
+                          BasionymAuthorshipMissingParens
+
+CombinationAuthorship <- AuthorsGroup
+
+BasionymAuthorshipMissingParens <- MissingParensStart / MissingParensEnd
+
+MissingParensStart <- '(' _? AuthorsGroup
+
+MissingParensEnd <- AuthorsGroup _? ')'
+
+BasionymAuthorshipYearMisformed <- '(' _? AuthorsGroup _? ')' (_? ',')? _? Year
+
+BasionymAuthorship <- BasionymAuthorship1 / BasionymAuthorship2Parens
+
+BasionymAuthorship1 <- '(' _? AuthorsGroup _? ')'
+
+BasionymAuthorship2Parens <- '(' _? '(' _? AuthorsGroup _? ')' _? ')'
+
+AuthorsGroup <- AuthorsTeam (','?_ (AuthorEmend / AuthorEx / AuthorIn) AuthorsTeam)?
+
+AuthorsTeam <- Author (AuthorSep Author)* (_? ','? _? Year)?
+
+AuthorSep <- AuthorSep1 / AuthorSep2
+
+AuthorSep1 <- _? (',' _)? ( '&' / AuthorSepSpanish / 'et' / 'and' / 'apud') _?
+
+AuthorSep2 <- _? ',' _?
+
+AuthorSepSpanish <- _? 'y' _?
+
+AuthorEx <- ('ex' '.'? ) _
+
+AuthorIn <- ( 'ms' _ 'in' / 'in') _
+
+AuthorEmend <- 'emend' '.'? _
+
+Author <- (Author0 / Author1 / Author2 / UnknownAuthor) (_ AuthorEtAl)?
+
+Author0 <- Author2 FiliusFNoSpace
+
+Author1 <- Author2 _? (Filius / AuthorSuffix)
+
+Author2 <- AuthorWord (_? AuthorWord)*
+
+UnknownAuthor <- '?' / (('auct' / 'anon') (&(SpaceCharEOI) / '.'))
+
+AuthorWord <- !( HybridChar / "bold:") (AuthorDashInitials / AuthorWord1 /
+  AuthorWord2 / AuthorWord3 / AuthorWord4 / AuthorPrefix)
+
+AuthorEtAl <- 'arg.' / 'et al.{?}' / ('et' / '&') ' al' '.'?
+
+AuthorWord1 <- 'duPont' / 'degli' / 'Arango y Molina'
+
+AuthorWord2 <- (AuthorWord3 / AuthorWord4) Dash
+  (AuthorWordSoft / AuthorInitial) ( Dash (AuthorWordSoft / AuthorInitial))?
+
+AuthorWord3 <- AuthorPrefixGlued2 (CapAuthorWord / AuthorLowerChar+) '.'?
+
+AuthorWord4 <- AuthorPrefixGlued1? (AllCapsAuthorWord / CapAuthorWord) '.'?
+
+AuthorDashInitials <- AuthorUpperChar '.'? Dash AuthorUpperChar '.'?
+
+AuthorInitial <- AuthorUpperChar '.'?
+
+AuthorWordSoft <- ((AuthorUpperChar (AuthorUpperChar+ / AuthorLowerChar+)) /
+  AuthorLowerChar+) '.'?
+
+CapAuthorWord <- <AuthorUpperChar AuthorLowerChar*>
+
+AllCapsAuthorWord <- <AuthorUpperChar AuthorUpperChar+>
+
+Filius <- FiliusF / 'fil.' / 'filius'
+
+FiliusF <- 'f.' !(_ Word)
+
+FiliusFNoSpace <- 'f.'
+
+AuthorSuffix <- 'bis' / 'ter'
+
+AuthorPrefixGlued1 <- ("d" / 'O' / 'L' / 'M') Apostrophe
+
+AuthorPrefixGlued2 <- ('Mc' / 'Mac') Apostrophe?
+
+AuthorPrefix <- AuthorPrefix1 / AuthorPrefix2
+
+AuthorPrefix2 <- ('v.' (_? 'd.')?) / Apostrophe 't'
+
+AuthorPrefix1 <- ('ab' / 'af' / 'bis' / 'da' / 'der' / 'des' / 'den' / 'dem' /
+  'della' / 'dela' / 'delle' / 'del' / 'de los' / 'de' / 'di' / 'dos' /
+  'du' / 'do' / 'el' / 'la' / 'le' / 'ten' / 'ter' / 'van' / 'ver' /
+  'd' Apostrophe / 'in' Apostrophe 't' / 'zur' / 'zu' /
+  ('von' (_ ('d.'/ 'dem'))?) / ('v' (_'d')?)) &_
+
+AuthorUpperChar <- UpperASCII / MiscodedChar /
+  [ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝĆČĎİĶĹĺĽľŁłŅŌŐŒŘŚŜŞŠŸŹŻŽƒǾȘȚ]
+
+AuthorLowerChar <- LowerASCII / MiscodedChar / Apostrophe /
+  [àáâãäåæçèéêëìíîïðñòóóôõöøùúûüýÿāăąćĉčďđēĕėęěğīĭİıĺľłńņňŏőœŕřśşšţťũūŭůűźżžſǎǔǧșțȳß]
+
+Year <- YearRange / YearApprox / YearWithParens / YearWithPage / YearWithDot /
+  YearWithChar / YearNum
+
+YearRange <- YearNum (Dash / Slash) (Nums+ [abcdefghijklmnopqrstuvwxyz?]*)
+
+YearWithDot <-  YearNum '.'
+
+YearApprox  <- '[' _? YearNum _? ']'
+
+YearWithPage <- (YearWithChar / YearNum)  _? ":" _? Nums+
+
+YearWithParens <- '(' (YearWithChar / YearNum) ')'
+
+YearWithChar <- YearNum LowerASCII
+
+YearNum <- <[12] [0789] Nums (Nums / '?') '?'*>
+
+NameUpperChar <- UpperChar / UpperCharExtended
+
+UpperCharExtended <- [ÆŒÖ]
+
+UpperChar <- UpperASCII
+
+NameLowerChar <- LowerChar / LowerCharExtended / MiscodedChar
+
+MiscodedChar <- '�'
+
+LowerCharExtended <- [æœàâåãäáçčéèëíìïňññóòôøõöúûùüŕřŗſššşßž]
+
+LowerChar <- LowerASCII
+
+SpaceCharEOI <- _ / !.
+
+Nums <- [0-9]
+
+LowerGreek <- [α-ω]
+
+LowerASCII <- [a-z]
+
+UpperASCII <- [A-Z]
+
+Apostrophe <- ApostrOther / ApostrASCII
+
+ApostrASCII <- '\''
+
+ApostrOther <- '‘' / '’' / '`' / '´'
+
+Dash <- '-' / DashOther
+
+DashOther <- [‑]
+
+Slash <- '/'
+
+~_ <- MultipleSpace / SingleSpace
+
+MultipleSpace <- SingleSpace SingleSpace+
+
+SingleSpace <- ' ' / OtherSpace
+
+OtherSpace <- [　 \t\r\n\f\v]
+
+END <- !.
