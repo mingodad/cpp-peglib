@@ -1,0 +1,115 @@
+#From: https://github.com/mna/pigeon/blob/b3f44a777b732e84a0c4611611f55856e312f04d/grammar/pigeon.peg
+
+Grammar <- __ ( Initializer __ )? ( Rule __ )+ EOF
+
+Initializer <- CodeBlock EOS
+
+Rule <- IdentifierName __ ( StringLiteral __ )? RuleDefOp __ Expression EOS
+
+Expression <- RecoveryExpr
+
+RecoveryExpr <- ChoiceExpr ( __ "//{" __ Labels __ "}" __ ChoiceExpr )*
+
+Labels <- IdentifierName ( __ "," __ IdentifierName)*
+
+ChoiceExpr <- ActionExpr ( __ "/" __ ActionExpr )*
+
+ActionExpr <- SeqExpr ( __ CodeBlock )?
+
+SeqExpr <- LabeledExpr ( __ LabeledExpr )*
+
+LabeledExpr <- Identifier __ ':' __ PrefixedExpr / PrefixedExpr / ThrowExpr
+
+PrefixedExpr <- PrefixedOp __ SuffixedExpr / SuffixedExpr
+
+PrefixedOp <- ( '&' / '!' )
+
+SuffixedExpr <- PrimaryExpr __ SuffixedOp / PrimaryExpr
+
+SuffixedOp <- ( '?' / '*' / '+' )
+
+PrimaryExpr <- LitMatcher / CharClassMatcher / AnyMatcher / RuleRefExpr / SemanticPredExpr / "(" __ Expression __ ")"
+
+RuleRefExpr <- IdentifierName !( __ ( StringLiteral __ )? RuleDefOp )
+
+SemanticPredExpr <- SemanticPredOp __ CodeBlock
+
+SemanticPredOp <- ( '#' / '&' / '!' )
+
+RuleDefOp <- '=' / "<-" / '\u2190' / '\u27f5'
+
+SourceChar <- .
+Comment <- MultiLineComment / SingleLineComment
+MultiLineComment <- "/*" ( !"*/" SourceChar )* "*/"
+MultiLineCommentNoLineTerminator <- "/*" ( !( "*/" / EOL ) SourceChar )* "*/"
+SingleLineComment <- !("//{") "//" ( !EOL SourceChar )*
+
+Identifier <- IdentifierName
+
+IdentifierName <- <IdentifierStart IdentifierPart*>
+IdentifierStart <- [A-Za-z_] #[\pL_]
+IdentifierPart <- IdentifierStart / [0-9] #[\p{Nd}]
+
+LitMatcher <- StringLiteral "i"?
+StringLiteral <- <( '"' DoubleStringChar* '"' / "'" SingleStringChar "'" / '`' RawStringChar* '`' )> / ( ( '"' DoubleStringChar* ( EOL / EOF ) ) / ( "'" SingleStringChar? ( EOL / EOF ) ) / '`' RawStringChar* EOF )
+
+DoubleStringChar <- !( '"' / "\\" / EOL ) SourceChar / "\\" DoubleStringEscape
+SingleStringChar <- !( "'" / "\\" / EOL ) SourceChar / "\\" SingleStringEscape
+RawStringChar <- !'`' SourceChar
+
+DoubleStringEscape <- ( '"' / CommonEscapeSequence )
+    / ( SourceChar / EOL / EOF )
+SingleStringEscape <- ( "'" / CommonEscapeSequence )
+    / ( SourceChar / EOL / EOF )
+
+CommonEscapeSequence <- SingleCharEscape / OctalEscape / HexEscape / LongUnicodeEscape / ShortUnicodeEscape
+SingleCharEscape <- 'a' / 'b' / 'n' / 'f' / 'r' / 't' / 'v' / '\\'
+OctalEscape <- OctalDigit OctalDigit OctalDigit
+    / OctalDigit ( SourceChar / EOL / EOF )
+HexEscape <- 'x' HexDigit HexDigit
+    / 'x' ( SourceChar / EOL / EOF )
+LongUnicodeEscape <-
+    'U' HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit HexDigit
+    / 'U' ( SourceChar / EOL / EOF )
+ShortUnicodeEscape <-
+    'u' HexDigit HexDigit HexDigit HexDigit
+    / 'u' ( SourceChar / EOL / EOF )
+
+OctalDigit <- [0-7]
+#DecimalDigit <- [0-9]
+HexDigit <- [0-9a-f]i
+
+CharClassMatcher <- '[' ( ClassCharRange / ClassChar / "\\" UnicodeClassEscape )* ']' 'i'? / '[' ( !( EOL ) SourceChar )* ( EOL / EOF )
+
+ClassCharRange <- ClassChar '-' ClassChar
+ClassChar <- !( "]" / "\\" / EOL ) SourceChar / "\\" CharClassEscape
+CharClassEscape <- ( ']' / CommonEscapeSequence )
+    / !'p' ( SourceChar / EOL / EOF )
+
+UnicodeClassEscape <- 'p' (
+      SingleCharUnicodeClass
+    / !'{' ( SourceChar / EOL / EOF )
+    / '{' IdentifierName '}'
+    / '{' IdentifierName ( ']' / EOL / EOF )
+    )
+SingleCharUnicodeClass <- [LMNCPZS]
+
+AnyMatcher <- "."
+
+ThrowExpr <- '%' '{' IdentifierName '}' / '%' '{' IdentifierName EOF
+CodeBlock <- <'{' Code '}'> / '{' Code EOF
+
+Code <- ( ( Comment / CodeStringLiteral / ![{}] SourceChar )+ / '{' Code '}' )*
+
+CodeStringLiteral <- '"' ('\\"' / '\\\\' / [^"\r\n])* '"' /
+                    '`' [^`]* '`' /
+                    '\'' ("\\'" / '\\\\' / [^']+) '\''
+
+~__ <- ( Whitespace / EOL / Comment )*
+~_ <- ( Whitespace / MultiLineCommentNoLineTerminator )*
+
+Whitespace <- [ \t\r]
+EOL <- '\n'
+EOS <- __ ';' / _ SingleLineComment? EOL / __ EOF
+
+EOF <- !.

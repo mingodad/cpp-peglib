@@ -1,0 +1,123 @@
+#From: https://github.com/pointlander/peg/blob/308e44424fb27cb1fa870e04c3c0cb4be772247e/peg.peg
+# PE Grammar for PE Grammars
+#
+# Adapted from [1] by Ian Piumarta <first-name at last-name point com>.
+#
+# Best viewed using 140 columns monospaced with tabs every 8.
+#
+# [1] Bryan Ford.  "Parsing Expression Grammars: A Recognition-Based Syntactic
+#     Foundation."  Symposium on Principles of Programming Languages,
+#     January 14--16, 2004, Venice, Italy.
+
+# parser declaration
+
+# Hierarchical syntax
+Grammar		<- Header 'package' MustSpacing Identifier
+			   Import*
+                           'type' MustSpacing Identifier
+                           'Peg' Spacing Action
+                           Definition+ EndOfFile
+
+Import		<- 'import' Spacing (MultiImport / SingleImport) Spacing
+SingleImport	<- ImportName
+MultiImport	<- '(' Spacing (ImportName '\n' Spacing)* Spacing ')'
+
+ImportName	<- ["] < [0-9a-zA-Z_/.\-]+ > ["]
+
+Definition	<- Identifier
+		     LeftArrow Expression 	 &(Identifier LeftArrow / !.)
+Expression	<- Sequence (Slash Sequence
+			    )* (Slash
+                               )?
+                 / ''
+
+Sequence	<- Prefix (Prefix
+			  )*
+Prefix		<- And Action
+		 / Not Action
+		 / And Suffix
+		 / Not Suffix
+		 /     Suffix
+Suffix          <- Primary (Question
+                           / Star
+                           / Plus
+                           )?
+Primary	        <- Identifier !LeftArrow
+                 / Open Expression Close
+                 / Literal
+                 / Class
+                 / Dot
+                 / Action
+                 / Begin Expression End
+
+# Lexical syntax
+
+#PrivateIdentifier <- < [a-z_] IdentCont* > Spacing
+Identifier	<- < IdentStart IdentCont* > Spacing
+IdentStart	<- [A-Za-z_]
+IdentCont	<- IdentStart / [0-9]
+Literal		<- <['] (!['] Char)? (!['] Char
+                                    )* [']> Spacing
+		 / <["] (!["] DoubleChar)? (!["] DoubleChar
+                                          )* ["]> Spacing
+Class		<- ( <'[[' ( '^' DoubleRanges
+                          / DoubleRanges )?
+                     ']]'>
+                   / <'[' ( '^' Ranges
+                         / Ranges )?
+                     ']'> )
+                   Spacing
+Ranges		<- !']' Range (!']' Range
+                              )*
+DoubleRanges	<- !']]' DoubleRange (!']]' DoubleRange
+                                     )*
+Range		<- Char '-' Char
+                 / Char
+DoubleRange	<- Char '-' Char
+                 / DoubleChar
+Char            <- Escape
+                 / !'\\' <.>
+DoubleChar	<- Escape
+		 / <[a-zA-Z]>
+                 / !'\\' <.>
+Escape          <- "\\a"                         # bell
+                 / "\\b"                         # bs
+                 / "\\e"                       # esc
+                 / "\\f"                         # ff
+                 / "\\n"                         # nl
+                 / "\\r"                         # cr
+                 / "\\t"                         # ht
+                 / "\\v"                         # vt
+                 / "\\'"
+                 / '\\"'
+                 / '\\['
+                 / '\\]'
+                 / '\\-'
+                 / '\\' "0x"<[0-9a-fA-F]+>
+                 / '\\' <[0-3][0-7][0-7]>
+                 / '\\' <[0-7][0-7]?>
+                 / '\\\\'
+LeftArrow	<- ('<-' / '\0x2190') Spacing
+Slash		<- '/' Spacing
+And		<- '&' Spacing
+Not		<- '!' Spacing
+Question	<- '?' Spacing
+Star		<- '*' Spacing
+Plus		<- '+' Spacing
+Open		<- '(' Spacing
+Close		<- ')' Spacing
+Dot		<- '.' Spacing
+SpaceComment	<- (Space / Comment)
+~Spacing		<- SpaceComment*
+~MustSpacing	<- SpaceComment+
+Comment		<- ('#' / '//') (!EndOfLine .)* EndOfLine
+Space		<- ' ' / '\t' / EndOfLine
+Header		<- <HeaderSpaceComment*>
+HeaderSpaceComment <- (HeaderComment / <Space+> )
+HeaderComment <- ('#' / '//') <(!EndOfLine .)*>  EndOfLine
+EndOfLine	<- '\r\n' / '\n' / '\r'
+EndOfFile	<- !.
+Action		<- '{' < ActionBody* > '}' Spacing
+ActionBody	<- [^{}] / '{' ActionBody* '}'
+Begin		<- '<' Spacing
+End		<- '>' Spacing

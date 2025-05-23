@@ -1,0 +1,181 @@
+#From: https://github.com/nathansobo/treetop/blob/0750a3a8333753097f811a65c11052f0feb80a3d/lib/treetop/compiler/metagrammar.treetop
+
+treetop_file <-
+        (space? require_statement)* space? module_or_grammar space?
+
+require_statement <-
+        space? "require" [ \t]+ [^\n\r]+ [\n\r]
+
+module_or_grammar <-
+	module_declaration / grammar
+
+module_declaration <-
+        ('module' space module_name space) (module_declaration / grammar) (space 'end')
+
+module_name <-
+    <([A-Z] alphanumeric_char* ('::' [A-Z] alphanumeric_char*)*)>
+
+grammar <-
+        'grammar' space grammar_name space ('do' space)? declaration_sequence space? 'end' #<Grammar>
+
+grammar_name <-
+        <([A-Z] alphanumeric_char*)>
+
+declaration_sequence <-
+        declaration (space declaration)* #<DeclarationSequence>
+        /
+        ''
+
+declaration <-
+        parsing_rule / include_declaration
+
+include_declaration <-
+        'include' space [A-Z] (alphanumeric_char / '::')*
+
+parsing_rule <-
+        'rule' space nonterminal space ('do' space)? parsing_expression space 'end' #<ParsingRule>
+
+parsing_expression <-
+        choice / sequence / primary
+
+choice <-
+        alternative (space? '/' space? alternative)+ #<Choice>
+
+sequence <-
+        sequence_body node_class_declarations #<Sequence>
+
+sequence_body <-
+        variable_length_sequence_body / labeled_expression_sequence_body
+
+variable_length_sequence_body <-
+        optionally_labeled_sequence_primary (space optionally_labeled_sequence_primary)+
+
+labeled_expression_sequence_body <-
+        labeled_sequence_primary
+
+alternative <-
+        sequence / primary
+
+primary <-
+        prefix atomic
+        / prefix space? predicate_block
+        / atomic suffix node_class_declarations
+        / atomic node_class_declarations
+
+optionally_labeled_sequence_primary <-
+        labeled_sequence_primary / unlabeled_sequence_primary
+
+labeled_sequence_primary <-
+        named_label sequence_primary
+
+unlabeled_sequence_primary <-
+        null_label sequence_primary
+
+#label <-
+#        named_label / null_label
+
+named_label <-
+        <(alpha_char alphanumeric_char*)> ':'
+
+null_label <-
+        ''
+
+sequence_primary <-
+        prefix atomic
+        / prefix space? predicate_block
+        / atomic suffix
+        / atomic
+
+suffix <-
+        repetition_suffix / optional_suffix
+
+optional_suffix <-
+        '?' #<Optional>
+
+node_class_declarations <-
+        node_class_expression trailing_inline_module
+
+repetition_suffix <-
+        '+' #<OneOrMore>
+	/ '*' #<ZeroOrMore>
+	/ occurrence_range
+
+occurrence_range <-
+	space? ([0-9])* '..' ([0-9])* #<OccurrenceRange>
+
+prefix <-
+        '&' #<AndPredicate>
+	/ '!' #<NotPredicate>
+	/ '~' #<TransientPrefix>
+
+atomic <-
+        terminal
+        / nonterminal
+        / parenthesized_expression
+
+parenthesized_expression <-
+        '(' space? parsing_expression space? ')' #<ParenthesizedExpression>
+
+nonterminal <-
+        !keyword_inside_grammar <(alpha_char alphanumeric_char*)> #<Nonterminal>
+
+terminal <-
+        quoted_string / character_class / anything_symbol
+
+quoted_string <-
+        (single_quoted_string / double_quoted_string)
+
+double_quoted_string <-
+        <'"' (!'"' ("\\\\" / '\"' / .))* '"'> #<Terminal>
+
+single_quoted_string <-
+        <"'" (!"'" ("\\\\" / "\\'" / .))* "'"> #<Terminal>
+
+character_class <-
+        <'[' (!']' ('\\' . / bracket_expression / !'\\' .))+ ']'> #<CharacterClass>
+
+bracket_expression <-
+         '[:' '^'? (
+           'alnum' / 'alpha' / 'blank' / 'cntrl' / 'digit' / 'graph' / 'lower' /
+           'print' / 'punct' / 'space' / 'upper' / 'xdigit' / 'word'
+         ) ':]'
+
+anything_symbol <-
+        '.' #<AnythingSymbol>
+
+node_class_expression <-
+        space '<' (!'>' .)+ '>'
+        /
+        ''
+
+trailing_inline_module <-
+        space inline_module
+        /
+        ''
+
+predicate_block <-
+        '' inline_module #<PredicateBlock>
+
+inline_module <-
+        '{' (inline_module / ![{}] .)* '}' #<InlineModule>
+
+keyword_inside_grammar <-
+        ('rule' / 'end') !non_space_char
+
+non_space_char <-
+        !space .
+
+alpha_char <-
+        [A-Za-z_]
+
+alphanumeric_char <-
+        alpha_char / [0-9]
+
+~space <-
+        (white / comment_to_eol)+
+
+comment_to_eol <-
+        '#' (!"\n" .)*
+
+white <-
+        [ \t\n\r]
