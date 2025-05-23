@@ -1,0 +1,140 @@
+#From: https://github.com/dlang-community/Pegged/blob/f12b0bdf86725ac3cea4cce4744050ab5a4e89a7/examples/peggedgrammar/src/pegged/examples/peggedgrammar.d
+
+# This is the PEG extended grammar used by Pegged
+
+# Syntactic rules:
+Grammar      <- Spacing GrammarName Definition+ !.
+Definition   <- LhsName Arrow Expression
+Expression   <- FirstExpression / LongestExpression
+FirstExpression   <- OR? Sequence (OR Sequence)+
+LongestExpression <- (OR / LONGEST_OR)? Sequence (LONGEST_OR Sequence)*
+Sequence     <- Prefix+
+Prefix       <- (POS / NEG / FUSE / DISCARD / KEEP / DROP / PROPAGATE)* Suffix
+Suffix       <- Primary (OPTION / ZEROORMORE / ONEORMORE / Action)*
+Primary      <- !(LhsName Arrow)
+                ( RhsName
+                / OPEN Expression CLOSE
+                / Literal
+                / CILiteral
+                / CharClass
+                / ANY)
+# Lexical syntax
+Identifier   <- identifier
+GrammarName  <- Identifier ParamList? Spacing ':' Spacing
+LhsName      <- Identifier ParamList? Spacing
+RhsName      <- Identifier ArgList? (NAMESEP Identifier ArgList?)* Spacing         # NAMESEP is *not* discarded
+ParamList    <- OPEN Param (SEPARATOR Param)*  CLOSE
+Param        <- DefaultParam / SingleParam
+DefaultParam <- Identifier Spacing ASSIGN Expression
+SingleParam  <- Identifier Spacing
+ArgList      <- OPEN Expression (SEPARATOR Expression)* CLOSE
+
+Literal      <- <quote       (!quote Char)*       quote>       !'i' Spacing
+              / <doublequote (!doublequote Char)* doublequote> !'i' Spacing
+CILiteral    <- <quote       (!quote Char)*       quote       'i'> Spacing
+              / <doublequote (!doublequote Char)* doublequote 'i'> Spacing
+CharClass    <- <'[' (!']' CharRange)* ']'> Spacing
+CharRange    <- Char '-' Char / Char
+
+# Terminals
+Char         <- backslash ( quote
+                          / doublequote
+                          / backquote
+                          / backslash
+                          / '-'
+                          / '['
+                          / ']'
+                          / [nrt]
+                          / [0-2][0-7][0-7]
+                          / [0-7][0-7]?
+                          / 'x' hexDigit hexDigit
+                          / 'u' hexDigit hexDigit hexDigit hexDigit
+                          / 'U' hexDigit hexDigit hexDigit hexDigit hexDigit hexDigit hexDigit hexDigit
+                          )
+              / . # or anything else
+
+Arrow        <- LEFTARROW / FUSEARROW / DISCARDARROW / KEEPARROW / DROPARROW / PROPAGATEARROW / ACTIONARROW / SPACEARROW
+LEFTARROW    <- '<-' Spacing
+FUSEARROW    <- '<~' Spacing
+DISCARDARROW <- '<:' Spacing
+KEEPARROW    <- '<^' Spacing
+DROPARROW    <- '<;' Spacing
+PROPAGATEARROW <- '<%' Spacing
+SPACEARROW   <- '<' Spacing
+ACTIONARROW  <- '<' Action Spacing
+
+OR           <- '/' Spacing
+LONGEST_OR   <- '|' Spacing
+
+POS          <- '&' Spacing
+NEG          <- '!' Spacing
+FUSE         <- '~' Spacing
+DISCARD      <- ':' Spacing
+KEEP         <- '^' Spacing
+DROP         <- ';' Spacing
+PROPAGATE    <- '%' Spacing
+
+OPTION       <- '?' Spacing
+ZEROORMORE   <- '*' Spacing
+ONEORMORE    <- '+' Spacing
+ACTIONOPEN   <- '{' Spacing
+ACTIONCLOSE  <- '}' Spacing
+SEPARATOR    <- ',' Spacing
+ASSIGN       <- '=' Spacing
+NAMESEP      <- '.'   # No Spacing
+OPEN         <- '(' Spacing
+CLOSE        <- ')' Spacing
+ANY          <- '.' Spacing
+~Spacing      <- (blank / Comment)*
+Comment      <- '#' (!eol .)* eol
+#Space        <- spacing / "\\t" / "\\n" / "\\r"
+
+# Action Rule
+Action      <- ACTIONOPEN Spacing ((Lambda / qualifiedIdentifier)
+(SEPARATOR (Lambda / qualifiedIdentifier))*) Spacing ACTIONCLOSE
+Lambda      <- (!(ACTIONCLOSE/SEPARATOR) (LambdaItems / NestedList3('{',LambdaItems,'}') / .))*
+
+LambdaItems <- DComment / DString / DParamList
+DString     <- WYSString / DBQString / TKNString / DLMString
+
+WYSString   <- 'r' doublequote (!doublequote .)* doublequote /
+               backquote (!backquote .)* backquote
+
+DBQString   <- doublequote (!doublequote Char)* doublequote
+
+TKNString   <- (&'q{' ('q' NestedList3('{',DString,'}')))
+
+DLMString   <- ('q' doublequote) ( (&'{' NestedList3('{',DString,'}'))
+                                 / (&'[' NestedList3('[',DString,']'))
+                                 / (&'(' NestedList3('(',DString,')'))
+                                 / (&'<' NestedList3('<',DString,'>'))
+                                 ) doublequote
+
+DComment             <- DLineComment / DBlockComment / DNestingBlockComment
+
+DLineComment         <- "//" (!endOfLine .)* endOfLine
+DBlockComment        <- "/*" (!"*/" .)* "*/"
+DNestingBlockComment <- NestedList2("/+","+/")
+
+DParamList <- NestedList2('(',')')
+
+# Linear nested lists with and without special items
+#NestedList3(L,Items,R)   <- L ( !(L/R/Items) . )* ( Items
+#                                                 / NestedList3(L,Items,R)
+#                                                 / ( !(L/R/Items) . )*
+#                                                 )* ( !(L/R/Items) . )* R
+NestedList3(L,Items,R)   <- L ( &L NestedList3(L,Items,R) / Items / !R . )* R
+
+#NestedList2(L,R) <- L ( !(L/R) . )* (NestedList2(L,R) / ( !(L/R) . )*)* ( !(L/R) . )* R
+NestedList2(L,R) <- L ( &L NestedList2(L,R) / !R . )* R
+
+endOfLine <- !.
+backquote <- '`'
+doublequote <- '"'
+quote <- "'"
+hexDigit <- [0-9A-Fa-f]
+backslash <- "\\"
+blank <- [ \t\r\n\f\v]
+identifier <- <[A-Za-z_][A-Za-z0-9_]*>
+qualifiedIdentifier <- <identifier ('.' identifier)+ >
+eol <- '\n' '\r'? / '\r' '\n'?
