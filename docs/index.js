@@ -59,6 +59,7 @@ const sampleList = [
 	["bnf parser", "bnf-node-ebnf.peglib", "test.bnf", "ace/mode/yaml"],
 	["bython2 parser", "bython_2.peglib", "test.bython_2", "ace/mode/text"],
 	["c-peg4d-java parser", "c-peg4d-java.peglib", "test.c", "ace/mode/c_cpp"],
+	["c-pegged parser", "c-pegged.peglib", "test.c", "ace/mode/c_cpp"],
 	["c11-lpegrex parser", "c11_lpegrex.peglib", "test.c", "ace/mode/c_cpp"],
 	["c99-mouse parser", "c99-mouse-dict.peglib", "test.c", "ace/mode/c_cpp"],
 	["cinamon parser", "cinamon.peglib", "test.cinamon", "ace/mode/text"],
