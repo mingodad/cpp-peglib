@@ -1,0 +1,373 @@
+#From: https://github.com/lalrpop/lalrpop/blob/dd942b1fa4aa99c123bc984cf723347e0a26926f/lalrpop/src/parser/lrgrammar.lalrpop
+
+#pub Top: Top = {
+#    "StartGrammar" <Grammar> => Top::Grammar(<>),
+#    "StartPattern" <Pattern> => Top::Pattern(<>),
+#    "StartMatchMapping" <MatchMapping> => Top::MatchMapping(<>),
+#    "StartTypeRef" <TypeRef> => Top::TypeRef(<>),
+#    "StartGrammarWhereClauses" <GrammarWhereClauses> => Top::GrammarWhereClauses(<>),
+#};
+
+Grammar <-
+    ShebangAttribute*
+    Use*
+    Attribute* #<lo:@L>
+    "grammar" #<hi:@R>
+    GrammarTypeParameters?
+    GrammarParameters?
+    GrammarWhereClauses?
+    ";"
+    GrammarItem*
+
+GrammarTypeParameters <-
+    "<" Comma(TypeParameter) ">"
+
+TypeParameter <-
+    Lifetime
+    / Id
+
+GrammarWhereClauses <-
+    "where" Comma(GrammarWhereClause)
+
+GrammarWhereClause <-
+    Lifetime ":" Plus(Lifetime)
+    / ForAll? TypeRef ":" TypeBounds
+
+
+#[inline]
+ForAll <-
+    "for" "<" Comma(TypeParameter) ">"
+
+TypeBounds <-
+    Plus(TypeBound)
+
+TypeBound <-
+    Lifetime
+    / ForAll? Path "(" Comma(TypeRef) ")" ("->" TypeRef)?
+    / ForAll? Path ("<" Comma(TypeBoundParameter) ">")?
+
+TypeBoundParameter <-
+    Lifetime
+    / TypeRef
+    / Id "=" TypeRef
+
+Plus(T) <-
+    (T "+")* T?
+
+GrammarParameters <-
+    "(" Comma(GrammarParameter) ")"
+
+GrammarParameter <-
+    Id ":" TypeRef
+
+GrammarItem <-
+    Use
+    / MatchToken
+    / ExternToken
+    / Nonterminal
+
+Use <-
+    "use" <(![;] .)+> ";"
+
+Visibility <-
+    "pub" "(" Path ")"
+    / "pub" "(" "in" Path ")"
+    / "pub"
+
+Nonterminal <-
+    Attribute*
+    Visibility? #<lo:@L>
+	NonterminalName #<hi:@R>
+    (":" TypeRef)? "=" Alternatives
+
+Attribute <-  "#" "[" <AttributeInner> "]"
+
+AttributeInner <-
+    #<lo:@L>
+    Id  AttributeArg? #<hi:@R>
+
+AttributeArg <-
+    "(" Comma(AttributeInner) ")"
+    / "=" "StringLiteral"
+
+NonterminalName <-
+    MacroId "<" Comma(NotMacroId) ">"
+    / NotMacroId
+    / "Escape"
+
+Alternatives <-
+    Alternative ";"
+    / "{" Comma(Alternative) "}" ";"?
+
+
+Alternative <-
+    Attribute* #<lo:@L>
+	Symbol+ ("if" Cond)? Action? #<hi:@R>
+    / #<lo:@L>
+	("if" <Cond>)? Action #<hi:@R>
+
+
+Action <-
+    "=>@L"
+    / "=>@R"
+    / "=>" ActionCode
+    / "=>?"
+
+ActionCode <-
+    <CurlyCode>
+    / < (CurlyCode / ParenCode / ![,};] .)* >
+
+CurlyCode <-
+    "{" (CurlyCode / !"}" .)* "}"
+
+ParenCode <-
+    "(" (ParenCode / !")" .)* ")"
+
+Cond <-
+    #<lo:@L>
+    NotMacroId CondOp StringLiteral #<hi:@R>
+
+CondOp <-
+    "=="
+    / "!="
+    / "~~"
+    / "!~"
+
+ExprSymbol <-
+    Symbol*
+
+Symbol <-
+    #<lo:@L>
+    "<" "mut"? #@L
+	Id ":" Symbol0 ">" #<hi:@R>
+    / #<lo:@L>
+    "<" Symbol0 ">" #<hi:@R>
+    / Symbol0
+
+Symbol0 <-
+    Symbol1 RepeatOp?
+    #Symbol1
+    #/ Symbol0 RepeatOp #<hi:@R>
+
+RepeatOp <-
+    "+"
+    / "*"
+    / "?"
+
+
+Symbol1 <-
+    #<lo:@L>
+    SymbolKind1 #<hi:@R>
+
+SymbolKind1 <-
+    MacroId "<" Comma(Symbol) ">"
+    / QuotedTerminal
+    / ident #"Id"
+    / Escape
+    / "(" ExprSymbol ")"
+    / "@L"
+    / "@R"
+    / "!"
+
+TypeRef <-
+    "(" Comma(TypeRef) ")"
+    / "[" TypeRef "]"
+    / "#" Symbol "#"
+    / "&" Lifetime? "mut"? TypeRef
+    / Path "<" Comma(TypeRefOrLifetime) ">"
+    / Path
+    / "dyn" Path "<" Comma(TypeRefOrLifetime) ">"
+    / "dyn" Path
+    / "dyn" ForAll? Path "("  Comma(TypeRef) ")" ("->" TypeRef)?
+
+TypeRefOrLifetime <-
+    TypeRef
+    / Lifetime
+
+Path <-
+    <"::"? Id ("::" Id)*>
+
+ExternToken <-
+    #<lo:@L>
+    "extern" #<hi:@R>
+	"{" AssociatedType* EnumToken AssociatedType* "}"
+    / #<lo:@L>
+	"extern" #<hi:@R>
+		"{" AssociatedType* "}"
+
+MatchToken <-
+    MatchTokenInt
+
+MatchTokenInt <-
+     "match" "{" MatchContents "}" ("else" "{" MatchContents "}")?
+    #MatchTokenInt "else" "{" MatchContents "}"
+    #/ #<lo:@L>
+    #"match" #<hi:@R>
+    #	"{" MatchContents "}"
+
+MatchContents <-
+    Comma(MatchItem)
+
+MatchItem <-
+    #<lo:@L>
+    "_" #<hi:@R>
+    / #<lo:@L>
+    MatchSymbol #<hi:@R>
+    / #<lo:@L>
+    MatchSymbol #<start:@L>
+	"=>" #<hi:@R>
+
+MatchSymbol <- QuotedLiteral
+
+#MatchMapping <-
+#    Terminal
+#    / "{" "}"
+
+EnumToken <-
+    "enum" #<lo:@L>
+	TypeRef #<hi:@R>
+	"{"
+      Comma(Conversion)
+    "}"
+
+AssociatedType <-
+    "type" #<lo:@L>
+	Id #<hi:@R>
+		"=" TypeRef ";"
+
+Conversion <-
+    #<lo:@L>
+    Attribute* Terminal #<start:@L>
+	"=>" #<hi:@R>
+	    ActionCode
+
+Pattern <-
+    #<lo:@L>
+    PatternKind #<hi:@R>
+
+PatternKind <-
+    Path "(" Comma(Pattern) ")"
+    / Path "{" (FieldPattern ",")* FieldPattern? "}"
+    / Path "{" (FieldPattern ",")* ".." "}"
+    / "_"
+    / ".."
+    / "<"
+    / "(" Comma(Pattern) ")"
+    / "CharLiteral"
+    / Path
+    / StringConstant
+
+FieldPattern <-
+    #<lo:@L>
+    Id #<hi:@R>
+	":" Pattern
+
+MacroId <-
+    ident #"MacroId"
+
+NotMacroId <-
+    ident #"Id"
+
+Id <-
+    ident #"Id"
+    / "MacroId"
+
+Escape <-
+    "Escape"
+
+Lifetime <-
+    <"'" ident>  #"Lifetime"
+
+Terminal <-
+    QuotedTerminal
+    / ident #"Id"
+
+QuotedTerminal <-
+    QuotedLiteral
+
+QuotedLiteral <-
+    StringLiteral
+    / RegexLiteral
+
+StringLiteral <-
+    #<lo:@L>
+    <'"' (!'"' .)* '"'> #"StringLiteral"
+
+StringConstant <-
+    #<lo:@L>
+    StringLiteral #"StringLiteral"
+
+RegexLiteral <-
+    "RegexLiteral"
+
+Comma(E) <-
+    (E ",")* E?
+
+ShebangAttribute <-
+    "#![...]"
+
+ident <- <[A-Za-z_][A-Za-z0-9_]*>
+%whitespace <- ([ \t\r\n\f\v]+ / "//"[^\n]* )*
+
+#"enum" => Tok::Enum,
+#"extern" => Tok::Extern,
+#"grammar" => Tok::Grammar,
+#"match" => Tok::Match,
+#"else" => Tok::Else,
+#"if" => Tok::If,
+#"mut" => Tok::Mut,
+#"pub" => Tok::Pub,
+#"in" => Tok::In,
+#"type" => Tok::Type,
+#"where" => Tok::Where,
+#"for" => Tok::For,
+#"!" => Tok::Bang,
+#"use" => Tok::Use(<&'input str>),
+#"dyn" => Tok::Dyn,
+#
+#"Escape" => Tok::Escape(<&'input str>),
+#"Id" => Tok::Id(<&'input str>),
+#"MacroId" => Tok::MacroId(<&'input str>),
+#"Lifetime" => Tok::Lifetime(<&'input str>),
+#"StringLiteral" => Tok::StringLiteral(<&'input str>),
+#"CharLiteral" => Tok::CharLiteral(<&'input str>),
+#"RegexLiteral" => Tok::RegexLiteral(<&'input str>),
+#
+#"&" => Tok::Ampersand,
+#"!=" => Tok::BangEquals,
+#"!~" => Tok::BangTilde,
+#":" => Tok::Colon,
+#"::" => Tok::ColonColon,
+#"," => Tok::Comma,
+#".." => Tok::DotDot,
+#"=" => Tok::Equals,
+#"==" => Tok::EqualsEquals,
+#"=>" => Tok::EqualsGreaterThanCode(<&'input str>),
+#"=>?" => Tok::EqualsGreaterThanQuestionCode(<&'input str>),
+#"=>@L" => Tok::EqualsGreaterThanLookahead,
+#"=>@R" => Tok::EqualsGreaterThanLookbehind,
+#">" => Tok::GreaterThan,
+#"#" => Tok::Hash,
+#"#![...]" => Tok::ShebangAttribute(<&'input str>),
+#"{" => Tok::LeftBrace,
+#"[" => Tok::LeftBracket,
+#"(" => Tok::LeftParen,
+#"<" => Tok::LessThan,
+#"@L" => Tok::Lookahead,
+#"@R" => Tok::Lookbehind,
+#"->" => Tok::MinusGreaterThan,
+#"+" => Tok::Plus,
+#"?" => Tok::Question,
+#"}" => Tok::RightBrace,
+#"]" => Tok::RightBracket,
+#")" => Tok::RightParen,
+#";" => Tok::Semi,
+#"*" => Tok::Star,
+#"~~" => Tok::TildeTilde,
+#"_" => Tok::Underscore,
+#
+#"StartGrammar" => Tok::StartGrammar,
+#"StartPattern" => Tok::StartPattern,
+#"StartMatchMapping" => Tok::StartMatchMapping,
+#"StartTypeRef" => Tok::StartTypeRef,
+#"StartGrammarWhereClauses" => Tok::StartGrammarWhereClauses,

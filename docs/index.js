@@ -93,6 +93,7 @@ const sampleList = [
 	["Jlang parser", "jlang.peglib", "test.jlang", "ace/mode/text"],
 	["Hera parser", "Hera.peglib", "test.Hera", "ace/mode/text"],
 	["kotlin parser", "kotlin-perf.peglib", "test.kotlin", "ace/mode/text"],
+	["lalrpop parser", "lalrpop.peglib", "test.lalrpop", "ace/mode/text"],
 	["leg parser", "leg.peglib", "test.leg", "ace/mode/text"],
 	["lpegrex parser", "lpegrex.peglib", "test.lpegrex", "ace/mode/text"],
 	["lua parser", "lua.peglib", "test.lua", "ace/mode/lua"],
