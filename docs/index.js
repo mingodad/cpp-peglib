@@ -149,6 +149,7 @@ const sampleList = [
 	["slang parser", "slang-grammar.peglib", "test.slang-grammar", "ace/mode/text"],
 	["spruce parser", "Spruce.peglib", "test.Spruce", "ace/mode/text"],
 	["sql parser", "sql.peglib", "test.sql", "ace/mode/sql"],
+	["sql-duckdb parser", "duckdb-autocomplete.peglib", "test.sql", "ace/mode/sql"],
 	["sql-pest parser", "sql-pest.peglib", "test.sql-pest", "ace/mode/sql"],
 	["sqlite-pegkit parser", "sqlite-pegkit.peglib", "test.sql", "ace/mode/sql"],
 	["sqlserver parser", "sqlserver-naig.peglib", "test.sql2", "ace/mode/sql"],
