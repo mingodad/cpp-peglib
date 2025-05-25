@@ -1,0 +1,127 @@
+#From: https://github.com/alpaylan/kale/blob/63b84056525b50395a2fac8d584a628307168f3d/src/html.pest
+
+# HTML 1.0 Grammar
+
+html <-
+    doctype?  element+
+
+# Whitespace skipping
+
+WHITESPACE <-  " " / "\n" / "\t"
+
+COMMENT <-  "<!--"  (!"-->"  ANY)*  "-->"
+
+element <-
+    selfClosingTag
+  / openCloseTag
+  / text
+
+
+openCloseTag <-
+    openTag  content  closeTag
+
+
+openTag <-
+    "<"  tagName  attributes  ">"
+
+
+closeTag <-
+    "</"  tagName  ">"
+
+
+selfClosingTag <-
+    br
+  / hr
+  / meta
+  / "<"  tagName  attributes  "/>"
+
+
+br <-
+    "<br>"i
+
+hr <-
+    "<hr>"i
+
+
+meta <-
+    "<meta"  attributes  ">"
+  / "<META "  attributes  ">"
+
+
+content <-  element*
+
+text <-
+    <(!"<"  ANY)+>
+
+
+tagName <-
+    "address"i
+  / "blockquote"i
+  / "header"i
+  / "title"i
+  / "meta"i
+  / "body"i
+  / "html"i
+  / "head"i
+  / "h1"i
+  / "h2"i
+  / "h3"i
+  / "h4"i
+  / "h5"i
+  / "h6"i
+  / "ul"i
+  / "ol"i
+  / "li"i
+  / "strong"i
+  / "b"i
+  / "nextid"i
+  / "aside"i
+  / "p"i
+  / "a"i
+  / "img"i
+  / "dl"i
+  / "dt"i
+  / "dd"i
+  / "script"i
+
+
+attributes <-
+    attribute*
+
+
+attribute <-
+    attributeName  "="  attributeValue
+
+
+attributeName <-
+    <ASCII_ALPHA  (ASCII_ALPHA / ASCII_DIGIT / "-")*>
+
+
+attributeValue <- <
+    "\""  attributeValueChar*  "\""
+  / "'"  attributeValueChar*  "'"
+  / ASCII_DIGIT+
+  / ASCII_ALPHA  ASCII_DIGIT+
+  / ASCII_ALPHA+
+  >
+
+
+attributeValueChar <-
+    !"'"  !"\""  ANY
+
+
+ASCII_ALPHA <-
+    [a-z]
+  / [A-Z]
+
+
+ASCII_DIGIT <-
+    [0-9]
+
+
+doctype <-
+    "<!DOCTYPE"  attributeValue+  ">"
+
+ANY <- .
+
+%whitespace <- (WHITESPACE+ / COMMENT)*

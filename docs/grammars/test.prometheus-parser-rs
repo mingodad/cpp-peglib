@@ -1,0 +1,4 @@
+foo{bar="baz"}
+sum(foo{bar="a"})
+sum(foo{bar="a"}) by (baz)
+foo[5m  :  30s   ]

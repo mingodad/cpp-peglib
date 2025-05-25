@@ -1,0 +1,195 @@
+#From: https://github.com/divvun/xkb-parser/blob/219e9ed33df82b0b1994675300c145d09674c2cf/src/xkb.pest
+
+file <-  SOI  (definition)*  EOI
+    definition <-  block_modifiers  directive
+
+    block_modifiers <-  block_modifier*
+        block_modifier <-  "partial" / "hidden" / "default" / "alphanumeric_keys" / "modifier_keys" / "keypad_keys" / "function_keys" / "alternate_group"
+    directive <-  xkb_symbols / xkb_keycodes / xkb_types / xkb_compatibility / xkb_geometry
+
+    xkb_symbols <-  "xkb_symbols"i  string  "{"  (xkb_symbols_item)*  "}"  ";"
+        xkb_symbols_item <-  includes / comment_line / name / key / key_type / virtual_modifiers / modifier_map
+            name <-  "name"i  group  "="  string  ";"
+            key_type <-  "key"i  "."  "type"  group?  "="  string  ";"
+            key <-  key_mode?  "key"i  symbol  "{"  (key_value  ARRAY_SEP?)*  "}"  ";"
+                key_mode <-  key_mode_replace / key_mode_override / key_mode_augment
+                    key_mode_replace <-  "replace"i
+                    key_mode_override <-  "override"i
+                    key_mode_augment <-  "augment"i
+                key_value <-  key_names / key_def
+                key_names <-  "["  (key_name)*  "]"
+                    key_name <-  ident  ARRAY_SEP?
+                key_def <-  (type_def / symbol_def / virtual_mods_def / actions_def / overlay_def)
+                    type_def <-  "type"i  group?  "="  string
+                    symbol_def <-  "symbols"i  group  "="  key_names
+                    virtual_mods_def <-  virtual_mods_def_prefix  "="  ident
+                        virtual_mods_def_prefix <-  "virtualMods"i / "vmods"i
+                    actions_def <-  "actions"i  group  "="  "["  (action  ARRAY_SEP?)*  "]"
+                    overlay_def <-  "overlay"  integer  "="  symbol
+            modifier_map <-  "modifier_map"i  ident  "{"  ( modifier  ARRAY_SEP? )*  "}"  ";"
+                modifier <-  symbol / ident
+
+    xkb_keycodes <-  "xkb_keycodes"i  string  "{"  (xkb_keycodes_item)*  "}"  ";"
+        xkb_keycodes_item <-  includes / comment_line / minimum / maximum / symbol_mapping / alternate / indicator / alias
+            minimum <-  "minimum"i  "="  integer  ";"
+            maximum <-  "maximum"i  "="  integer  ";"
+            symbol_mapping <-  symbol  "="  integer  ";"
+            alternate <-  "alternate"i  symbol  "="  integer  ";"
+            indicator <-  indicator_prefix?  "indicator"  integer  "="  string  ";"
+                indicator_prefix <-  "virtual"i
+            alias <-  "alias"i  symbol  "="  symbol  ";"
+
+    xkb_types <-  "xkb_types"i  string  "{"  (xkb_types_item)*  "}"  ";"
+        xkb_types_item <-  includes / comment_line / virtual_modifiers / type_item
+            type_item <-  type_item_prefix?  "type"i  string  "{"  (type_component)*  "}"  ";"
+                type_item_prefix <-  "override"i
+            type_component <-  modifiers / map / preserve / level_name
+                modifiers <-  "modifiers"i  "="  key_combo  ";"
+                map <-  "map"i  "["  key_combo  "]"  "="  ident  ";"
+                preserve <-  "preserve"i  "["  key_combo  "]"  "="  key_combo  ";"
+                level_name <-  "level_name"i  group  "="  string  ";"
+
+    xkb_compatibility <-  "xkb_compatibility"i  string  "{"  (xkb_compat_item)*  "}"  ";"
+        xkb_compat_item <-  includes / comment_line / virtual_modifiers / compat_set_mods / compat_latch_mods / compat_group / compat_interpret_line / compat_indicator_line / compat_interpret_block / compat_indicator_block
+            compat_set_mods <-  "setMods"  "."  ident  "="  ident  ";"
+            compat_latch_mods <-  "latchMods"  "."  ident  "="  ident  ";"
+            compat_group <-  "group"  ident  "="  ident  ";"
+            compat_interpret_line <-  "interpret"i  "."  ident  "="  ident  ";"
+            compat_indicator_line <-  "indicator"i  "."  ident  "="  ident  ";"
+            compat_interpret_block <-  "interpret"i  key_combo  interpret_condition?  "{"  (interpret_item)*  "}"  ";"
+                interpret_condition <-  "("  key_combo  ")"
+                interpret_item <-  compat_action / compat_modifier / use_mod_map_mods
+                    compat_action <-  "action"i  "="  action  ";"
+                    compat_modifier <-  "virtualModifier"i  "="  ident  ";"
+                    use_mod_map_mods <-  "useModMapMods"i  "="  ident  ";"
+            compat_indicator_block <-  "indicator"i  string  "{"  (indicator_item)*  "}"  ";"
+                indicator_item <-  indicator_negation / allow_explicit / indicator_drives_keyboard / indicator_controls / which_mod_state / indicator_modifiers / indicator_groups
+                    indicator_negation <-  negation  ";"
+                    allow_explicit <-  "allowExplicit"  ";"
+                    indicator_drives_keyboard <-  "indicatorDrivesKeyboard"  ";"
+                    indicator_controls <-  "controls"  "="  ident  ";"
+                    which_mod_state <-  "whichModState"  "="  ident  ";"
+                    indicator_modifiers <-  "modifiers"  "="  ident  ";"
+                    indicator_groups <-  "groups"  "="  ident  ";"
+
+    xkb_geometry <-  "xkb_geometry"i  string  "{"  (xkb_geometry_item)*  "}"  ";"
+        xkb_geometry_item <-
+            includes / comment_line / geometry_assigment_line / geometry_alias_line
+            / xkb_geometry_block
+
+        xkb_geometry_block <-
+            geometry_shape_block / geometry_solid_block / geometry_indicator_block
+            / geometry_section_block / geometry_outline_block / geometry_logo_block
+            / geometry_text_block / geometry_overlay_block
+
+            geometry_assigment <-  ident  ("."  ident)?  "="  geometry_assigment_value
+                geometry_assigment_value <-  color / string / calc_expression / decimal / boolean
+            geometry_assigment_line <-  geometry_assigment  ";"
+            geometry_alias <-  symbol  "="  symbol
+
+            geometry_section_block <-  "section"i  string  "{"  (geometry_section_item)*  "}"  ";"
+                geometry_section_item <-  geometry_assigment_line / xkb_geometry_block / geometry_row_block
+
+            geometry_alias_line <-  "alias"i  geometry_alias  ";"
+            geometry_shape_block <-  "shape"i  string  "{"  (geometry_shape_item  ARRAY_SEP?)*  "}"  ";"
+                geometry_shape_item <-  geometry_coordinates / geometry_shape_coordinates / geometry_shape_approx / geometry_shape_primary / geometry_assigment
+                    geometry_shape_coordinates <-  "{"  (geometry_coordinates  ARRAY_SEP?)+  "}"
+                    geometry_shape_approx <-  "approx"i  "="  (geometry_shape_coordinates  ARRAY_SEP?)*
+                    geometry_shape_primary <-  "primary"i  "="  (geometry_shape_coordinates  ARRAY_SEP?)*
+            geometry_solid_block <-  "solid"i  string  "{"  (geometry_assigment_line)*  "}"  ";"
+            geometry_text_block <-  "text"i  string  "{"  (geometry_assigment_line)*  "}"  ";"
+            geometry_outline_block <-  "outline"i  string  "{"  (geometry_assigment_line)*  "}"  ";"
+            geometry_indicator_block <-  "indicator"i  string  "{"  (geometry_assigment_line)*  "}"  ";"
+                #geometry_indicator_item <-  geometry_assigment_line
+            geometry_row_block <-  "row"i  "{"  (geometry_row_item)*  "}"  ";"
+                geometry_row_item <-  geometry_assigment_line / geometry_keys_block / geometry_keys_block
+            geometry_keys_block <-  "keys"i  "{"  (geometry_keys_items  ARRAY_SEP?)*  "}"  ";"
+                geometry_keys_items <-  symbol / string / decimal / geometry_key_def / geometry_assigment
+                    geometry_key_def <-  "{"  (geometry_keys_items  ARRAY_SEP?)*  "}"
+            geometry_overlay_block <-  "overlay"i  string?  "{"  (geometry_alias  ARRAY_SEP?)*  "}"  ";"
+            geometry_logo_block <-  "logo"i  string  "{"  (geometry_assigment_line)*  "}"  ";"
+
+        geometry_coordinates <-  "["  decimal  ","  decimal  "]"
+
+        # geometry_description <-  "description"i  "="  string  ";"
+        # geometry_width <-  "width"i  "="  integer  ";"
+        # geometry_height <-  "height"i  "="  integer  ";"
+        # geometry_shape_line <-  "shape"i  "."  ident  "="  decimal  ";"
+        # geometry_row_line <-  "row"i  "."  geometry_prop_line
+        # geometry_text_line <-  "text"i  "."  geometry_prop_line
+        # geometry_section_line <-  "section"i  "."  geometry_prop_line
+        # geometry_indicator_line <-  "indicator"i  "."  geometry_prop_line
+        # geometry_approx_line <-  "approx"i  "="  (geometry_shape_coordinates  ARRAY_SEP?)*  ";"
+        # geometry_key_line <-  "key"i  "."  geometry_prop_line
+
+        # geometry_prop_line <-  geometry_prop  ";"
+        # geometry_prop <-
+        #     geometry_prop_shape / geometry_prop_vertical / geometry_prop_horizontal /
+        #     geometry_prop_top / geometry_prop_left / geometry_prop_bottom / geometry_prop_right /
+        #     geometry_prop_gap / geometry_prop_angle /
+        #     geometry_prop_color / geometry_prop_base_color / geometry_prop_label_color /
+        #     geometry_prop_on_color / geometry_prop_off_color /
+        #     geometry_prop_name
+        #
+        #     geometry_prop_shape <-  "shape"i  "="  string
+        #     geometry_prop_text <-  "text"i  "="  string
+        #     geometry_prop_vertical <-  "vertical"i  "="  ident
+        #     geometry_prop_horizontal <-  "horizontal"i  "="  ident
+        #     geometry_prop_top <-  "top"i  "="  decimal
+        #     geometry_prop_left <-  "left"i  "="  decimal
+        #     geometry_prop_bottom <-  "bottom"i  "="  decimal
+        #     geometry_prop_right <-  "right"i  "="  decimal
+        #     geometry_prop_gap <-  "gap"i  "="  decimal
+        #     geometry_prop_angle <-  "angle"i  "="  decimal
+        #     geometry_prop_color <-  "color"i  "="  string
+        #     geometry_prop_base_color <-  "baseColor"i  "="  string
+        #     geometry_prop_label_color <-  "labelColor"i  "="  string
+        #     geometry_prop_on_color <-  "onColor"i  "="  string
+        #     geometry_prop_off_color <-  "offColor"i  "="  string
+        #     geometry_prop_name <-  "name"i  "="  string
+
+    # common sections
+    comment_line <-  "#"  (!NEWLINE  ANY)*  NEWLINE
+    includes <-  include / override_ / augment
+        include <-  "include"i  string
+        override_ <-  "override"i  string
+        augment <-  "augment"i  string
+    virtual_modifiers <-  "virtual_modifiers"i  (key_combo  ARRAY_SEP?)+  ";"
+    action <-  ident  "("  (action_param  (ARRAY_SEP  action_param)*)?  ")"
+        action_param <-  param_assignment / param_expression
+            param_assignment <-  ident  "="  param_expression
+            param_expression <-  negation / ( "+"  integer ) / key_combo / string
+
+WHITESPACE <-  " " / "\t" / NEWLINE
+COMMENT <-  ("//" / "#")  (!NEWLINE  ANY)*  NEWLINE+
+ARRAY_SEP <-  ","  "\n"?
+
+# identifier types
+ident <-  <(ASCII_ALPHANUMERIC / "_" / "-" )+>
+symbol <-  "<"  symbol_name  ">"
+    symbol_name <-  <(ASCII_ALPHANUMERIC / "_" / "-" / "+" )+>
+group <-  "["  ident  "]"
+key_combo <-  ident  ( "+"  ident)*
+integer <-  <(ASCII_DIGIT){1,10}>
+decimal <-  <"-"?  (ASCII_DIGIT){1,10}  ("."  (ASCII_DIGIT){1,10})?>
+boolean <-  "True"i / "False"i
+negation <-  "!"  ident
+calc_expression <-  decimal  (( "+" / "-" )  decimal)+
+color <-  <"\"#"  ASCII_HEX_DIGIT{6}  "\"">
+
+string <-  <"\""  string_content  "\"">
+string_content <-  char*
+    char <-
+        !("\"" / "\\")  ANY
+        / "\\"  ("\"" / "\\" / "/" / "|" / "b" / "f" / "n" / "r" / "t")
+        / "\\"  ("u"  ASCII_HEX_DIGIT{4})
+
+ASCII_DIGIT <- [0-9]
+ASCII_HEX_DIGIT <- [0-9A-Fa-f]
+ASCII_ALPHANUMERIC <- [A-Za-z0-9]
+ANY <- .
+NEWLINE <- '\n' '\r'? / '\r' '\n'?
+SOI <- ''
+EOI <- !.
+
+%whitespace <- (WHITESPACE+ / COMMENT)*

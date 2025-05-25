@@ -1,0 +1,195 @@
+#From: https://github.com/vampirc/vampirc-uci/blob/c74c2ea016f0d5864a1a2012d240d05b9eab6a93/res/uci.pest
+
+ucl <- commands / commands_ignore_unknown / commands_with_unknown
+
+commands <-  SOI  ws_nl*  message*  message_no_nl?  !any
+
+commands_ignore_unknown <-  SOI  ws_nl*  (message / something)* message_no_nl?  WHITESPACE*
+
+commands_with_unknown <-  SOI  ws_nl*  (message / something_produced_nl)*  (message_no_nl / something_produced)?  !any
+
+message <-  message_no_nl  NEWLINE+
+
+message_no_nl <-  WHITESPACE*  (uci / debug / isready / setoption / register / ucinewgame / stop / ponderhit / quit /
+                            position / go / id / uciok / readyok / bestmove / copyprotection / registration / option / info)
+                            WHITESPACE*
+
+#single_message_per_line <- message_no_nl  NEWLINE?
+
+uci <-  "uci"i  (!non_ws / EOI)
+
+switch <-  "on"i / "off"i
+debug <-  "debug"i  WHITESPACE+  switch
+
+isready <-  "isready"i
+
+setoption <- "setoption"i  WHITESPACE+  "name"i  WHITESPACE+  option_internal
+option_internal <-  option_name  (WHITESPACE+  ("value"i  WHITESPACE+  option_value))?
+option_name <-  option_token  (WHITESPACE+  option_token)*
+option_token <-  !"value"i  token
+option_value <-  any+
+
+register <-  "register"i  WHITESPACE+  (register_later / register_nc)
+register_later <-  "later"i  (!non_ws / EOI)
+register_nc <-  "name"i  WHITESPACE+  register_name  WHITESPACE+  "code"i  WHITESPACE+  register_code
+register_name <-  register_token  (WHITESPACE+  register_token)*
+register_token <-  !"code"i  token
+register_code <-  any+
+
+ucinewgame <-  "ucinewgame"i
+
+stop <-  "stop"i  (!non_ws / EOI)
+
+quit <-  "quit"i  (!non_ws / EOI)
+
+ponderhit <-  "ponderhit"i
+
+position <-  "position"i  WHITESPACE+  (fen_pos / startpos)  WHITESPACE*  ("moves"i WHITESPACE  a_move
+        (WHITESPACE+  a_move)*)*
+square <-  <file  rank>
+from_sq <-  square
+to_sq <-  square
+a_move <- from_sq  to_sq  promotion?
+promotion <-  "q"i / "r"i / "n"i / "b"i
+startpos <-  "startpos"i
+piece_char <-  "k"i / "q"i / "r"i / "n"i / "b"i / "p"i
+rank <-  [1-8]
+file <-  ([a-h]) / ([A-H])
+
+# FEN stuff
+fen_pos <-  "fen"i  WHITESPACE+  fen
+fen <-  (fen_rank  rank_sep){7}  fen_rank  WHITESPACE+  color  WHITESPACE+  castling  WHITESPACE+  en_passant
+         WHITESPACE+  ply_clock  WHITESPACE+  move_num
+rank_sep <-  "/"
+fen_rank <-  (piece_char / rank){1,8}
+color <- "w"i / "b"i
+fen_none <-  "-"
+castling_chars <-  "k"i / "q"i
+castling <-  castling_chars{1,4} / fen_none
+en_passant <-  square / fen_none
+counter <-  digit{1,4}
+ply_clock <-  counter
+move_num <-  counter
+
+# GO
+go <- go_full / go_empty
+go_empty <-  "go"i  WHITESPACE*   (EOI / NEWLINE)
+go_full <-  "go"i  (WHITESPACE+   (go_time / go_search / EOI / NEWLINE))+
+go_time <-  go_ponder / go_infinite / go_movetime / go_timeleft
+go_ponder <-  "ponder"i  (!non_ws / EOI)
+go_infinite <-  "infinite"i  (!non_ws / EOI)
+go_movetime <-  "movetime"i  WHITESPACE+  milliseconds
+go_timeleft <-  (wtime / btime / winc / binc / movestogo)+
+wtime <-  "wtime"i  WHITESPACE+  milliseconds
+btime <-  "btime"i  WHITESPACE+  milliseconds
+winc <-  "winc"i  WHITESPACE+  milliseconds
+binc <-  "binc"i  WHITESPACE+  milliseconds
+movestogo <-  "movestogo"i  WHITESPACE+  digits3
+go_search <-  depth / nodes / mate / searchmoves
+depth <-  "depth"i WHITESPACE+  digits3
+nodes <-  "nodes"i WHITESPACE+  digits12
+mate <-  "mate"i WHITESPACE+  digits3
+searchmoves <-  "searchmoves"i  (WHITESPACE+  a_move)+
+
+# GUI-bound stuff
+
+# id
+id <-  "id"i  WHITESPACE+  (id_name / id_author)
+id_name <-  "name"i  WHITESPACE+  id_text
+id_author <-  "author"i  WHITESPACE+  id_text
+id_text <-  any+
+
+uciok <-  "uciok"i
+
+readyok <-  "readyok"i
+
+bestmove <-  "bestmove"i  WHITESPACE+  a_move  (WHITESPACE+ / bestmove_ponder)*
+bestmove_ponder <-  "ponder"i  WHITESPACE+  a_move
+
+copyprotection <-  "copyprotection"i  WHITESPACE+  (protection_checking / protection_ok / protection_error)
+registration <-  "registration"i  WHITESPACE+  (protection_checking / protection_ok / protection_error)
+protection_checking <-  "checking"i
+protection_ok <-  "ok"i
+protection_error <-  "error"i
+
+# option
+option <-  "option"i  WHITESPACE+  "name"i  WHITESPACE+  option_name2  WHITESPACE+  "type"i  WHITESPACE+  option_type
+ ((WHITESPACE+  "default"i  WHITESPACE+  option_default)?  (WHITESPACE+  "min"i  WHITESPACE+  option_min)?
+ (WHITESPACE+  "max"i  WHITESPACE+  option_max)?  (WHITESPACE+  "var"i  WHITESPACE+  option_var)*)?
+option_name2 <-  (!"type"i  token)  (WHITESPACE+  !"type"i  token+)*
+option_type <-  option_check / option_spin / option_combo / option_string / option_button
+option_check <-  "check"i
+option_spin <-  "spin"i
+option_combo <-  "combo"i
+option_string <-  "string"i
+option_button <-  "button"i
+option_default <- !("min"i / "max"i / "var"i)  token  (WHITESPACE+  !("min"i / "max"i / "var"i)  token+)*
+option_min <-  i64
+option_max <-  i64
+option_var <-  !"var"i  token  (WHITESPACE+  !"var"i  token+)*
+
+# info
+# e.g. "info currmove e2e4 currmovenumber 1" or
+# 	     "info depth 12 nodes 123456 nps 100000".
+# 	Also all infos belonging to the pv should be sent together
+# 	e.g. "info depth 2 score cp 214 time 1242 nodes 2124 nps 34928 pv e2e4 e7e5 g1f3"
+
+
+info <- "info"i  (WHITESPACE+  info_attribute)+
+info_attribute <-  info_depth / info_seldepth / info_time / info_nodes / info_currmovenum / info_currmove / info_hashfull / info_nps /
+ info_tbhits / info_sbhits / info_cpuload / info_string / info_pv / info_multipv / info_refutation / info_currline /
+ info_score / info_any
+info_depth <-  "depth"i  WHITESPACE+  digits3
+info_seldepth <-  "seldepth"i  WHITESPACE+  digits3
+info_time <-  "time"i  WHITESPACE+  digits12
+info_nodes <-  "nodes"i  WHITESPACE+  digits12
+info_currmove <-  "currmove"i  WHITESPACE+  a_move
+info_currmovenum <-  "currmovenum"i  WHITESPACE+  digits12
+info_hashfull <-  "hashfull"i  WHITESPACE+  digits12
+info_nps <-  "nps"i  WHITESPACE+  digits12
+info_tbhits <-  "tbhits"i  WHITESPACE+  digits12
+info_sbhits <-  "sbhits"i  WHITESPACE+  digits12
+info_cpuload <-  "cpuload"i  WHITESPACE+  digits12
+info_string <-  "string"i  WHITESPACE+  info_string_string
+info_any <-  token  WHITESPACE+  info_string_string
+info_string_string <-  any+
+info_pv <-  "pv"i  (WHITESPACE+  a_move)+
+info_multipv <-  "multipv"i  WHITESPACE+  digits12
+info_refutation <-  "refutation"i  (WHITESPACE+  a_move)+
+info_currline <-  "currline"i  (WHITESPACE+  info_cpunr)*  (WHITESPACE+  a_move)+
+info_cpunr <-  digits3
+info_score <-  "score"i  WHITESPACE+  (info_cp / info_mate)  (WHITESPACE+  (info_lowerbound / info_upperbound))*
+info_cp <-  "cp"i  WHITESPACE+  i64
+info_mate <-  "mate"i  WHITESPACE+  i64
+info_lowerbound <-  "lowerbound"i
+info_upperbound <-  "upperbound"i
+
+
+
+sign <- PLUS / MINUS
+milliseconds <- sign?  digit{1,12}
+digits3 <-  digit{1,3}
+digits12 <-  digit{1,12}
+i64 <-  "-"?  digits12
+
+
+
+token <-  (!(WHITESPACE / NEWLINE)  ANY)+
+any <-  !NEWLINE  ANY
+
+#alpha <-  [a-z] / [A-Z]
+digit <-  [0-9]
+~non_ws <- !(WHITESPACE / NEWLINE)  ANY*
+~ws_nl <-  WHITESPACE / NEWLINE
+something <-  any+  NEWLINE+
+something_produced <-  any+
+something_produced_nl <-  any+  NEWLINE+
+
+~WHITESPACE <-  " " / "\t"
+PLUS <- "+"
+MINUS <- "-"
+
+NEWLINE <- '\n' '\r'? / '\r' '\n'?
+ANY <- .
+SOI <- ''
+EOI <- !.

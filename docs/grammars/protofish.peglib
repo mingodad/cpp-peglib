@@ -1,0 +1,104 @@
+#From: https://github.com/Rantanen/protofish/blob/65abc93db66b040720ee027fb32a6e32e5452201/src/proto.pest
+
+proto <-  BOM?  syntax  ( import / package / option / topLevelDef / emptyStatement )*  EOI
+
+WHITESPACE <-  " " / "\t" / "\n" / "\r"
+COMMENT <-  "//"  (!"\n"  ANY)* / "/*"  (!"*/"  ANY)*  "*/"
+BOM <-  "\ufeff"
+
+letter <-  [A-Z] / [a-z]
+decimalDigit <-  [0-9]
+octalDigit <-  [0-7]
+hexDigit <-  [0-9] / [A-F] / [a-f]
+
+ident <-  <letter  ( letter / decimalDigit / "_" )*>
+fullIdent <-  ident  ( "."  ident )*
+messageName <-  ident
+enumName <-  ident
+fieldName <-  ident
+oneofName <-  ident
+mapName <-  ident
+serviceName <-  ident
+rpcName <-  ident
+messageType <-  "."?  ( ident  "." )*  messageName
+enumType <-  "."?  ( ident  "." )*  enumName
+
+sign <-  "-" / "+"
+intLit <-  <sign?  ( hexLit / octalLit / decimalLit )>
+decimalLit <-  [1-9]  decimalDigit*
+octalLit <-  "0"  octalDigit*
+hexLit <-  "0"  ( "x" / "X" )  hexDigit+
+
+floatLit <-  <sign?  ( ( decimals  "."  decimals?  exponent? / decimals  exponent / "."  decimals  exponent? ) / "inf" / "nan" )>
+decimals <-  decimalDigit+
+exponent <-  ( "e" / "E" )  sign?  decimals
+
+boolLit <-  "true" / "false"
+
+strLit <-  <"'"  charValueQuot*  "'" / "\""  charValueDblQuot*  "\"">
+charValueQuot <-  hexEscape / octEscape / charEscape / !( "\0" / "\n" / "\\" / "'" )  anyChar
+charValueDblQuot <-  hexEscape / octEscape / charEscape / !( "\0" / "\n" / "\\" / "\"" )  anyChar
+hexEscape <-  "\\"  ( "x" / "X" )  hexByte
+hexByte <-  hexDigit  hexDigit
+octEscape <-  "\\"  octByte
+octByte <-  octalDigit  octalDigit?  octalDigit?
+charEscape <-  "\\"  escapeChar
+escapeChar <-  "a" / "b" / "f" / "n" / "r" / "t" / "v" / "\\" / "'" / "\""
+anyChar <-  ANY
+quote <-  "'" / "\""
+
+emptyStatement <-  ";"
+
+constant <-  intLit / floatLit / strLit / boolLit / fullIdent
+
+syntax <-  "syntax"  "="  <quote  "proto3"  quote>  ";"
+import <-  "import"  ( "weak" / "public" )?  strLit  ";"
+package <-  "package"  fullIdent  ";"
+
+option <-  "option"  optionName  "="  constant  ";"
+optionName <-  ( ident / "("  fullIdent  ")" )  ( "."  ident )*
+
+type_ <-  "double" / "float" / "int32" / "int64" / "uint32" / "uint64"
+    / "sint32" / "sint64" / "fixed32" / "fixed64" / "sfixed32" / "sfixed64"
+    / "bool" / "string" / "bytes" / messageType / enumType
+fieldNumber <-  intLit
+
+optional <-  "optional"
+repeated <-  "repeated"
+one_multiplicity <-  repeated / optional
+multiplicity <-  one_multiplicity?
+field <-  multiplicity  type_  fieldName  "="  fieldNumber  ( "["  fieldOptions  "]" )?  ";"
+fieldOptions <-  fieldOption  ( ","  fieldOption )*
+fieldOption <-  optionName  "="  constant
+
+oneof <-  "oneof"  oneofName  "{"  ( option / oneofField / emptyStatement )*  "}"
+oneofField <-  type_  fieldName  "="  fieldNumber  ( "["  fieldOptions  "]" )?  ";"
+
+mapField <-  "map"  "<"  keyType  ","  type_  ">"  mapName  "="  fieldNumber  ( "["  fieldOptions  "]" )?  ";"
+keyType <-  "int32" / "int64" / "uint32" / "uint64" / "sint32" / "sint64" /
+          "fixed32" / "fixed64" / "sfixed32" / "sfixed64" / "bool" / "string"
+
+reserved <-  "reserved"  ( ranges / fieldNames )  ";"
+ranges <-  range  ( ","  range )*
+range <-  intLit  ( "to"  ( intLit / "max" ) )?
+fieldNames <-  fieldName  ( ","  fieldName )*
+
+enum_ <-  "enum"  enumName  enumBody
+enumBody <-  "{"  ( option / enumField / emptyStatement )*  "}"
+enumField <-  ident  "="  intLit  ( "["  enumValueOption  ( ","  enumValueOption )*  "]" )*  ";"
+enumValueOption <-  optionName  "="  constant
+
+message <-  "message"  messageName  messageBody
+messageBody <-  "{"  ( field / enum_ / message / option / oneof / mapField / reserved / emptyStatement )*  "}"
+
+service <-  "service"  serviceName  "{"  ( option / rpc / emptyStatement )*  "}"
+stream <-  "stream"
+opt_stream <-  stream?
+rpcParam <-  opt_stream  messageType
+rpc <-  "rpc"  rpcName  "("  rpcParam  ")"  "returns"  "("  rpcParam  ")"  (( "{"  ( option / emptyStatement )*  "}" ) / ";")
+
+topLevelDef <-  message / enum_ / service
+
+ANY <- .
+EOI <- !.
+%whitespace <- (WHITESPACE+ / COMMENT)*

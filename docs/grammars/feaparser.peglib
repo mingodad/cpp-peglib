@@ -1,0 +1,500 @@
+#From: https://github.com/MFEK/feaparser.rlib/blob/76fe651537d745b1a277b539ec45b82647d79715/fea.pest
+
+file <-  SOI  ( topLevelStatement
+    / featureBlock
+    / variationFeatureBlock
+    / tableBlock
+    / anonBlock
+    / lookupBlockTopLevel
+    )*  EOI
+
+include_string_char <-
+    "\\"  ")"
+    / !")"  ANY
+
+include_inner <-  <include_string_char+>
+include <-  INCLUDE  "("  include_inner  ")"
+
+QUOTE <-  "\""
+EQUOTE <-  "\""
+string_char <-
+    "\\"  "\""
+    / !"\""  ANY
+
+STRVAL <-  <string_char*>
+
+INCLUDE <-  "include"
+FEATURE <-  "feature"
+TABLE <-  "table"
+SCRIPT <-  "script"
+LANGUAGE <-  "language"
+LANGSYS <-  "languagesystem"
+SUBTABLE <-  "subtable"
+LOOKUP <-  "lookup"
+LOOKUPFLAG <-  "lookupflag"
+NOTDEF <-  ".notdef"
+REQUIRED <-  "required"
+
+RIGHT_TO_LEFT <-  "RightToLeft"
+IGNORE_BASE_GLYPHS <-  "IgnoreBaseGlyphs"
+IGNORE_LIGATURES <-  "IgnoreLigatures"
+IGNORE_MARKS <-  "IgnoreMarks"
+USE_MARK_FILTERING_SET   <-  "UseMarkFilteringSet"
+MARK_ATTACHMENT_TYPE <-  "MarkAttachmentType"
+
+ANON <-  "anon"
+ANON_v <-  "anonymous"
+
+A_LABEL <-  <TSTART  TCHR*>
+#A_LBRACE <- "{"
+A_CLOSE <-  A_LABEL  SEMI
+
+
+EXCLUDE_DFLT <-  "excludeDFLT"
+INCLUDE_DFLT <-  "includeDFLT"
+EXCLUDE_dflt <-  "exclude_dflt"
+INCLUDE_dflt <-  "include_dflt"
+
+USE_EXTENSION <-  "useExtension"
+BEGINVALUE <-  "<"
+ENDVALUE <-  ">"
+ENUMERATE <-  "enumerate"
+ENUMERATE_v <-  "enum"
+#EXCEPT <-  "except"
+IGNORE <-  "ignore"
+SUBSTITUTE <-  "substitute"
+SUBSTITUTE_v <-  "sub"
+REVERSE <-  "reversesub"
+REVERSE_v <-  "rsub"
+BY <-  "by"
+FROM <-  "from"
+POSITION <-  "position"
+POSITION_v <-  "pos"
+PARAMETERS <-  "parameters"
+FEATURE_NAMES <-  "featureNames"
+CV_PARAMETERS <-  "cvParameters"
+CV_UI_LABEL <-  "FeatUILabelNameID"
+CV_TOOLTIP <-  "FeatUITooltipTextNameID"
+CV_SAMPLE_TEXT <-  "SampleTextNameID"
+CV_PARAM_LABEL <-  "ParamUILabelNameID"
+CV_CHARACTER <-  "Character"
+SIZEMENUNAME <-  "sizemenuname"
+CONTOURPOINT <-  "contourpoint"
+ANCHORTOKEN <-  "anchor"
+ANCHOR_DEF <-  "anchorDef"
+DEVICE <-  "device"
+VALUE_RECORD_DEF <-  "valueRecordDef"
+MARK <-  "mark"
+MARK_CLASS <-  "markClass"
+CURSIVE <-  "cursive"
+MARKBASE <-  "base"
+MARKLIG <-  "ligature"
+MARKLIG_v <-  "lig"
+LIG_COMPONENT <-  "ligComponent"
+CONDITIONSET <-  "conditionset"
+VARIATION <-  "variation"
+
+KNULL <-  "NULL"
+
+BASE <-  "BASE"
+HA_BTL <-  "HorizAxis.BaseTagList"
+VA_BTL <-  "VertAxis.BaseTagList"
+HA_BSL <-  "HorizAxis.BaseScriptList"
+VA_BSL <-  "VertAxis.BaseScriptList"
+
+GDEF <-  "GDEF"
+GLYPH_CLASS_DEF <-  "GlyphClassDef"
+ATTACH <-  "Attach"
+LIG_CARET_BY_POS <-  "LigatureCaretByPos"
+LIG_CARET_BY_IDX <-  "LigatureCaretByIndex"
+
+HEAD <-  "head"
+FONT_REVISION <-  "FontRevision"
+
+HHEA <-  "hhea"
+ASCENDER <-  "Ascender"
+DESCENDER <-  "Descender"
+LINE_GAP <-  "LineGap"
+
+CARET_OFFSET <-  "CaretOffset"
+
+NAME <-  "name"
+NAMEID <-  "nameid"
+
+OS_2 <-  "OS/2"
+FS_TYPE <-  "FSType"
+FS_TYPE_v <-  "fsType"
+OS2_LOWER_OP_SIZE <-  "LowerOpSize"
+OS2_UPPER_OP_SIZE <-  "UpperOpSize"
+PANOSE <-  "Panose"
+TYPO_ASCENDER <-  "TypoAscender"
+TYPO_DESCENDER <-  "TypoDescender"
+TYPO_LINE_GAP <-  "TypoLineGap"
+WIN_ASCENT <-  "winAscent"
+WIN_DESCENT <-  "winDescent"
+X_HEIGHT <-  "XHeight"
+CAP_HEIGHT <-  "CapHeight"
+WEIGHT_CLASS <-  "WeightClass"
+WIDTH_CLASS <-  "WidthClass"
+VENDOR <-  "Vendor"
+UNICODE_RANGE <-  "UnicodeRange"
+CODE_PAGE_RANGE <-  "CodePageRange"
+FAMILY_CLASS <-  "FamilyClass"
+
+STAT <-  "STAT"
+ELIDED_FALLBACK_NAME <-  "ElidedFallbackName"
+ELIDED_FALLBACK_NAME_ID  <-  "ElidedFallbackNameID"
+DESIGN_AXIS <-  "DesignAxis"
+AXIS_VALUE <-  "AxisValue"
+FLAG <-  "flag"
+LOCATION <-  "location"
+AXIS_EAVN <-  "ElidableAxisValueName"
+AXIS_OSFA <-  "OlderSiblingFontAttribute"
+
+VHEA <-  "vhea"
+VERT_TYPO_ASCENDER <-  "VertTypoAscender"
+VERT_TYPO_DESCENDER <-  "VertTypoDescender"
+VERT_TYPO_LINE_GAP <-  "VertTypoLineGap"
+
+VMTX <-  "vmtx"
+VERT_ORIGIN_Y <-  "VertOriginY"
+VERT_ADVANCE_Y <-  "VertAdvanceY"
+
+LCBRACE <-  "{"
+RCBRACE <-  "}"
+LBRACKET <-  "["
+RBRACKET <-  "]"
+HYPHEN <-  "-"
+SEMI <-  ";"
+EQUALS <-  "="
+MARKER <-  "\'"
+COMMA <-  ","
+
+GNST <-  ASCII_ALPHA / "_"
+LCHR <-  GNST / ASCII_DIGIT / "."
+GCCHR <-  LCHR / "-"
+GCLASS <-  <"@"  GNST  GCCHR*>
+
+CID <-  <"\\"  ASCII_DIGIT+>
+GNCHR <-  GCCHR / "+" / "*" / ":" / "~" / "^" / "|"
+ESCGNAME <-  <"\\"  GNST  GNCHR*>
+NAMELABEL <- < GNST  LCHR*>
+EXTNAME <-  <GNST  GNCHR*>
+POINTNUM <-  <"-"?  ASCII_DIGIT+  "."  ASCII_DIGIT+>
+NUMEXT <-  <"0x"  ASCII_HEX_DIGIT+>
+NUMOCT <-  <"0"  ASCII_OCT_DIGIT+>
+NUM <-  <"-"?  ( ASCII_NONZERO_DIGIT ASCII_DIGIT* / "0" )>
+TSTART <-   "!" / "$" / "%" / "&" / "*" / "+" / "." / ":" / "?" / ASCII_ALPHA / "^" / "|" / "~"
+TCHR <-  TSTART / ASCII_DIGIT / "-"
+CATCHTAG <- < TSTART  TCHR?>
+
+
+topLevelStatement <-  ( include
+    / glyphClassAssign
+    / langsysAssign
+    / mark_statement
+    / anchorDef
+    / valueRecordDef
+    / conditionsetDef
+    )
+    SEMI
+
+
+
+glyphClassAssign <-  GCLASS  EQUALS  glyphClass
+
+script <-  tag
+lang <-  tag
+langsysAssign <-  LANGSYS  script  lang
+
+mark_statement <-  MARK_CLASS  ( glyph / glyphClass )  anchor  GCLASS
+
+xval <- NUM
+yval <- NUM
+cp <- NUM
+anchorDef <-  ANCHOR_DEF  xval  yval  ( CONTOURPOINT  cp )?  label
+
+valueRecordDef <-  VALUE_RECORD_DEF  valueLiteral  label
+
+conditionsetDef <-  CONDITIONSET  label  LCBRACE  condition+  RCBRACE  label
+condition <-  tag  NUM  NUM  SEMI
+
+starttag <- tag
+endtag <- tag
+featureBlock <-  FEATURE  starttag  USE_EXTENSION?  LCBRACE
+     featureStatement*
+     RCBRACE  endtag  SEMI
+
+variationFeatureBlock <-  VARIATION  starttag  label  USE_EXTENSION?  LCBRACE
+     featureStatement+
+     RCBRACE  endtag  SEMI
+
+
+tableBlock <-  TABLE
+    ( table_BASE
+    / table_GDEF
+    / table_head
+    / table_hhea
+    / table_vhea
+    / table_name
+    / table_OS_2
+    / table_STAT
+    / table_vmtx
+    )
+
+
+anon_string_char <-
+    !("{" / "}" / "\"")  ANY
+
+anon_inner <-  <(anon_string_char / (QUOTE  STRVAL  EQUOTE) / A_BLOCK)*>
+A_BLOCK <-  "{"  anon_inner  "}"
+anonBlock <-  anontok  A_LABEL  A_BLOCK+  A_CLOSE
+
+lookupBlockTopLevel <-  LOOKUP  label  USE_EXTENSION?  LCBRACE
+     statement*  RCBRACE  label  SEMI
+
+featureStatement <-  statement
+    / lookupBlockOrUse
+    / cvParameterBlock
+
+
+lookupBlockOrUse <-  LOOKUP  label  ( USE_EXTENSION?  LCBRACE
+    statement+
+     RCBRACE  label )?  SEMI
+
+
+cvParameterBlock <-  CV_PARAMETERS  LCBRACE
+    cvParameterStatement*  RCBRACE  SEMI
+
+cvParameterStatement <-  ( cvParameter
+    / include
+    )  SEMI
+
+
+cvParameter <-  ( CV_UI_LABEL / CV_TOOLTIP / CV_SAMPLE_TEXT / CV_PARAM_LABEL )  LCBRACE
+      nameEntryStatement+
+      RCBRACE
+    / CV_CHARACTER  genNum
+
+
+statement <-  (
+    featureNames
+    / featureUse
+    / scriptAssign
+    / langAssign
+    / lookupflagAssign
+    / glyphClassAssign
+    / ignoreSubOrPos
+    / substitute
+    / mark_statement
+    / position
+    / parameters
+    / sizemenuname
+    / subtable
+    / include
+    )  SEMI
+
+
+featureUse <-  FEATURE  tag
+scriptAssign <-  SCRIPT  tag
+
+langAssign <-  LANGUAGE  tag  ( EXCLUDE_DFLT / INCLUDE_DFLT / EXCLUDE_dflt / INCLUDE_dflt )?  REQUIRED?
+
+lookupflagAssign <-  LOOKUPFLAG  ( NUM / lookupflagElement+ )
+
+lookupflagElement <-  RIGHT_TO_LEFT
+    / IGNORE_BASE_GLYPHS
+    / IGNORE_LIGATURES
+    / IGNORE_MARKS
+    / ( MARK_ATTACHMENT_TYPE  glyphClass )
+    / ( USE_MARK_FILTERING_SET  glyphClass )
+
+
+ignoreSubOrPos <-  IGNORE  ( subtok / revtok / postok )  lookupPattern  ( COMMA  lookupPattern )*
+
+
+substitute <-
+	# No, this is evil and undocumented
+	# ( EXCEPT  lookupPattern  ( COMMA  lookupPattern )* )?
+      ( revtok  lookupPattern  ( BY  ( KNULL / lookupPattern ) )? )
+    /
+    	( subtok  lookupPattern  ( ( BY / FROM )  ( KNULL / lookupPattern ) )? )
+
+
+pos_mark <-  MARK  pattern  baseToMarkElement+  pattern?
+position <-  enumtok?  postok
+    (
+        ( pattern?  ( valueRecord  valuePattern* ) )
+      / pos_mark
+      / ( CURSIVE  cursiveElement  pattern? )
+      / ( MARKBASE  pattern  baseToMarkElement+  pattern? )
+      / ( markligtok   pattern  ligatureMarkElement+  pattern? )
+      / lookupPattern
+    )
+
+
+valuePattern <-  patternElement  valueRecord?
+
+valueRecord <-  BEGINVALUE  label  ENDVALUE / valueLiteral
+
+valueLiteral <-  ( BEGINVALUE  num_or_varnum  num_or_varnum  num_or_varnum  num_or_varnum  (deviceLiteral  deviceLiteral  deviceLiteral  deviceLiteral)?  ENDVALUE ) / num_or_varnum
+
+deviceLiteral <-  BEGINVALUE  DEVICE  ( NUM  NUM  (","  NUM  NUM )* / KNULL )  ENDVALUE
+cursiveElement <-  patternElement  anchor  anchor
+baseToMarkElement <-  anchor  MARK  GCLASS  MARKER?
+ligatureMarkElement <-  anchor  ( MARK  GCLASS )?  LIG_COMPONENT?  MARKER?
+parameters <-  PARAMETERS  fixedNum+
+sizemenuname <-
+	SIZEMENUNAME  ( genNum  ( genNum  genNum )? )?  QUOTE  STRVAL  EQUOTE
+
+
+featureNames <-  FEATURE_NAMES  LCBRACE  nameEntryStatement+  RCBRACE
+subtable <-  SUBTABLE
+
+table_BASE <-  BASE  LCBRACE  baseStatement+  RCBRACE  BASE  SEMI
+baseStatement <-  ( axisTags / axisScripts / include )  SEMI
+
+axisTags <-  ( HA_BTL / VA_BTL )  tag+
+
+axisScripts <-  ( HA_BSL / VA_BSL )  baseScript  ( COMMA  baseScript )*
+
+baseScript <-  script  tag  NUM+
+
+table_GDEF <-  GDEF  LCBRACE  gdefStatement+  RCBRACE  GDEF  SEMI
+
+gdefStatement <-  ( gdefGlyphClass
+    / gdefAttach
+    / gdefLigCaretPos
+    / gdefLigCaretIndex
+    / include
+    )  SEMI
+
+
+gdefGlyphClass <-  GLYPH_CLASS_DEF  glyphClassOptional  COMMA
+                     glyphClassOptional  COMMA
+                     glyphClassOptional  COMMA
+                     glyphClassOptional
+
+gdefAttach <-  ATTACH  lookupPattern  NUM+
+gdefLigCaretPos <-  LIG_CARET_BY_POS  lookupPattern  NUM+
+gdefLigCaretIndex <-  LIG_CARET_BY_IDX  lookupPattern  NUM+
+table_head <-  HEAD  LCBRACE  headStatement+  RCBRACE  HEAD  SEMI
+
+headStatement <-  ( head / include )  SEMI
+head <-  FONT_REVISION  POINTNUM
+
+table_hhea <-  HHEA  LCBRACE  hheaStatement*  RCBRACE  HHEA  SEMI
+hheaStatement <-  ( hhea / include )  SEMI
+
+hhea <-  ( CARET_OFFSET / ASCENDER / DESCENDER / LINE_GAP )  NUM
+table_vhea <-  VHEA  LCBRACE  vheaStatement*  RCBRACE  VHEA  SEMI
+
+vheaStatement <-  ( vhea / include )  SEMI
+
+vhea <-  ( VERT_TYPO_ASCENDER / VERT_TYPO_DESCENDER / VERT_TYPO_LINE_GAP )  NUM
+
+table_name <-  NAME  LCBRACE  nameStatement+  RCBRACE  NAME  SEMI
+
+nameStatement <-  ( nameID / include )  SEMI
+
+nameID <-  NAMEID  genNum  ( genNum  ( genNum  genNum )? )?  QUOTE  STRVAL  EQUOTE
+
+table_OS_2 <-  OS_2  LCBRACE  os_2Statement+  RCBRACE  OS_2  SEMI
+
+os_2Statement <-  ( os_2 / include )  SEMI
+
+os_2 <-  ( TYPO_ASCENDER / TYPO_DESCENDER / TYPO_LINE_GAP
+      / WIN_ASCENT / WIN_DESCENT / X_HEIGHT / CAP_HEIGHT )  NUM
+    /
+      ( FS_TYPE / FS_TYPE_v / WEIGHT_CLASS / WIDTH_CLASS
+      / OS2_LOWER_OP_SIZE / OS2_UPPER_OP_SIZE )  NUM
+    / FAMILY_CLASS  genNum
+    / VENDOR  QUOTE  STRVAL  EQUOTE
+    / PANOSE  NUM  NUM  NUM  NUM  NUM  NUM  NUM  NUM  NUM  NUM
+    / ( UNICODE_RANGE / CODE_PAGE_RANGE )  NUM+
+
+
+
+table_STAT <-  STAT  LCBRACE  statStatement+  RCBRACE  STAT  SEMI
+
+statStatement <-  ( designAxis / axisValue / elidedFallbackName / elidedFallbackNameID / include )  SEMI
+
+designAxis <-  DESIGN_AXIS  tag  NUM  LCBRACE  nameEntryStatement+  RCBRACE
+
+axisValue <-  AXIS_VALUE  LCBRACE  axisValueStatement+  RCBRACE
+
+axisValueStatement <-  ( nameEntry / axisValueLocation / axisValueFlags / include )  SEMI
+
+axisValueLocation <-  LOCATION  tag  fixedNum  ( fixedNum  fixedNum? )?
+
+axisValueFlags <-  FLAG  ( AXIS_OSFA / AXIS_EAVN )+
+
+elidedFallbackName <-  ELIDED_FALLBACK_NAME  LCBRACE  nameEntryStatement+  RCBRACE
+
+nameEntryStatement <-  ( nameEntry / include )  SEMI
+
+elidedFallbackNameID <-  ELIDED_FALLBACK_NAME_ID  genNum
+
+nameEntry <-  NAME  ( genNum  ( genNum  genNum )? )?  QUOTE  STRVAL  EQUOTE
+
+table_vmtx <-  VMTX  LCBRACE  vmtxStatement+  RCBRACE  VMTX  SEMI
+
+vmtxStatement <-  ( vmtx / include )  SEMI
+
+vmtx <-  ( VERT_ORIGIN_Y / VERT_ADVANCE_Y )  glyph  NUM
+
+anchor <-  "<"  ANCHORTOKEN  (num_or_varnum  num_or_varnum  (CONTOURPOINT  cp / deviceLiteral  deviceLiteral)? / KNULL / label)  ">"
+
+#anchor_test <-  SOI  anchor  EOI
+
+lookupPattern <-  lookupPatternElement+
+
+lookupPatternElement <-  patternElement  ( LOOKUP  label )*
+
+pattern <-  patternElement+
+
+patternElement <-  ( glyphClass / glyph )  MARKER?
+
+glyphClassOptional <-  glyphClass?
+
+glyphClass <-  GCLASS / gcLiteral
+
+gcLiteral <-  LBRACKET  gcLiteralElement*  RBRACKET
+
+gcLiteralElement <-  glyph  ( HYPHEN  glyph )? / GCLASS
+
+glyph <-  glyphName / CID
+glyphName <-  ESCGNAME / NAMELABEL / EXTNAME / NOTDEF
+label <-  NAMELABEL / MARK
+tag <-  NAMELABEL / EXTNAME / CATCHTAG / MARK
+
+fixedNum <-  POINTNUM / NUM
+genNum <-  NUMEXT / NUMOCT / NUM
+
+subtok <-  SUBSTITUTE / SUBSTITUTE_v
+revtok <-  REVERSE / REVERSE_v
+anontok <-  ANON_v / ANON
+enumtok <-  ENUMERATE / ENUMERATE_v
+postok <-  POSITION / POSITION_v
+markligtok <-  MARKLIG / MARKLIG_v
+
+location <-  tag  "="  NUM
+master <-  location  (","  location)*  ":"  NUM
+varnum <-  "("  (master / NUM)+  ")"
+num_or_varnum <-  varnum / NUM
+
+WHITESPACE <-  " " / "\t" / NEWLINE
+comment_inner <-  (!"\n"  ANY)*
+COMMENT <-  "#" comment_inner
+
+ANY <- .
+SOI <- ''
+EOI <- !.
+ASCII_DIGIT <- [0-9]
+ASCII_NONZERO_DIGIT <- [1-9]
+ASCII_OCT_DIGIT <- [0-7]
+ASCII_HEX_DIGIT <- [0-9A-Fa-f]
+ASCII_ALPHA <- [A-Za-z]
+NEWLINE <- '\n' '\r' ? / '\r' '\n'?
+
+%whitespace <- (WHITESPACE+ / COMMENT)*

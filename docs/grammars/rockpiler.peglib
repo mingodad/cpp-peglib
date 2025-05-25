@@ -1,0 +1,191 @@
+#From: https://github.com/incolore-team/rockpiler/blob/b9bd173ed9251be144ef25da4f621f8f288c3d2d/src/sysy.pest
+
+grammar <-  SOI  trans_unit  EOI
+trans_unit <-  (func_decl / var_decls / func_proto)*
+var_decls <-  const_var_decls / normal_var_decls
+basic_type <-  KW_INT / KW_FLOAT
+const_var_decls <-  KW_CONST  basic_type  var_def  (","  var_def)*  ";"
+normal_var_decls <-  basic_type  var_def  (","  var_def)*  ";"
+
+    var_def <-
+        id  ("["  const_expr  "]")*  "="  init_val
+        / id  ("["  const_expr  "]")*
+
+
+    init_val <-  expr / array_init_val
+	array_init_val <-  "{"  (init_val  (","  init_val)*)?  "}"
+
+func_decl <-  func_type  id  "("  (func_params)?  ")"  block
+    func_type <-  KW_VOID / KW_INT / KW_FLOAT
+    func_params <-  func_param  (","  func_param)*
+    func_param <-  basic_type  id  ("["  "]"  ("["  const_expr  "]")*)?
+    block <-  "{"  (block_item)*  "}"
+
+func_proto <-  func_type  id  "("  (func_params)?  ")"  ";"
+
+const_expr <-  expr
+
+block_item <-  var_decls / stmt
+
+stmt <-
+    break_stmt
+    / continue_stmt
+    / expr_stmt
+    / block_stmt
+    / if_else_stmt
+    / if_stmt
+    / while_stmt
+    / for_stmt
+    / do_while_stmt
+    / return_stmt
+
+
+    expr_stmt <-  (expr)?  ";"
+    block_stmt <-  block
+    if_stmt <-  KW_IF  "("  cond  ")"  stmt
+    if_else_stmt <-  KW_IF  "("  cond  ")"  stmt  KW_ELSE  stmt
+    while_stmt <-  KW_WHILE  "("  cond  ")"  stmt
+    for_stmt <-  KW_FOR  "("  (expr)?  ";"  (expr)?  ";"  (expr)?  ")"  stmt
+    do_while_stmt <-  KW_DO  stmt  KW_WHILE  "("  cond  ")"  ";"
+    break_stmt <-  KW_BREAK  ";"
+    continue_stmt <-  KW_CONTINUE  ";"
+    return_stmt <-  KW_RETURN  (expr)?  ";"
+
+expr <-  prefix_op*  primary_expr  postfix_op*  (infix_op  prefix_op*  primary_expr  postfix_op* )*
+
+prefix_op <-  prefix_incr / prefix_decr / prefix_not / prefix_bit_not / prefix_pos / prefix_neg
+    prefix_incr <-  "++"
+    prefix_decr <-  "--"
+    prefix_not <-  "!" / "not"
+    prefix_bit_not <-  "~"
+    prefix_pos <-  "+"
+    prefix_neg <-  "-"
+
+infix_op <-  infix_logic / infix_cmp / infix_bitwise / infix_arith / assign
+    assign <-  "="
+    infix_bitwise <-  bit_and / bit_or / bit_xor / bit_shl / bit_shr
+        bit_and <-  "&"
+        bit_or <-  "|"
+        bit_xor <-  "^"
+        bit_shl <-  "<<"
+        bit_shr <-  ">>"
+    infix_logic <-  logic_and / logic_or
+        logic_and <-  "and" / "&&"
+        logic_or <-  "or" / "||"
+    infix_arith <-  arith_add / arith_sub / arith_mul / arith_div / arith_mod
+        arith_add <-  "+"
+        arith_sub <-  "-"
+        arith_mul <-  "*"
+        arith_div <-  "/"
+        arith_mod <-  "%"
+    infix_cmp <-  cmp_eq / cmp_ne / cmp_le / cmp_ge / cmp_lt / cmp_gt
+        cmp_eq <-  "=="
+        cmp_ne <-  "!="
+        cmp_le <-  "<="
+        cmp_ge <-  ">="
+        cmp_lt <-  "<"
+        cmp_gt <-  ">"
+
+postfix_op <-  postfix_incr / postfix_decr / call_access / dot_access / index_access
+    postfix_incr <-  "++"
+    postfix_decr <-  "--"
+    call_access <-  "."  id  "("  call_args?  ")"
+    call_args <-  expr  (","  expr)*
+    dot_access <-  "."  id
+
+cond <-  expr
+
+primary_expr <-  group_expr / call_expr / id / lhs_expr / literal_expr
+    lhs_expr <-  id  (index_access / dot_access)*
+        index_access <-  "["  expr  "]"
+    group_expr <-  "("  expr  ")"
+    literal_expr <-  number / char / string
+    call_expr <-  id  "("  (func_args)?  ")"
+
+func_args <-  func_arg  (","  func_arg)*
+
+func_arg <-  expr
+
+
+# Tokens
+KW_INT <-  "int"
+KW_FLOAT <-  "float"
+KW_VOID <-  "void"
+KW_CONST <-  "const"
+KW_RETURN <-  "return"
+KW_IF <-  "if"
+KW_ELSE <-  "else"
+KW_FOR <-  "for"
+KW_WHILE <-  "while"
+KW_DO <-  "do"
+KW_BREAK <-  "break"
+KW_CONTINUE <-  "continue"
+
+number <-  float / int
+
+int <-  dec_int / hex_int / oct_int / bin_int
+    dec_int <-  <dec_const>  !(exp_part / ".")
+    dec_const <-  non_zero_digit  dec_digit*
+    oct_int <-  <"0"  ASCII_OCT_DIGIT*>  !(exp_part / ".")
+    hex_int <-  <"0"  ("x" / "X")  hex_digit+>  !(exp_part / ".")
+    bin_int <-  <"0"  ("b" / "B")  bin_digit+>
+
+        bin_digit <-  "0" / "1"
+
+float <-  dec_flot / hex_float
+
+dec_flot <-  <dec_frac  (exp_part)? / dec_digit+  exp_part>
+
+hex_float <-  <"0x"  (hex_frac / hex_digit+)  bin_exp_part>
+
+hex_frac <-
+    hex_digit+  "."  hex_digit*
+    / hex_digit*  "."  hex_digit+
+
+
+dec_frac <-
+    dec_digit+  "."  dec_digit*
+    / "."  dec_digit+
+
+
+exp_part <-  ("e" / "E")  ("+" / "-")?  dec_digit+
+
+bin_exp_part <-  ("p" / "P")  ("+" / "-")?  dec_digit+
+
+string <-  <"\""  inner_str  "\"">
+char <-  <"'"  inner_chr  "'">
+id <-  <("_" / "$" / alpha / unicode)  ("_" / "$" / alpha_num / unicode)*>
+inner_str <-  (!("\"" / "\\")  ANY)*  (escape  inner_str)?
+inner_chr <-  escape / ANY
+escape <-  "\\"  ("\"" / "\\" / "r" / "n" / "t" / "0" / "'" / code / unicode)
+code <-  "x"  hex_digit_atomic{2}
+unicode <-  "u"  "{"  hex_digit_atomic{2, 6}  "}"
+hex_digit_atomic <-  [0-9] / [a-f] / [A-F]
+alpha <-  [a-z] / [A-Z]
+alpha_num <-  alpha / dec_digit
+
+WHITESPACE <-  " " / "\t" / "\n" / "\r"
+
+non_zero_digit <-  [1-9]
+
+dec_digit <-  [0-9]
+
+hex_digit <-  [0-9] / [a-f] / [A-F]
+
+#ASCII_ALPHANUMERIC <-  [0-9] / [a-z] / [A-Z]
+
+COMMENT <-
+    SINGLE_LINE_COMMENT
+    / MULTI_LINE_COMMENT
+
+
+SINGLE_LINE_COMMENT <-  "//"  (!("\n" / "\r")  ANY)*
+
+MULTI_LINE_COMMENT <-  "/*"  (!("*/")  ANY)*  "*/"
+
+ANY <- .
+SOI <- ''
+EOI <- !.
+ASCII_OCT_DIGIT <- [0-7]
+
+%whitespace <- (WHITESPACE+ / COMMENT)*

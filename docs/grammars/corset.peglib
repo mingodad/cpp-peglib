@@ -1,0 +1,34 @@
+#From: https://github.com/Consensys/corset/blob/87e52d6260a8e8b3780b8646c3999c0a3b142dd3/src/corset.pest
+
+corset <-  SOI  toplevel*  EOI
+
+WHITESPACE <-  " " / "\t" / "\r" / "\n"
+COMMENT <-  ";"  (!NEWLINE  ANY)*
+
+definition_kw <-  "module" / "defconstraint" / "defunalias" / "defun" / "defpurefun" / "defconst" / "defalias" / "deflookup" / "defpermutation" / "definrange" / "defperspective" / "defcolumns" / "definterleaved"
+toplevel <-  "("  definition_kw  (sexpr / expr)*  ")"
+sexpr <-  "("  (expr / keyword / range)*  ")"
+expr <-  integer / symbol / sexpr / nth
+
+nth <-  "["  symbol  expr  "]"
+
+range <-  immediate_range / interval
+immediate_range <-  "{"  expr+  "}"
+interval <-  "["  (expr  (":"  expr  (":"  expr)?)?)  "]"
+
+integer <-  <"-"?  natural >
+natural <-  "0x"  ASCII_HEX_DIGIT+ / "0b"  ASCII_BIN_DIGIT+ / ASCII_DIGIT+
+symbol <-  <(LETTER / NUMBER / SYMBOL / "-" / "*" / "=" / "_" / "," / "." / "'" / "/" / "!" / "@")+>
+keyword <-  <":"  (LETTER / NUMBER / SYMBOL / "-" / "*" / "=" / "_" / "@")+>
+
+NUMBER <- [0-9]
+LETTER <- [A-Za-z]
+SYMBOL <- [-+/*%]
+ANY <- .
+SOI <- ''
+EOI <- !.
+NEWLINE <- '\n' '\r'? / '\r' '\n'?
+ASCII_DIGIT <- [0-9]
+ASCII_BIN_DIGIT <- [01]
+ASCII_HEX_DIGIT <- [0-9A-Fa-f]
+%whitespace <- (WHITESPACE+ / COMMENT)*

@@ -1,0 +1,46 @@
+#From: https://github.com/tyrchen/curl-parser/blob/eecb61a25cae702fec0b14f1845f035ebcd9adfb/src/curl.pest
+
+# a curl cli parser
+input <-
+    SOI  (comment / ws / newline)*  ws*  "curl"  wss  (option  wss )*  url?  (wss  option  wss)*  ws*  EOI
+
+~ws <-  " " / "\t"
+newline <-  "\r" / "\n"
+slash <-  "\\"  ws*  newline+
+
+comment <-  "#"  (!newline  ANY)*  newline
+
+single_quoted <-  <"'"  single_quoted_inner  "'">
+single_quoted_inner <-  (!"'"  ANY)*
+double_quoted <-  <"\""  double_quoted_inner  "\"">
+double_quoted_inner <-  (!"\""  ANY)*
+
+none_ws <-  (!ws  ANY)+
+url_plain <-  <"http"  "s"?  "://"  none_ws>
+url <-  single_quoted / double_quoted / url_plain
+option <-  method_option / header_option / location_option / body_option / auth_option / ssl_verify_option
+
+method_option <-  ("-X" / "--request")  ws+  method
+method <-  "GET" / "POST" / "PUT" / "DELETE" / "PATCH"
+
+header_option <-  ("-H" / "--header")  ws+  header
+header <-  single_quoted / double_quoted / none_ws
+
+location_option <-  ("-L" / "--location")  ws+  location
+location <-  single_quoted / double_quoted / none_ws
+
+body_option <-  ("-d" / "--data")  ws+  body
+body <-  single_quoted / double_quoted / (!((" -"  ASCII_ALPHA_UPPER) / (" --"  ASCII_ALPHA_LOWER) / "\\")  ANY)+
+
+auth_option <-  "-u"  ws+  auth
+auth <-  single_quoted / double_quoted / none_ws
+
+ssl_verify_option <-  ("-k" / "--insecure")
+
+~wss <-  ws*  slash*  ws*
+
+ANY <- .
+ASCII_ALPHA_LOWER <- [a-z]
+ASCII_ALPHA_UPPER <- [A-Z]
+SOI <- ''
+EOI <- !.

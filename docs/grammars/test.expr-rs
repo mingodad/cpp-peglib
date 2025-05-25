@@ -1,0 +1,16 @@
+let accounts = [
+  {name: "Alice", balance: 1234.56, transactions: [100, -50, 200]},
+  {name: "Bob", balance: 2345.67, transactions: [-200, 300, -150]},
+  {name: "Charlie", balance: 3456.78, transactions: [400, -100, 50]}
+];
+
+{
+  totalBalance: sum(accounts, .balance),
+  averageBalance: mean(map(accounts, .balance)),
+  //totalTransactions: reduce(accounts, #acc + len(.transactions), 0),
+  accounts: map(accounts, {{
+      name: .name,
+      final: .balance + sum(.transactions),
+      transactionCount: len(.transactions)
+  }})
+}

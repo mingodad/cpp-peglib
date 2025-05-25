@@ -1,0 +1,38 @@
+#From: https://github.com/one-ini/core/blob/cfb2315a213b10136202944e83e0b653b19d8626/src/ini.pest
+
+ini <-  SOI  bom?  (blank / pair / comment)*  section*
+
+# lines
+~blank <- NEWLINE
+pair <-  key  "="  value  eol
+comment <-  <indicator  comment_value>  eol
+comment_value <-  char*
+
+# sections
+section <-  header  eol  body
+body <-  (blank / pair / comment)*
+
+# tokens
+# a name must end with a closing bracket followed by optional whitespace and EOL
+header <-  "["  header_text  "]"
+header_text <-  <(!header_end  char)+>
+header_end <-  "]"  eol
+# a key may not begin with an opening bracket and may not contain an equal sign
+key <-  <(!("=" / "[")  char)  (!key_end  char)*>
+key_end <-  (WHITESPACE*  "=")  # Trim key's trailing whitespace
+value <-  <(!value_end  char)*>
+value_end <-  WHITESPACE+  eol  # Trim value's trailing whitespace
+
+# atomic primitives
+bom <-  "\ufeff"
+indicator <-  "#" / ";"
+char <-  !eol  ANY
+~eol <-  NEWLINE / EOI
+
+WHITESPACE <-  " " / "\t"
+
+ANY <- .
+SOI <- ''
+EOI <- !.
+NEWLINE <- '\n' '\r'? / '\r' '\n'?
+

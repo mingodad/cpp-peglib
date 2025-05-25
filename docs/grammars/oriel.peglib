@@ -1,0 +1,171 @@
+#From: https://github.com/wojciech-graj/oriel/blob/cf748be20261aa8010331faf16cd451952e663bd/src/oriel.pest
+
+program <- SOI (whitespace_or_comment*  newline / command_group)*  EOI
+
+command_group <-  whitespace_or_comment*  (command  whitespace_gz)*  command?  whitespace_or_comment*  newline
+
+command <-
+    label
+  / kword_command_nfunc
+  / command_func
+  / command_goto
+  / command_gosub
+  / command_if_then
+  / command_set
+
+
+command_func    <-
+    kword_command_func  whitespace_or_comment*  "("  whitespace_or_comment*  ")"
+  / kword_command_func  whitespace_or_comment*  "("  whitespace_or_comment_or_lf*  ((integer / string / identifier / token)  whitespace_or_comment_or_lf*  ","  whitespace_or_comment_or_lf*)*  (integer / string / identifier / token)  whitespace_or_comment_or_lf*  ")"
+command_goto    <-  "Goto"i  whitespace_or_comment*  identifier  ":"?
+command_gosub   <-  "Gosub"i  whitespace_or_comment*  identifier
+command_if_then <-  "If"i  whitespace_gz  (integer / identifier)  whitespace_or_comment*  logical_operator  whitespace_or_comment*  (integer / identifier)  whitespace_gz  "Then"i
+command_set     <-  "Set"i  whitespace_gz  identifier  whitespace_or_comment*  "="  whitespace_or_comment*  (integer / identifier)  (whitespace_or_comment*  math_operator  whitespace_or_comment*  (integer / identifier) / integer)?
+label           <-  identifier  ":"
+
+logical_operator <-  "=" / "<=" / "<>" / "<" / ">=" / ">"
+math_operator    <-  "+" / "-" / "*" / "/"
+
+kword_command_func <-
+    "DrawArc"i
+  / "DrawBitmap"i
+  / "DrawChord"i
+  / "DrawEllipse"i
+  / "DrawFlood"i
+  / "DrawLine"i
+  / "DrawNumber"i
+  / "DrawPie"i
+  / "DrawRectangle"i
+  / "DrawRoundRectangle"i
+  / "DrawSizedBitmap"i
+  / "DrawText"i
+  / "MessageBox"i
+  / "Run"i
+  / "SetKeyboard"i
+  / "SetMenu"i
+  / "SetMouse"i
+  / "SetWaitMode"i
+  / "SetWindow"i
+  / "UseBackground"i
+  / "UseBrush"i
+  / "UseCaption"i
+  / "UseCoordinates"i
+  / "UseFont"i
+  / "UsePen"i
+  / "WaitInput"i
+
+
+kword_command_nfunc <-
+    "Beep"i
+  / "DrawBackground"i
+  / "End"i
+  / "Return"i
+
+
+token <-
+    "OKCANCEL"
+  / "OK"
+  / "YESNOCANCEL"
+  / "YESNO"
+  / "INFORMATION"
+  / "EXCLAMATION"
+  / "QUESTION"
+  / "STOP"
+  / "NOICON"
+  / "IGNORE"
+  / "NULL"
+  / "FOCUS"
+  / "MAXIMIZE"
+  / "MINIMIZE"
+  / "RESTORE"
+  / "OPAQUE"
+  / "TRANSPARENT"
+  / "SOLID"
+  / "DIAGONALUP"
+  / "DIAGONALDOWN"
+  / "DIAGONALCROSS"
+  / "HORIZONTAL"
+  / "VERTICAL"
+  / "CROSS"
+  / "PIXEL"
+  / "METRIC"
+  / "BOLD"
+  / "NOBOLD"
+  / "ITALIC"
+  / "NOITALIC"
+  / "UNDERLINE"
+  / "NOUNDERLINE"
+  / "DASHDOTDOT"
+  / "DASHDOT"
+  / "DASH"
+  / "DOT"
+
+
+kword_token <-
+    "OK"i
+  / "OKCANCEL"i
+  / "YESNO"i
+  / "YESNOCANCEL"i
+  / "INFORMATION"i
+  / "EXCLAMATION"i
+  / "QUESTION"i
+  / "STOP"i
+  / "NOICON"i
+  / "IGNORE"i
+  / "NULL"i
+  / "FOCUS"i
+  / "MAXIMIZE"i
+  / "MINIMIZE"i
+  / "RESTORE"i
+  / "OPAQUE"i
+  / "TRANSPARENT"i
+  / "SOLID"i
+  / "DIAGONALUP"i
+  / "DIAGONALDOWN"i
+  / "DIAGONALCROSS"i
+  / "HORIZONTAL"i
+  / "VERTICAL"i
+  / "CROSS"i
+  / "PIXEL"i
+  / "METRIC"i
+  / "BOLD"i
+  / "NOBOLD"i
+  / "ITALIC"i
+  / "NOITALIC"i
+  / "UNDERLINE"i
+  / "NOUNDERLINE"i
+  / "DASH"i
+  / "DOT"i
+  / "DASHDOT"i
+  / "DASHDOTDOT"i
+
+
+kword_reserved <-
+    kword_command_func
+  / kword_command_nfunc
+  / kword_token
+  / "Goto"i
+  / "Gosub"i
+  / "Return"i
+  / "If"i
+  / "Then"i
+
+
+integer    <-  <ASCII_DIGIT+>
+string     <-  <"\""  (!"\""  ANY)*  "\"">
+identifier <-  !(kword_reserved  !(ASCII_ALPHA / ASCII_DIGIT / "_"))  <(ASCII_ALPHA / "_")  (ASCII_ALPHA / ASCII_DIGIT / "_")*>
+
+~newline               <-  NEWLINE
+whitespace            <-  " " / "\t" / "\r" / "|"
+comment               <-  "{"  (!"}"  ANY)*  "}"
+~whitespace_or_comment <-  whitespace / comment
+~whitespace_or_comment_or_lf <-  whitespace_or_comment / "\n"
+whitespace_gz         <-  comment*  whitespace  whitespace_or_comment*
+
+NEWLINE <- '\n' '\r'? / '\r' '\n'?
+ANY <- .
+SOI <- ''
+EOI <- !.
+ASCII_ALPHA <- [A-Za-z]
+ASCII_DIGIT <- [0-9]
+

@@ -1,0 +1,224 @@
+#From: https://github.com/onlycs/jasmine/blob/1b686669dbaefdf1912270a10c20080fcfcc057e/jasmine.pest
+
+#/* ** Program ** */
+program <-  SOI  (struct_def / impl_def / fn_def / enum_def / (var  semi))*  EOI
+
+WHITESPACE <-  " " / "\t" / "\n" / "\r"
+COMMENT    <-
+    "//"  (!"\n"  ANY)*  "\n"
+  / "/*"  (!"*/"  ANY)*  "*/"
+
+
+#/* ** Definition ** */
+true_lit  <-  "true"
+false_lit <-  "false"
+bool      <-  true_lit / false_lit
+
+digit  <-  [0-9]
+digits <-  digit  (digit / "_")*
+
+int <-  <digits  ("i")?>
+#/* 012, 012i */
+float <-  <digits  (("."  (digits  ("f")?)?) / "f")>
+#/* 012.3, 012.3f, 012. */
+
+#/* Escapes */
+escape_predefined <-  "n" / "r" / "t" / "\\" / "0" / "'" / "\""
+unicode_hex       <-  ASCII_HEX_DIGIT{1, 4}
+unicode_escape    <-  "u"  lbrace  unicode_hex  rbrace
+escape            <-  "\\"  (escape_predefined / unicode_escape)
+
+#/* Strings and Chars */
+raw_char <-  !("\\")  ANY
+
+char   <-  <"'"  ((!("'")  raw_char) / escape)  "'">
+string <-  <"\""  ((!("\"")  raw_char) / escape)*  "\"">
+
+#/* Arrays */
+array <-  lbrack  (expr  (comma  expr)*)?  rbrack
+
+range_incl <-  "="
+range      <-  int  ".."  range_incl?  expr
+
+definition <-  range / array / string / struct / float / int / bool / char / closure
+
+int_ty     <-  "int"
+float_ty   <-  "float"
+bool_ty    <-  "bool"
+char_ty    <-  "char"
+string_ty  <-  "string"
+closure_ty <-  "Closure<"  lparen  (generic_kwd?  ty  (comma  generic_kwd?  ty)*)?  rparen  (","  generic_kwd?  ty)?  ">"
+ident_ty   <-  ident
+array_ty   <-  (not_array_ty / (lparen  not_array_ty  rparen))  (lbrack  rbrack)+
+range_ty   <-  "range"
+generic_ty <-  not_generic_ty  "<"  ty  (comma  ty)*  ">"
+
+not_array_ty   <-  (int_ty / float_ty / bool_ty / char_ty / range_ty / string_ty / closure_ty / ident_ty)
+not_generic_ty <-  array_ty / not_array_ty
+ty             <-  generic_ty / not_generic_ty
+
+#/* ** Keywords ** */
+fn_kwd       <-  "fn"
+let_kwd      <-  "let"
+if_kwd       <-  "if"
+else_kwd     <-  "else"
+while_kwd    <-  "while"
+for_kwd      <-  "for"
+return_kwd   <-  "return"
+break_kwd    <-  "break"
+continue_kwd <-  "continue"
+struct_kwd   <-  "struct"
+impl_kwd     <-  "impl"
+self_kwd     <-  "self"
+mut_kwd      <-  "mut"
+generic_kwd  <-  "generic"
+match_kwd    <-  "match"
+in_kwd       <-  "in"
+enum_kwd     <-  "enum"
+where_kwd    <-  "where"
+#kwd          <-  fn_kwd / let_kwd / if_kwd / else_kwd / while_kwd / for_kwd / return_kwd / break_kwd / continue_kwd / struct_kwd / enum_kwd
+
+#/* ** Identifiers ** */
+ident_char <-  ASCII_ALPHANUMERIC / "_"
+ident_str  <-  (ASCII_ALPHA / "_")  ident_char*
+ident      <-  <ident_str>
+
+#/* ** Mathmatical Operators ** */
+add_op <-  "+"
+sub_op <-  "-"
+neg_op <-  "-"
+mul_op <-  "*"
+div_op <-  "/"
+mod_op <-  "%"
+
+#/* ** Logical Operators ** */
+and_op <-  "&&"
+or_op  <-  "||"
+not_op <-  "!"
+
+#/* ** Comparison Operators ** */
+eq_op  <-  "=="
+neq_op <-  "!="
+lt_op  <-  "<"
+gt_op  <-  ">"
+lte_op <-  "<="
+gte_op <-  ">="
+
+two_input_op <-  gte_op / lte_op / add_op / sub_op / mul_op / div_op / mod_op / and_op / or_op / eq_op / neq_op / gt_op / lt_op
+one_input_op <-  not_op / neg_op
+
+#/* ** Grammar ** */
+lparen <-  "("
+rparen <-  ")"
+semi   <-  ";"
+comma  <-  ","
+lbrace <-  "{"
+rbrace <-  "}"
+colon  <-  ":"
+lbrack <-  "["
+rbrack <-  "]"
+dot    <-  "."
+dblcln <-  "::"
+
+#/* ** Expressions ** */
+static_fn   <-  dblcln  fn_call
+unit_enum   <-  dblcln  ident
+object_fn   <-  dot  fn_call
+object_prop <-  dot  ident
+array_idx   <-  lbrack  expr  rbrack
+
+base_expr <-
+    (one_input_op*  ((fn_call / (ident  (static_fn / unit_enum)?))  (object_fn / object_prop / array_idx)*))
+  / (lparen  base_expr  rparen)
+
+
+op_expr <-  op_expr_recurse  (two_input_op  op_expr_recurse)+
+
+op_expr_paren   <-  lparen  op_expr  rparen
+op_expr_recurse <-  op_expr_paren / base_expr / definition
+
+expr <-  op_expr / definition / base_expr
+
+#/* ** Assign ** */
+assign     <-  "="
+add_assign <-  "+="
+sub_assign <-  "-="
+mul_assign <-  "*="
+div_assign <-  "/="
+mod_assign <-  "%="
+stmt       <-
+    ident  (assign / add_assign / sub_assign / mul_assign / div_assign / mod_assign)  expr
+
+
+#/* ** Variable creation ** */
+var <-  let_kwd  mut_kwd?  ident  colon  ty  assign  expr
+
+#/* ** Arguments ** */
+define_argument  <-  ident  colon  ty
+define_arguments <-  define_argument  (comma  define_argument)*
+
+call_argument  <-  expr
+call_arguments <-  call_argument  (comma  call_argument)*
+
+impl_define_arguments <-  (self_kwd  (comma  define_arguments)?) / define_arguments
+
+#/* ** Functions ** */
+fn_call   <-  ident  lparen  call_arguments?  rparen
+fn_return <-  "->"  ty
+fn_def    <-  fn_kwd  ident  generic_args?  lparen  define_arguments?  rparen  fn_return?  where_clause?  block
+
+impl_fn_def <-  fn_kwd  ident  generic_args?  lparen  impl_define_arguments?  rparen  fn_return?  where_clause?  block
+closure     <-  "|"  define_arguments?  "|"  fn_return?  block
+
+return_def <-  return_kwd  expr?
+
+#/* ** Blocks ** */
+in_block <-  ((return_def / break_kwd / continue_kwd / var / stmt / expr)  semi) / if_def / while_def / for_def / match_def
+block    <-  lbrace  in_block*  rbrace
+
+#/* ** If Statements ** */
+if_def      <-  if_kwd  if_expr  block  else_if_def*  else_def?
+else_if_def <-  else_kwd  if_kwd  if_expr  block
+else_def    <-  else_kwd  block
+if_expr     <-  if_let / expr
+if_let      <-  let_kwd  ident  dblcln  ident  lparen  ident  colon  ty  rparen  assign  expr
+
+#/* ** While Statements ** */
+while_def <-  while_kwd  expr  block
+
+#/* ** For Statements ** */
+for_def <-  for_kwd  define_argument  in_kwd  expr  block
+
+#/* ** Structs ** */
+struct_def  <-  struct_kwd  ident  generic_args?  where_clause?  lbrace  define_arguments  rbrace
+struct_arg  <-  ident  colon  expr
+struct_args <-  struct_arg  (comma  struct_arg)*
+struct      <-  ident  lbrace  struct_args  rbrace
+
+#/* ** Impl ** */
+impl_def <-  impl_kwd  ident  lbrace  (impl_fn_def)*  rbrace
+
+#/* ** Enums ** */
+enum_def     <-  enum_kwd  ident  generic_args?  where_clause?  enum_block
+enum_block   <-  lbrace  enum_variant  (comma  enum_variant)*  rbrace
+enum_variant <-  ident  (lparen  ty  rparen)?
+
+#/* ** Generic Arguments ** */
+generic_args <-  "<"  ident  (comma  ident)*  ">"
+where_unit   <-  (ident  (assign / colon)  ident)
+where_clause <-  where_kwd  where_unit  (comma  where_unit)*
+
+#/* ** Match ** */
+match_def       <-  match_kwd  expr  lbrace  match_arm  (comma  match_arm)*  (comma  match_arm_final)?  rbrace
+match_arm       <-  match_ident  "=>"  block
+match_arm_final <-  "_"  "=>"  block
+match_ident     <-  ident  dblcln  ident  (lparen  ident  colon  ty  rparen)?
+
+ASCII_ALPHA <- [A-Za-z]
+ASCII_ALPHANUMERIC <- [A-Za-z0-9]
+ASCII_HEX_DIGIT <- [0-9A-Fa-f]
+ANY <- .
+SOI <- ''
+EOI <- !.
+
+%whitespace <- (WHITESPACE+ / COMMENT)*

@@ -1,0 +1,118 @@
+#From: https://github.com/alexshadley/Spruce/blob/34d1e48c4d2cc441bc4e105eafc71dbda9f83543/src/spruce.pest
+
+file <-  SOI  (top_stmt / empty_line)*  EOI
+
+top_stmt <-  ( import / interop_decl / function_decl / type_decl / assign )  "\n"
+stmt <-  ( while_stmt / assign / fn_call / case )  "\n"
+
+import <-  "import"  import_name
+import_name <-  ( ASCII_ALPHANUMERIC / "_" / "/" )+
+
+type_decl <-  "type"  up_id  type_params  "{\n"  (type_option  "\n")+  "}"
+type_params <-  ("("  lo_id  (","  lo_id)*  ")")?
+type_option <-  up_id  ("("  type_id  (","  type_id)*  ")")?
+
+type_id <-  up_id  ("("  type_id  (","  type_id)*  ")")? / lo_id
+
+interop_decl <-  "interop"  interop_id  fn_args
+# interop ids are more permissive because they need to be able to mirror
+# javascript function names
+interop_id <-  <(ASCII_ALPHA / "_")  (ASCII_ALPHANUMERIC / "_" / ".")*>
+
+function_decl <-  lo_id  fn_args  "{\n"  body  "}"
+fn_args <-  "("  (fn_arg  (","  fn_arg)*)?  ")"  ("->"  type_ann)?
+fn_arg <-  lo_id  (":"  type_ann)?
+
+assign <-  target  "="  valued
+
+target <-  mutable_tgt / update_tgt / lo_id
+mutable_tgt <-  "mut"  lo_id
+update_tgt <-  lo_id  ":"
+
+# type annotation definitions
+type_ann <-  func / unit / adt / tvar
+    unit <-  "()"
+    adt <-  up_id  ("("  type_ann  (","  type_ann)*  ")")?
+    tvar <-  lo_id
+    func <-  "("  (type_ann  (","  type_ann)*)?  ")"  "->"  type_ann
+
+
+# something that can be reduced to a value
+valued <-  case / expr
+
+case <-  "case"  expr  "{\n"  case_option+  "}"
+case_option <-  case_pattern  "->"  (expr / "{\n"  body  "}")  "\n"
+case_pattern <-  up_id  ( "("  lo_id  ( ","  lo_id )*   ")")?
+
+while_stmt <-  "while"  expr  "{\n"  body  "}"
+
+body <-  (stmt / empty_line)*  (valued  "\n")?
+
+expr <-  term  (operation  term)*
+term <-  struct_val / curry / fn_call / val_call / id / num / string / "("  expr  ")"
+
+# we have to allow interop_id here, but that feels gross. There's almost
+# certainly a better approach
+fn_call <-  interop_id  "("  (expr  (","  expr)* )?  ")"
+val_call <-  up_id  "("  (expr  (","  expr)* )?  ")"
+
+# very experimental implementation of currying
+curry <-  interop_id  "@"  "("  (curry_arg  (","  curry_arg)* )?  ")"
+curry_arg <-  expr / blank
+blank <-  "_"
+
+struct_val <-  "["   (struct_val_field  (","  struct_val_field)* )  "]"
+struct_val_field <-  lo_id  "="  expr
+
+id <-  up_id / lo_id
+up_id <-  <ASCII_ALPHA_UPPER  ASCII_ALPHANUMERIC*>
+lo_id <-  <ASCII_ALPHA_LOWER  ASCII_ALPHANUMERIC*>
+
+# also allows comments
+empty_line <-  "\n" / "//"  (!"\n"  ANY)*  "\n"
+
+num <-  <int  ("."  ASCII_DIGIT*)?  ("e"i  int)?>
+    int <-  <("+" / "-")?  ASCII_DIGIT+>
+
+hex <-  [0-9] / [a-f] / [A-F]
+unicode_hex <-  hex{1, 6}
+
+predefined <-  "n" / "r" / "t" / "\\" / "0" / "\"" / "'"
+byte       <-  "x"  hex{2}
+unicode    <-  "u"  "{"  unicode_hex  "}"
+escape     <-  "\\"  (predefined / byte / unicode)
+
+raw_string <-  (!("\\" / "\"")  ANY)+
+string <-  <"\""  (raw_string / escape)*  "\"">
+
+operation <-  concat / add / subtract / multiply / divide / power / modulus / eq / not_eq / lt_eq / gt_eq / lt / gt / access
+    concat   <-  "++"
+    add      <-  "+"
+    subtract <-  "-"
+    multiply <-  "*"
+    divide   <-  "/"
+    power    <-  "^"
+    modulus  <-  "%"
+    eq       <-  "=="
+    not_eq   <-  "!="
+    lt_eq    <-  "<="
+    gt_eq    <-  ">="
+    lt       <-  "<"
+    gt       <-  ">"
+    # implementing struct access as an operator lets us avoid left recursion, but causes lots of things to parse that shouldn't
+    access   <-  "."
+
+WHITESPACE <-  " " / "\t"
+COMMENT <-  "/*"  (!"*/"  ANY)*  "*/"
+
+ANY <- .
+ASCII_ALPHA_UPPER <- [A-Z]
+ASCII_ALPHA_LOWER <- [a-z]
+ASCII_ALPHA <- [A-Za-z]
+ASCII_ALPHANUMERIC <- [A-Za-z0-9]
+ASCII_DIGIT <- [0-9]
+SOI <- ''
+EOI <- !.
+
+%whitespace <- (WHITESPACE+ / COMMENT)*
+

@@ -1,0 +1,109 @@
+#From: https://github.com/caido/httpql/blob/494869bc936f7f7d8d3de937754e9b21e61b7b23/rust/httpql.pest
+
+HTTPQL <-  SOI  Query?  EOI
+
+# Tokens
+# Delimiters
+LeftParen  <-  "("
+RightParen <-  ")"
+Dot        <-  "."
+Colon      <-  ":"
+
+# Logical operators
+And <-  "AND" / "and"
+Or  <-  "OR" / "or"
+
+# Namespaces
+RowNamespace      <-  "row"
+RequestNamespace  <-  "req"
+ResponseNamespace <-  "resp"
+PresetNamespace   <-  "preset"
+SourceNamespace   <-  "source"
+
+# Row field names
+RowIntFieldName <-  "id"
+
+# Request field names
+RequestStringFieldName <-  "ext" / "host" / "method" / "path" / "query" / "raw"
+RequestIntFieldName    <-  "len" / "port"
+RequestDateFieldName   <-  "created_at"
+RequestBoolFieldName   <-  "tls"
+
+# Response field names
+ResponseStringFieldName <-  "raw"
+ResponseIntFieldName    <-  "code" / "len" / "roundtrip"
+
+# Operators for string and integer types
+StringOperator <-  "cont" / "ncont" / "eq" / "ne" / "like" / "nlike"
+RegexOperator  <-  "regex" / "nregex"
+IntOperator    <-  "eq" / "gte" / "gt" / "lte" / "lt" / "ne"
+DateOperator   <-  "lt" / "gt"
+BoolOperator   <-  "eq" / "ne"
+
+# Value types
+SymbolValue   <-  <([a-z] / [0-9] / "-" / "_")+>
+IntValue      <-  <ASCII_DIGIT+>
+StringValue   <-  <"\""  StringContent  "\"">
+StringContent <-  StringChar*
+StringChar    <-
+    !("\"" / "\\")  ANY
+  / "\\"  ("\"" / "\\" / "/" / "b" / "f" / "n" / "r" / "t")
+  / "\\"  ("u"  ASCII_HEX_DIGIT{4})
+
+RegexValue    <-  <"/"  RegexContent  "/">
+RegexContent  <-  RegexChar*
+RegexChar     <-
+    "\\"  ANY
+  / !"/"  ANY
+
+BoolValue     <-  "true" / "false"
+
+# Define non-token rules for constructing expressions
+WHITESPACE <-  " " / "\t" / "\n" / "\r"
+
+# Expression
+IntExpression         <-  IntOperator  Colon  IntValue
+StringExpression      <-  StringOperator  Colon  StringValue / RegexOperator  Colon  (RegexValue / StringValue)
+DateExpression        <-  DateOperator  Colon  StringValue
+BoolExpression        <-  BoolOperator  Colon  BoolValue
+PresetNameExpression  <-  StringValue
+PresetAliasExpression <-  SymbolValue
+SourceNameExpression  <-  StringValue
+
+# Clause
+StringClause <-  StringValue
+
+RowClause <-  RowNamespace  Dot  RowIntFieldName  Dot  IntExpression
+
+RequestClause <-
+    RequestNamespace  Dot  RequestIntFieldName  Dot  IntExpression
+  / RequestNamespace  Dot  RequestStringFieldName  Dot  StringExpression
+  / RequestNamespace  Dot  RequestDateFieldName  Dot  DateExpression
+  / RequestNamespace  Dot  RequestBoolFieldName  Dot  BoolExpression
+
+
+ResponseClause <-
+    ResponseNamespace  Dot  ResponseIntFieldName  Dot  IntExpression
+  / ResponseNamespace  Dot  ResponseStringFieldName  Dot  StringExpression
+
+
+PresetClause <-
+    PresetNamespace  Colon  (PresetNameExpression / PresetAliasExpression)
+
+
+SourceClause <-
+    SourceNamespace  Colon  SourceNameExpression
+
+
+# Query
+Clause          <-  StringClause / RowClause / RequestClause / ResponseClause / PresetClause / SourceClause / LeftParen  Query  RightParen
+LogicalOperator <-  And / Or
+Query           <-  (Clause  (LogicalOperator  Clause)*)?
+
+ANY <- .
+ASCII_DIGIT <- [0-9]
+ASCII_HEX_DIGIT <- [0-9A-Fa-f]
+SOI <- ''
+EOI <- !.
+
+%whitespace <- WHITESPACE*
