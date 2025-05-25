@@ -1,0 +1,198 @@
+#From: https://github.com/pest-parser/pest/blob/111e7793a7522bbda71f84c20b70254e050b641f/grammars/src/grammars/sql.pest
+
+#Command <-  SOI (Query / ExplainQuery / DDL / ACL) EOF
+Command <-   ((Query / ExplainQuery / DDL / ACL) ';')* EOF
+
+ACL <-  DropRole / DropUser / CreateRole / CreateUser / AlterUser / GrantPrivilege / RevokePrivilege
+    CreateUser <-
+        "create"i "user"i Identifier ("with"i)? "password"i SingleQuotedString
+        AuthMethod?
+
+    AlterUser <-
+        "alter"i "user"i Identifier ("with"i)? AlterOption
+
+        AlterOption <-  AlterLogin / AlterNoLogin / AlterPassword
+            AlterLogin <-  "login"i
+            AlterNoLogin <-  "nologin"i
+            AlterPassword <-  "password"i SingleQuotedString AuthMethod?
+	AuthMethod <-  "using"i (ChapSha1 / Md5 / Ldap)
+            ChapSha1 <-  "chap-sha1"i
+            Md5 <-  "md5"i
+            Ldap <-  "ldap"i
+    DropUser <-  "drop"i "user"i Identifier
+    CreateRole <-  "create"i "role"i Identifier
+    DropRole <-  "drop"i "role"i Identifier
+    GrantPrivilege <-  "grant"i PrivBlock "to"i Identifier
+    RevokePrivilege <-  "revoke"i PrivBlock "from"i Identifier
+        PrivBlock <-  PrivBlockPrivilege / PrivBlockRolePass
+            PrivBlockPrivilege <- Privilege (PrivBlockUser / PrivBlockSpecificUser / PrivBlockRole
+                                                / PrivBlockSpecificRole / PrivBlockTable / PrivBlockSpecificTable)
+            PrivBlockUser <-  "user"i
+            PrivBlockSpecificUser <-  "on"i "user"i Identifier
+            PrivBlockRole <-  "role"i
+            PrivBlockSpecificRole <-  "on"i "role"i Identifier
+            PrivBlockTable <-  "table"i
+            PrivBlockSpecificTable <-  "on"i "table"i Identifier
+            PrivBlockRolePass <-  Identifier
+        Privilege <-  PrivilegeRead / PrivilegeWrite / PrivilegeExecute /
+                      PrivilegeCreate / PrivilegeAlter / PrivilegeDrop /
+                      PrivilegeSession / PrivilegeUsage
+            PrivilegeAlter <-  "alter"i
+            PrivilegeCreate <-  "create"i
+            PrivilegeDrop <-  "drop"i
+            PrivilegeExecute <-  "execute"i
+            PrivilegeRead <-  "read"i
+            PrivilegeSession <-  "session"i
+            PrivilegeUsage <-  "usage"i
+            PrivilegeWrite <-  "write"i
+
+DDL <-  CreateTable / DropTable / CreateProc
+    CreateTable <-
+        "create"i "table"i Identifier
+        "(" Columns "," PrimaryKey ")"
+        Distribution
+
+        Columns <-  ColumnDef ("," ColumnDef)*
+            ColumnDef <-  Identifier ColumnDefType ColumnDefIsNull?
+            ColumnDefIsNull <-  NotFlag? "null"i
+        PrimaryKey <-
+            "primary"i "key"i
+            "(" Identifier ("," Identifier)* ")"
+
+        Distribution <-  "distributed"i (Global / Sharding)
+        Global <-  "globally"i
+        Sharding <-  "by"i "(" Identifier ("," Identifier)* ")"
+    DropTable <-  "drop"i "table"i Identifier
+
+    CreateProc <-
+        "create"i "procedure"i Identifier
+        "(" ProcParams? ")" ("language"i ProcLanguage)?
+        (("as"i "$$" ProcBody "$$") / ("begin"i "atomic" ProcBody "end"))
+
+        ProcParams <-  ProcParamDef ("," ProcParamDef)*
+            ProcParamDef <-  ColumnDefType
+        ProcLanguage <-  SQL
+            SQL <-  "sql"i
+        ProcBody <-  (Insert / Update / Delete)
+
+ExplainQuery <-  Explain
+    Explain <-  "explain"i Query
+
+Query <-  (SelectWithOptionalContinuation / Values / Insert / Update / Delete)
+    SelectWithOptionalContinuation <-  Select (ExceptContinuation / UnionAllContinuation)?
+        ExceptContinuation   <-  (("except"i "distinct"i) / "except"i) Select
+        UnionAllContinuation <-  "union"i "all"i Select
+    Select <-
+        "select"i Projection "from"i Scan
+        Join? WhereClause?
+        ("group"i "by"i GroupBy)?
+        ("having"i Having)?
+
+        Projection <-  Distinct? ProjectionElement ("," ProjectionElement)*
+            ProjectionElement <-  Asterisk / Column
+            Column <-  Expr (("as"i)? Identifier)?
+            Asterisk <-  "*"
+        WhereClause <-  "where"i Selection
+        Selection <-  Expr
+        Scan <-  (Identifier / SubQuery) (("as"i)? Identifier)?
+        Join <-  JoinKind? "join"i Scan "on"i Expr
+            JoinKind <-  ( InnerJoinKind / LeftJoinKind )
+                InnerJoinKind <-  "inner"i
+                LeftJoinKind <-  "left"i ("outer"i)?
+        GroupBy <-  Expr ("," Expr)*
+        Having <-  Expr
+    SubQuery <-  "(" (SelectWithOptionalContinuation / Values) ")"
+    Insert <-  "insert"i "into"i Identifier ("(" TargetColumns ")")? (Values / Select) OnConflict?
+        TargetColumns <-  Identifier ("," Identifier)*
+        OnConflict <-  "on conflict"i "do"i (DoNothing / DoReplace / DoFail)
+        DoReplace <-  "replace"i
+        DoNothing <-  "nothing"i
+        DoFail <-  "fail"i
+    Update <-  "update"i Identifier "set"i UpdateList (UpdateFrom / WhereClause)?
+        UpdateList <-  UpdateItem ("," UpdateItem)*
+        UpdateItem <-  Identifier "=" Expr
+        UpdateFrom <-  "from"i Scan ("where"i Expr)?
+    Values <-  "values"i Row ("," Row)*
+    Delete <-  "delete"i "from"i Identifier ("where"i DeleteFilter)?
+    	DeleteFilter <-  Expr
+
+Identifier <-  <DoubleQuotedIdentifier / IdentifierInner>
+    DoubleQuotedIdentifier <-  ("\"" IdentifierInner "\"")
+    IdentifierInner <-  !(Keyword ("(" / WHITESPACE / "," / EOF)) (IdentifierNonDigit (IdentifierNonDigit / ASCII_DIGIT)*)
+        IdentifierNonDigit <-  ([a-z] / [A-Z] / [А-Я] / [а-я] / "-" / "_")
+    Keyword <-  <("left"i / "having"i / "not"i / "inner"i / "group"i
+                / "on"i / "join"i / "from"i / "exists"i / "except"i
+                / "union"i / "where"i / "distinct"i / "between"i / "option"i
+                / "values"i) !IdentifierNonDigit>
+
+Expr <-  ExprAtomValue (ExprInfixOp ExprAtomValue)*
+    ExprInfixOp <-  Between / ArithInfixOp / CmpInfixOp / ConcatInfixOp / And / Or
+        Between       <-  NotFlag? "between"i
+        And           <-  "and"i
+        Or            <-  "or"i
+        ConcatInfixOp <-  "||"
+        ArithInfixOp  <-  Add / Subtract / Multiply / Divide
+            Add      <-  "+"
+            Subtract <-  "-"
+            Multiply <-  "*"
+            Divide   <-  "/"
+        CmpInfixOp    <-  NotEq / GtEq / Gt / LtEq / Lt / Eq / Lt / In
+            Eq    <-  "="
+            Gt    <-  ">"
+            GtEq  <-  ">="
+            Lt    <-  "<"
+            LtEq  <-  "<="
+            NotEq <-  "<>" / "!="
+            In    <-  NotFlag? "in"i
+    ExprAtomValue <-  UnaryNot* AtomicExpr IsNullPostfix?
+        UnaryNot   <-  NotFlag
+        IsNullPostfix <-  "is"i NotFlag? "null"i
+        AtomicExpr <-  Literal / Parameter / Cast / IdentifierWithOptionalContinuation / ExpressionInParentheses / UnaryOperator / SubQuery / Row
+            Literal <-  True / False / Null / Double / Decimal / Unsigned / Integer / SingleQuotedString
+                True     <-  "true"i
+                False    <-  "false"i
+                Null     <-  "null"i
+                Decimal <-  <Integer ("." ASCII_DIGIT*)>
+                Double <-  <Integer ("." ASCII_DIGIT*)? ("e"i Integer)>
+                Integer <-  <("+" / "-")? ASCII_DIGIT+>
+                Unsigned <-  <ASCII_DIGIT+>
+                SingleQuotedString <-  <OnlyQuotesSequence / AnythingButQuotesSequence>
+                    OnlyQuotesSequence <-  ("'" "'")+
+                    AnythingButQuotesSequence <-  "'" (!("'") ANY)* "'"
+            Parameter <-  PgParameter / QuestionParameter
+                QuestionParameter <-  "?"
+                PgParameter <-  <"$" Unsigned>
+            IdentifierWithOptionalContinuation <-  <Identifier (ReferenceContinuation / FunctionInvocationContinuation)?>
+                ReferenceContinuation          <-  "." Identifier
+                FunctionInvocationContinuation <-  "(" (CountAsterisk / FunctionArgs)? ")"
+                    FunctionArgs <-  Distinct? (Expr ("," Expr)*)?
+                    CountAsterisk <-  "*"
+            ExpressionInParentheses <-  "(" Expr ")"
+            Cast <-  "cast"i "(" Expr "as"i TypeCast ")"
+                TypeCast <-  TypeAny / ColumnDefType
+                ColumnDefType <-  TypeBool / TypeDecimal / TypeDouble / TypeInt / TypeNumber
+                                   / TypeScalar / TypeString / TypeText / TypeUnsigned / TypeVarchar
+                    TypeAny <-  "any"i
+                    TypeBool <-  ("boolean"i / "bool"i)
+                    TypeDecimal <-  "decimal"i
+                    TypeDouble <-  "double"i
+                    TypeInt <-  ("integer"i / "int"i)
+                    TypeNumber <-  "number"i
+                    TypeScalar <-  "scalar"i
+                    TypeString <-  "string"i
+                    TypeText <-  "text"i
+                    TypeUnsigned <-  "unsigned"i
+                    TypeVarchar <-  "varchar"i "(" Unsigned ")"
+            UnaryOperator <-  Exists
+                Exists <-  NotFlag? "exists"i SubQuery
+            Row <-  "(" Expr ("," Expr)* ")"
+
+Distinct <-  "distinct"i
+NotFlag <-  "not"i
+EOF <-  EOI / ";"
+WHITESPACE <-  " " / "\t" / "\n" / "\r\n"
+
+%whitespace <- WHITESPACE*
+ANY <- .
+ASCII_DIGIT <- [0-9]
+EOI <- !.

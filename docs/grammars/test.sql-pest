@@ -1,0 +1,9 @@
+select * from table;
+
+create user "my_user" with password 'strong_password123';
+
+insert into "my_table" ("col_1", "col_2")
+                  select "name", "class", avg("age")
+                  from "students"
+                  where "age" > 15
+                  group by "age";
