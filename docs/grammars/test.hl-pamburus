@@ -1,0 +1,2 @@
+level > info or status-code >= 400 or duration > 0.5
+and (request in (95c72499d9ec, 9697f7aa134f, bc3451d0ad60)) or (method != GET)

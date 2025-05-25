@@ -1,0 +1,561 @@
+#From: https://github.com/phillord/horned-owl/blob/f3a1752f5e1dafb978fe8cda1f1e333fcbd1012b/src/grammars/ofn.pest
+
+OntologyDocument <-  PrefixDeclarations  Ontology  EOI
+
+WHITESPACE <-  " " / "\t" / "\n" / "\r"
+COMMENT    <-  "#"  (!"\n"  !"\r"  ANY)*
+
+# Annex I: SPARQL 1.0 Grammar Subset
+# (source: https://www.w3.org/TR/2008/REC-rdf-sparql-query-20080115/)
+
+SPARQL_BlankNodeLabel <-  "_:"  SPARQL_PnLocal
+SPARQL_PnameNs        <-  SPARQL_PnPrefix?  ":"
+SPARQL_PnameLn        <-  SPARQL_PnameNs  SPARQL_PnLocal
+
+SPARQL_PnLocal  <-  (SPARQL_PnCharsU / ASCII_DIGIT)  (("."  SPARQL_PnChars) / SPARQL_PnChars)*
+SPARQL_PnPrefix <-  SPARQL_PnCharsBase  (("."  SPARQL_PnChars) / SPARQL_PnChars)*
+
+SPARQL_PnChars     <-  SPARQL_PnCharsU / "-" / ASCII_DIGIT / "\u00B7" / '\u0300'..'\u036F' / '\u203F'..'\u2040'
+SPARQL_PnCharsU    <-  SPARQL_PnCharsBase / "_"
+SPARQL_PnCharsBase <-
+    ASCII_ALPHA
+  / '\u00C0'..'\u00D6'
+  / '\u00D8'..'\u00F6'
+  / '\u00F8'..'\u02FF'
+  / '\u0370'..'\u037D'
+  / '\u037F'..'\u1FFF'
+  / '\u200C'..'\u200D'
+  / '\u2070'..'\u218F'
+  / '\u2C00'..'\u2FEF'
+  / '\u3001'..'\uD7FF'
+  / '\uF900'..'\uFDCF'
+  / '\uFDF0'..'\uFFFD'
+  / '\u10000'..'\uEFFFF'
+
+# Annex III: Language Tag Grammar from BCP 47
+# (source: https://www.rfc-editor.org/bcp/bcp47.txt)
+
+BCP47_LanguageTag <-  BCP47_LangTag / BCP47_PrivateUse / BCP47_GrandFathered
+BCP47_LangTag     <-
+    BCP47_Language  ("-"  BCP47_Script)?  ("-"  BCP47_Region)?  ("-"  BCP47_Variant)*  ("-"  BCP47_Extension)*  ("-"  BCP47_PrivateUse)?
+
+
+BCP47_Language <-
+    ASCII_ALPHA{2, 3}  ("-"  BCP47_ExtLang)?
+  / ASCII_ALPHA{4}
+  / ASCII_ALPHA{5}
+
+
+BCP47_ExtLang       <-  ASCII_ALPHA{3}  ("-"  ASCII_ALPHA{3}){,2}
+BCP47_Script        <-  ASCII_ALPHA{4}
+BCP47_Region        <-  ASCII_ALPHA{2} / ASCII_DIGIT{3}
+BCP47_Variant       <-  ASCII_ALPHANUMERIC{5, 8} / ASCII_DIGIT  ASCII_ALPHANUMERIC{3}
+BCP47_Extension     <-  BCP47_Singleton  ("-"  ASCII_ALPHANUMERIC{2, 8})+
+BCP47_Singleton     <-  ASCII_DIGIT / [\x41-\x57] / [\x59-\x5A] / [\x61-\x77] / [\x79-\x7A]
+BCP47_PrivateUse    <-  "x"  ("-"  ASCII_ALPHANUMERIC{1, 8})+
+BCP47_GrandFathered <-  BCP47_Irregular / BCP47_Regular
+
+BCP47_Irregular <-
+    "en-GB-oed"
+  / "i-ami"
+  / "i-bnn"
+  / "i-default"
+  / "i-enochian"
+  / "i-hak"
+  / "i-klingon"
+  / "i-lux"
+  / "i-mingo"
+  / "i-navajo"
+  / "i-pwn"
+  / "i-tao"
+  / "i-tay"
+  / "i-tsu"
+  / "sgn-BE-FR"
+  / "sgn-BE-NL"
+  / "sgn-CH-DE"
+
+
+BCP47_Regular <-
+    "art-lojban"
+  / "cel-gaulish"
+  / "no-bok"
+  / "no-nyn"
+  / "zh-guoyu"
+  / "zh-hakka"
+  / "zh-min"
+  / "zh-min-nan"
+  / "zh-xiang"
+
+# Annex II: Iri Grammar from IRI RFC
+# (source: https://www.ietf.org/rfc/rfc3987.txt)
+
+RFC3987_Iri <-  RFC3987_IriScheme  ":"  RFC3987_IriHierPart  ("?"  RFC3987_IriQuery)?  ("#"  RFC3987_IriFragment)?
+
+RFC3987_IriHierPart <-
+    ("//"  RFC3987_IriAuthority  RFC3987_IriPathAbempty?)
+  / RFC3987_IriPathAbsolute
+  / RFC3987_IriPathRootless
+  / RFC3987_IriPathEmpty
+
+
+#RFC3987_IriReference    <-  RFC3987_Iri / RFC3987_IriRelativeRef
+#RFC3987_AbsoluteIri     <-  RFC3987_IriScheme  ":"  RFC3987_IriHierPart  ("?"  RFC3987_IriQuery)?
+#RFC3987_IriRelativeRef  <-  RFC3987_IriRelativePart  ("?"  RFC3987_IriQuery)?  ("#"  RFC3987_IriFragment)?
+#RFC3987_IriRelativePart <-  ("//"  RFC3987_IriAuthority  RFC3987_IriPathAbempty?) / RFC3987_IriPathAbsolute / RFC3987_IriPathRootless
+
+RFC3987_IriAuthority <-  (RFC3987_IriUserInfo  "@")?  RFC3987_IriHost  (":"  RFC3987_IriPort)?
+RFC3987_IriUserInfo  <-  (RFC3987_IriUnreserved / RFC3987_IriPctEncoded / RFC3987_IriSubDelims / ":")*
+RFC3987_IriHost      <-  RFC3987_IriIpLiteral / RFC3987_IriIpv4Address / RFC3987_IriRegName
+RFC3987_IriRegName   <-  <(RFC3987_IriUnreserved / RFC3987_IriPctEncoded / RFC3987_IriSubDelims)*>
+
+#RFC3987_IriPath         <-  RFC3987_IriPathAbempty / RFC3987_IriPathAbsolute / RFC3987_IriPathNoScheme / RFC3987_IriPathRootless / RFC3987_IriPathEmpty
+RFC3987_IriPathAbempty  <-  ("/"  RFC3987_IriSegment)+
+RFC3987_IriPathAbsolute <-  "/"  (RFC3987_IriSegmentNz  ("/"  RFC3987_IriSegment)*)?
+#RFC3987_IriPathNoScheme <-  RFC3987_IriSegmentNzNc  ("/"  RFC3987_IriSegment)*
+RFC3987_IriPathRootless <-  RFC3987_IriSegmentNz  ("/"  RFC3987_IriSegment)*
+RFC3987_IriPathEmpty    <-  "0"  RFC3987_IriIpChar
+
+RFC3987_IriSegment     <-  RFC3987_IriIpChar*
+RFC3987_IriSegmentNz   <-  <RFC3987_IriIpChar+>
+#RFC3987_IriSegmentNzNc <-  (RFC3987_IriUnreserved / RFC3987_IriPctEncoded / RFC3987_IriSubDelims / "@")+
+
+RFC3987_IriQuery    <-  <(RFC3987_IriIpChar / RFC3987_IriPrivate / "/" / "?")*>
+RFC3987_IriFragment <-  <(RFC3987_IriIpChar / "/" / "?")*>
+
+RFC3987_IriScheme <-  <ASCII_ALPHA  (ASCII_ALPHA / ASCII_DIGIT / "+" / "-" / ".")*>
+RFC3987_IriPort   <-  <ASCII_DIGIT*>
+
+RFC3987_IriPrivate    <-  '\uE000'..'\uF8FF' / '\uF0000'..'\uFFFFD' / '\u100000'..'\u10FFFD'
+RFC3987_IriPctEncoded <-  "%"  ASCII_HEX_DIGIT  ASCII_HEX_DIGIT
+RFC3987_IriUnreserved <-  ASCII_ALPHA / ASCII_DIGIT / "-" / "." / "_" / "~" / RFC3987_IriUCSChar
+RFC3987_IriUCSChar    <-
+    [\xa0-\ud7ff]
+  / [\uf900-\ufdcf]
+  / [\ufdf0-\uffef]
+  / [\u10000-\u1fffd]
+  / [\u20000-\u2fffd]
+  / [\u30000-\u3fffd]
+  / [\u40000-\u4fffd]
+  / [\u50000-\u5fffd]
+  / [\u60000-\u6fffd]
+  / [\u70000-\u7fffd]
+  / [\u80000-\u8fffd]
+  / [\u90000-\u9fffd]
+  / [\ua0000-\uafffd]
+  / [\ub0000-\ubfffd]
+  / [\uc0000-\ucfffd]
+  / [\ud0000-\udfffd]
+  / [\ue1000-\uefffd]
+
+#RFC3987_IriReserved   <-  RFC3987_IriGenDelims / RFC3987_IriSubDelims
+#RFC3987_IriGenDelims  <-  ":" / "/" / "?" / "#" / "[" / "]" / "@"
+RFC3987_IriSubDelims  <-  "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / ";" / "=" / ","
+RFC3987_IriDecOctet   <-
+    ASCII_DIGIT
+  / (ASCII_NONZERO_DIGIT  ASCII_DIGIT)
+  / ("1"  ASCII_DIGIT  ASCII_DIGIT)
+  / ("2"  ([0-4])  ASCII_DIGIT)
+  / ("25"  ([0-5]))
+
+
+RFC3987_IriIpChar    <-  RFC3987_IriUnreserved / RFC3987_IriPctEncoded / RFC3987_IriSubDelims / ":" / "@"
+RFC3987_IriIpLiteral <-  "["  (RFC3987_IriIpv6Address  RFC3987_IriIpvFutureAddress)*  "]"
+
+RFC3987_IriIpv6H16  <-  ASCII_HEX_DIGIT{1, 4}
+RFC3987_IriIpv6Ls32 <-  (RFC3987_IriIpv6H16  ":"  RFC3987_IriIpv6H16) / RFC3987_IriIpv4Address
+
+RFC3987_IriIpv4Address      <-  RFC3987_IriDecOctet  "."  RFC3987_IriDecOctet  "."  RFC3987_IriDecOctet  "."  RFC3987_IriDecOctet
+RFC3987_IriIpvFutureAddress <-  "v"  ASCII_HEX_DIGIT+  "."  (RFC3987_IriUnreserved / RFC3987_IriSubDelims / ":")+
+RFC3987_IriIpv6Address      <-
+    ((RFC3987_IriIpv6H16  ":"){6}  RFC3987_IriIpv6Ls32)
+  / ("::"  (RFC3987_IriIpv6H16  ":"){5}  RFC3987_IriIpv6Ls32)
+  / (RFC3987_IriIpv6H16?  "::"  (RFC3987_IriIpv6H16  ":"){4}  RFC3987_IriIpv6Ls32)
+  / (((RFC3987_IriIpv6H16  ":"){1}  RFC3987_IriIpv6H16)?  "::"  (RFC3987_IriIpv6H16  ":"){3}  RFC3987_IriIpv6Ls32)
+  / (((RFC3987_IriIpv6H16  ":"){2}  RFC3987_IriIpv6H16)?  "::"  (RFC3987_IriIpv6H16  ":"){2}  RFC3987_IriIpv6Ls32)
+  / (((RFC3987_IriIpv6H16  ":"){3}  RFC3987_IriIpv6H16)?  "::"  RFC3987_IriIpv6H16  ":"  RFC3987_IriIpv6Ls32)
+  / (((RFC3987_IriIpv6H16  ":"){4}  RFC3987_IriIpv6H16)?  "::"  RFC3987_IriIpv6Ls32)
+  / (((RFC3987_IriIpv6H16  ":"){5}  RFC3987_IriIpv6H16)?  "::"  RFC3987_IriIpv6H16)
+  / (((RFC3987_IriIpv6H16  ":"){6}  RFC3987_IriIpv6H16)?  "::")
+
+LIT_PREFIX                             <-  "Prefix"
+LIT_ONTOLOGY                           <-  "Ontology"
+LIT_IMPORT                             <-  "Import"
+LIT_DECLARATION                        <-  "Declaration"
+LIT_CLASS                              <-  "Class"
+LIT_DATATYPE                           <-  "Datatype"
+LIT_OBJECT_PROPERTY                    <-  "ObjectProperty"
+LIT_DATA_PROPERTY                      <-  "DataProperty"
+LIT_ANNOTATION_PROPERTY                <-  "AnnotationProperty"
+LIT_NAMED_INDIVIDUAL                   <-  "NamedIndividual"
+LIT_ANNOTATION                         <-  "Annotation"
+LIT_ANNOTATION_ASSERTION               <-  "AnnotationAssertion"
+LIT_SUBANNOTATION_PROPERTY_OF          <-  "SubAnnotationPropertyOf"
+LIT_ANNOTATION_PROPERTY_DOMAIN         <-  "AnnotationPropertyDomain"
+LIT_ANNOTATION_PROPERTY_RANGE          <-  "AnnotationPropertyRange"
+LIT_OBJECT_ONE_OF                      <-  "ObjectOneOf"
+LIT_OBJECT_ALL_VALUES_FROM             <-  "ObjectAllValuesFrom"
+LIT_OBJECT_SOME_VALUES_FROM            <-  "ObjectSomeValuesFrom"
+LIT_OBJECT_INVERSE_OF                  <-  "ObjectInverseOf"
+LIT_DATA_INTERSECTION_OF               <-  "DataIntersectionOf"
+LIT_DATA_UNION_OF                      <-  "DataUnionOf"
+LIT_DATA_COMPLEMENT_OF                 <-  "DataComplementOf"
+LIT_DATA_ONE_OF                        <-  "DataOneOf"
+LIT_DATATYPE_RESTRICTION               <-  "DatatypeRestriction"
+LIT_OBJECT_INTERSECTION_OF             <-  "ObjectIntersectionOf"
+LIT_OBJECT_UNION_OF                    <-  "ObjectUnionOf"
+LIT_OBJECT_COMPLEMENT_OF               <-  "ObjectComplementOf"
+LIT_OBJECT_MIN_CARDINALITY             <-  "ObjectMinCardinality"
+LIT_OBJECT_MAX_CARDINALITY             <-  "ObjectMaxCardinality"
+LIT_OBJECT_HAS_SELF                    <-  "ObjectHasSelf"
+LIT_OBJECT_HAS_VALUE                   <-  "ObjectHasValue"
+LIT_OBJECT_EXACT_CARDINALITY           <-  "ObjectExactCardinality"
+LIT_CLASS_ASSERTION                    <-  "ClassAssertion"
+LIT_DATA_SOME_VALUES_FROM              <-  "DataSomeValuesFrom"
+LIT_DATA_ALL_VALUES_FROM               <-  "DataAllValuesFrom"
+LIT_DATA_HAS_VALUE                     <-  "DataHasValue"
+LIT_DATA_MIN_CARDINALITY               <-  "DataMinCardinality"
+LIT_DATA_MAX_CARDINALITY               <-  "DataMaxCardinality"
+LIT_DATA_EXACT_CARDINALITY             <-  "DataExactCardinality"
+LIT_SUB_CLASS_OF                       <-  "SubClassOf"
+LIT_EQUIVALENT_CLASSES                 <-  "EquivalentClasses"
+LIT_DISJOINT_CLASSES                   <-  "DisjointClasses"
+LIT_DISJOINT_UNION                     <-  "DisjointUnion"
+LIT_SUB_OBJECT_PROPERTY_OF             <-  "SubObjectPropertyOf"
+LIT_OBJECT_PROPERTY_CHAIN              <-  "ObjectPropertyChain"
+LIT_EQUIVALENT_OBJECT_PROPERTIES       <-  "EquivalentObjectProperties"
+LIT_DISJOINT_OBJECT_PROPERTIES         <-  "DisjointObjectProperties"
+LIT_OBJECT_PROPERTY_DOMAIN             <-  "ObjectPropertyDomain"
+LIT_OBJECT_PROPERTY_RANGE              <-  "ObjectPropertyRange"
+LIT_INVERSE_OBJECT_PROPERTIES          <-  "InverseObjectProperties"
+LIT_FUNCTIONAL_OBJECT_PROPERTY         <-  "FunctionalObjectProperty"
+LIT_INVERSE_FUNCTIONAL_OBJECT_PROPERTY <-  "InverseFunctionalObjectProperty"
+LIT_REFLEXIVE_OBJECT_PROPERTY          <-  "ReflexiveObjectProperty"
+LIT_IRREFLEXIVE_OBJECT_PROPERTY        <-  "IrreflexiveObjectProperty"
+LIT_SYMMETRIC_OBJECT_PROPERTY          <-  "SymmetricObjectProperty"
+LIT_ASYMMETRIC_OBJECT_PROPERTY         <-  "AsymmetricObjectProperty"
+LIT_TRANSITIVE_OBJECT_PROPERTY         <-  "TransitiveObjectProperty"
+LIT_SUB_DATA_PROPERTY_OF               <-  "SubDataPropertyOf"
+LIT_EQUIVALENT_DATA_PROPERTIES         <-  "EquivalentDataProperties"
+LIT_DISJOINT_DATA_PROPERTIES           <-  "DisjointDataProperties"
+LIT_DATA_PROPERTY_DOMAIN               <-  "DataPropertyDomain"
+LIT_DATA_PROPERTY_RANGE                <-  "DataPropertyRange"
+LIT_FUNCTIONAL_DATA_PROPERTY           <-  "FunctionalDataProperty"
+LIT_DATATYPE_DEFINITION                <-  "DatatypeDefinition"
+LIT_HAS_KEY                            <-  "HasKey"
+LIT_DIFFERENT_INDIVIDUALS              <-  "DifferentIndividuals"
+LIT_SAME_INDIVIDUAL                    <-  "SameIndividual"
+LIT_OBJECT_PROPERTY_ASSERTION          <-  "ObjectPropertyAssertion"
+LIT_NEGATIVE_OBJECT_PROPERTY_ASSERTION <-  "NegativeObjectPropertyAssertion"
+LIT_DATA_PROPERTY_ASSERTION            <-  "DataPropertyAssertion"
+LIT_NEGATIVE_DATA_PROPERTY_ASSERTION   <-  "NegativeDataPropertyAssertion"
+
+LBRACKET <-  "("
+RBRACKET <-  ")"
+LCHEVRON <-  "<"
+RCHEVRON <-  ">"
+EQ       <-  "="
+CARET    <-  ""
+
+#
+NonNegativeInteger <-  ASCII_DIGIT+
+LanguageTag        <-  "i@"  BCP47_LanguageTag
+QuotedString       <-  "\""  (!"\""  ("\\\\" / "\\\"" / ANY))*  "\""
+NodeID             <-  SPARQL_BlankNodeLabel
+
+#
+
+FullIRI        <-  LCHEVRON  RFC3987_Iri  RCHEVRON
+PrefixName     <-  SPARQL_PnameNs
+AbbreviatedIRI <-  SPARQL_PnameLn
+IRI            <-  FullIRI / AbbreviatedIRI
+
+#
+
+PrefixDeclarations <-  PrefixDeclaration*
+PrefixDeclaration  <-  LIT_PREFIX  LBRACKET  PrefixName  EQ  FullIRI  RBRACKET
+
+Ontology <-
+    LIT_ONTOLOGY  LBRACKET  (OntologyIRI  VersionIRI?)?  DirectlyImportsDocuments  OntologyAnnotations  OntologyAxioms  RBRACKET
+
+
+OntologyIRI <-  IRI
+VersionIRI  <-  IRI
+
+Import                   <-  LIT_IMPORT  LBRACKET  IRI  RBRACKET
+DirectlyImportsDocuments <-  Import*
+OntologyAnnotations      <-  Annotation*
+OntologyAxiom            <-  Axiom / Rule / DGAxiom
+OntologyAxioms           <-  OntologyAxiom*
+#Axioms                   <-  Axiom*
+
+Annotations <-  Annotation*
+
+Declaration <-  LIT_DECLARATION  LBRACKET  AxiomAnnotations  Entity  RBRACKET
+
+Entity <-
+    ClassDeclaration
+  / DatatypeDeclaration
+  / ObjectPropertyDeclaration
+  / DataPropertyDeclaration
+  / AnnotationPropertyDeclaration
+  / NamedIndividualDeclaration
+
+
+ClassDeclaration              <-  LIT_CLASS  LBRACKET  Class  RBRACKET
+DatatypeDeclaration           <-  LIT_DATATYPE  LBRACKET  Datatype  RBRACKET
+ObjectPropertyDeclaration     <-  LIT_OBJECT_PROPERTY  LBRACKET  ObjectProperty  RBRACKET
+DataPropertyDeclaration       <-  LIT_DATA_PROPERTY  LBRACKET  DataProperty  RBRACKET
+AnnotationPropertyDeclaration <-  LIT_ANNOTATION_PROPERTY  LBRACKET  AnnotationProperty  RBRACKET
+NamedIndividualDeclaration    <-  LIT_NAMED_INDIVIDUAL  LBRACKET  NamedIndividual  RBRACKET
+
+AnnotationSubject <-  IRI / AnonymousIndividual
+AnnotationValue   <-  AnonymousIndividual / IRI / Literal
+AxiomAnnotations  <-  Annotations
+
+Annotation            <-  LIT_ANNOTATION  LBRACKET  AnnotationAnnotations  AnnotationProperty  AnnotationValue  RBRACKET
+AnnotationAnnotations <-  Annotations
+
+AnnotationAxiom     <-  AnnotationAssertion / SubAnnotationPropertyOf / AnnotationPropertyDomain / AnnotationPropertyRange
+AnnotationAssertion <-  LIT_ANNOTATION_ASSERTION  LBRACKET  AxiomAnnotations  AnnotationProperty  AnnotationSubject  AnnotationValue  RBRACKET
+
+SubAnnotationPropertyOf <-  LIT_SUBANNOTATION_PROPERTY_OF  LBRACKET  AxiomAnnotations  SubAnnotationProperty  SuperAnnotationProperty  RBRACKET
+SubAnnotationProperty   <-  AnnotationProperty
+SuperAnnotationProperty <-  AnnotationProperty
+
+AnnotationPropertyDomain <-  LIT_ANNOTATION_PROPERTY_DOMAIN  LBRACKET  AxiomAnnotations  AnnotationProperty  IRI  RBRACKET
+AnnotationPropertyRange  <-  LIT_ANNOTATION_PROPERTY_RANGE  LBRACKET  AxiomAnnotations  AnnotationProperty  IRI  RBRACKET
+
+# --- Definition of OWL 2 Constructs ----------------------------------------
+
+Class               <-  IRI
+Datatype            <-  IRI
+ObjectProperty      <-  IRI
+DataProperty        <-  IRI
+AnnotationProperty  <-  IRI
+Individual          <-  NamedIndividual / AnonymousIndividual
+NamedIndividual     <-  IRI
+AnonymousIndividual <-  NodeID
+
+Literal                   <-  TypedLiteral / StringLiteralWithLanguage / StringLiteralNoLanguage
+TypedLiteral              <-  QuotedString  CARET{2}  Datatype
+StringLiteralNoLanguage   <-  QuotedString
+StringLiteralWithLanguage <-  QuotedString  LanguageTag
+
+ObjectPropertyExpression <-  ObjectProperty / InverseObjectProperty
+InverseObjectProperty    <-  LIT_OBJECT_INVERSE_OF  LBRACKET  ObjectProperty  RBRACKET
+
+DataRange           <-
+    Datatype
+  / DataIntersectionOf
+  / DataUnionOf
+  / DataComplementOf
+  / DataOneOf
+  / DatatypeRestriction
+
+DataIntersectionOf  <-  LIT_DATA_INTERSECTION_OF  LBRACKET  DataRange{2, }  RBRACKET
+DataUnionOf         <-  LIT_DATA_UNION_OF  LBRACKET  DataRange{2, }  RBRACKET
+DataComplementOf    <-  LIT_DATA_COMPLEMENT_OF  LBRACKET  DataRange  RBRACKET
+DataOneOf           <-  LIT_DATA_ONE_OF  LBRACKET  Literal+  RBRACKET
+DatatypeRestriction <-  LIT_DATATYPE_RESTRICTION  LBRACKET  Datatype  FacetRestriction+  RBRACKET
+FacetRestriction    <-  ConstrainingFacet  Literal
+ConstrainingFacet   <-  IRI
+
+ClassExpression <-
+    Class
+  / ObjectIntersectionOf
+  / ObjectUnionOf
+  / ObjectComplementOf
+  / ObjectOneOf
+  / ObjectSomeValuesFrom
+  / ObjectAllValuesFrom
+  / ObjectHasValue
+  / ObjectHasSelf
+  / ObjectMinCardinality
+  / ObjectMaxCardinality
+  / ObjectExactCardinality
+  / DataSomeValuesFrom
+  / DataAllValuesFrom
+  / DataHasValue
+  / DataMinCardinality
+  / DataMaxCardinality
+  / DataExactCardinality
+
+
+ObjectIntersectionOf   <-  LIT_OBJECT_INTERSECTION_OF  LBRACKET  ClassExpression{2, }  RBRACKET
+ObjectUnionOf          <-  LIT_OBJECT_UNION_OF  LBRACKET  ClassExpression{2, }  RBRACKET
+ObjectComplementOf     <-  LIT_OBJECT_COMPLEMENT_OF  LBRACKET  ClassExpression  RBRACKET
+ObjectOneOf            <-  LIT_OBJECT_ONE_OF  LBRACKET  Individual+  RBRACKET
+ObjectSomeValuesFrom   <-  LIT_OBJECT_SOME_VALUES_FROM  LBRACKET  ObjectPropertyExpression  ClassExpression  RBRACKET
+ObjectAllValuesFrom    <-  LIT_OBJECT_ALL_VALUES_FROM  LBRACKET  ObjectPropertyExpression  ClassExpression  RBRACKET
+ObjectHasValue         <-  LIT_OBJECT_HAS_VALUE  LBRACKET  ObjectPropertyExpression  Individual  RBRACKET
+ObjectHasSelf          <-  LIT_OBJECT_HAS_SELF  LBRACKET  ObjectPropertyExpression  RBRACKET
+ObjectMinCardinality   <-  LIT_OBJECT_MIN_CARDINALITY  LBRACKET  NonNegativeInteger  ObjectPropertyExpression  ClassExpression?  RBRACKET
+ObjectMaxCardinality   <-  LIT_OBJECT_MAX_CARDINALITY  LBRACKET  NonNegativeInteger  ObjectPropertyExpression  ClassExpression?  RBRACKET
+ObjectExactCardinality <-  LIT_OBJECT_EXACT_CARDINALITY  LBRACKET  NonNegativeInteger  ObjectPropertyExpression  ClassExpression?  RBRACKET
+# WORKAROUND(@althonos): Because the PEG is greedy and DataRange can be an IRI, in the case where the DataRange is
+# an IRI it can actually match the DataProperty being repeated and fail the parser. To avoid this,
+# we check that the DataProperty is never at the end of the list, and force the parser to move
+# to the DataRange rule.
+DataSomeValuesFrom   <-  LIT_DATA_SOME_VALUES_FROM  LBRACKET  (DataProperty  !RBRACKET)+  DataRange  RBRACKET
+DataAllValuesFrom    <-  LIT_DATA_ALL_VALUES_FROM  LBRACKET  (DataProperty  !RBRACKET)+  DataRange  RBRACKET
+DataHasValue         <-  LIT_DATA_HAS_VALUE  LBRACKET  DataProperty  Literal  RBRACKET
+DataMinCardinality   <-  LIT_DATA_MIN_CARDINALITY  LBRACKET  NonNegativeInteger  DataProperty  DataRange?  RBRACKET
+DataMaxCardinality   <-  LIT_DATA_MAX_CARDINALITY  LBRACKET  NonNegativeInteger  DataProperty  DataRange?  RBRACKET
+DataExactCardinality <-  LIT_DATA_EXACT_CARDINALITY  LBRACKET  NonNegativeInteger  DataProperty  DataRange?  RBRACKET
+
+Axiom <-  Declaration / ClassAxiom / ObjectPropertyAxiom / DataPropertyAxiom / DatatypeDefinition / HasKey / Assertion / AnnotationAxiom / DLSafeRule
+
+ClassAxiom           <-  SubClassOf / EquivalentClasses / DisjointClasses / DisjointUnion
+SubClassOf           <-  LIT_SUB_CLASS_OF  LBRACKET  AxiomAnnotations  SubClassExpression  SuperClassExpression  RBRACKET
+SubClassExpression   <-  ClassExpression
+SuperClassExpression <-  ClassExpression
+
+EquivalentClasses <-  LIT_EQUIVALENT_CLASSES  LBRACKET  AxiomAnnotations  ClassExpression{2, }  RBRACKET
+DisjointClasses   <-  LIT_DISJOINT_CLASSES  LBRACKET  AxiomAnnotations  ClassExpression{2, }  RBRACKET
+DisjointUnion     <-  LIT_DISJOINT_UNION  LBRACKET  AxiomAnnotations  Class  ClassExpression{2, }  RBRACKET
+
+ObjectPropertyAxiom <-
+    SubObjectPropertyOf
+  / EquivalentObjectProperties
+  / DisjointObjectProperties
+  / InverseObjectProperties
+  / ObjectPropertyDomain
+  / ObjectPropertyRange
+  / FunctionalObjectProperty
+  / InverseFunctionalObjectProperty
+  / ReflexiveObjectProperty
+  / IrreflexiveObjectProperty
+  / SymmetricObjectProperty
+  / AsymmetricObjectProperty
+  / TransitiveObjectProperty
+
+
+SubObjectPropertyOf           <-  LIT_SUB_OBJECT_PROPERTY_OF  LBRACKET  AxiomAnnotations  SubObjectPropertyExpression  SuperObjectPropertyExpression  RBRACKET
+SubObjectPropertyExpression   <-  ObjectPropertyExpression / PropertyExpressionChain
+PropertyExpressionChain       <-  LIT_OBJECT_PROPERTY_CHAIN  LBRACKET  ObjectPropertyExpression{2, }  RBRACKET
+SuperObjectPropertyExpression <-  ObjectPropertyExpression
+
+EquivalentObjectProperties      <-  LIT_EQUIVALENT_OBJECT_PROPERTIES  LBRACKET  AxiomAnnotations  ObjectPropertyExpression{2, }  RBRACKET
+DisjointObjectProperties        <-  LIT_DISJOINT_OBJECT_PROPERTIES  LBRACKET  AxiomAnnotations  ObjectPropertyExpression{2, }  RBRACKET
+ObjectPropertyDomain            <-  LIT_OBJECT_PROPERTY_DOMAIN  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  ClassExpression  RBRACKET
+ObjectPropertyRange             <-  LIT_OBJECT_PROPERTY_RANGE  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  ClassExpression  RBRACKET
+FunctionalObjectProperty        <-  LIT_FUNCTIONAL_OBJECT_PROPERTY  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  RBRACKET
+InverseFunctionalObjectProperty <-  LIT_INVERSE_FUNCTIONAL_OBJECT_PROPERTY  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  RBRACKET
+ReflexiveObjectProperty         <-  LIT_REFLEXIVE_OBJECT_PROPERTY  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  RBRACKET
+IrreflexiveObjectProperty       <-  LIT_IRREFLEXIVE_OBJECT_PROPERTY  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  RBRACKET
+SymmetricObjectProperty         <-  LIT_SYMMETRIC_OBJECT_PROPERTY  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  RBRACKET
+AsymmetricObjectProperty        <-  LIT_ASYMMETRIC_OBJECT_PROPERTY  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  RBRACKET
+TransitiveObjectProperty        <-  LIT_TRANSITIVE_OBJECT_PROPERTY  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  RBRACKET
+InverseObjectProperties         <-  LIT_INVERSE_OBJECT_PROPERTIES  LBRACKET  AxiomAnnotations  ObjectProperty{2}  RBRACKET
+
+DataPropertyAxiom <-  SubDataPropertyOf / EquivalentDataProperties / DisjointDataProperties / DataPropertyDomain / DataPropertyRange / FunctionalDataProperty
+
+SubDataPropertyOf <-  LIT_SUB_DATA_PROPERTY_OF  LBRACKET  AxiomAnnotations  SubDataProperty  SuperDataProperty  RBRACKET
+SubDataProperty   <-  DataProperty
+SuperDataProperty <-  DataProperty
+
+EquivalentDataProperties <-  LIT_EQUIVALENT_DATA_PROPERTIES  LBRACKET  AxiomAnnotations  DataProperty{2, }  RBRACKET
+DisjointDataProperties   <-  LIT_DISJOINT_DATA_PROPERTIES  LBRACKET  AxiomAnnotations  DataProperty{2, }  RBRACKET
+
+DataPropertyDomain     <-  LIT_DATA_PROPERTY_DOMAIN  LBRACKET  AxiomAnnotations  DataProperty  ClassExpression  RBRACKET
+DataPropertyRange      <-  LIT_DATA_PROPERTY_RANGE  LBRACKET  AxiomAnnotations  DataProperty  DataRange  RBRACKET
+FunctionalDataProperty <-  LIT_FUNCTIONAL_DATA_PROPERTY  LBRACKET  AxiomAnnotations  DataProperty  RBRACKET
+
+DatatypeDefinition <-  LIT_DATATYPE_DEFINITION  LBRACKET  AxiomAnnotations  Datatype  DataRange  RBRACKET
+
+HasKey <-  LIT_HAS_KEY  LBRACKET  AxiomAnnotations  ClassExpression  LBRACKET  ObjectPropertyExpression*  RBRACKET  LBRACKET  DataProperty*  RBRACKET  RBRACKET
+
+Assertion <-  SameIndividual / DifferentIndividuals / ClassAssertion / ObjectPropertyAssertion / NegativeObjectPropertyAssertion / DataPropertyAssertion / NegativeDataPropertyAssertion
+
+SourceIndividual <-  Individual
+TargetIndividual <-  Individual
+
+SameIndividual                  <-  LIT_SAME_INDIVIDUAL  LBRACKET  AxiomAnnotations  Individual{2, }  RBRACKET
+DifferentIndividuals            <-  LIT_DIFFERENT_INDIVIDUALS  LBRACKET  AxiomAnnotations  Individual{2, }  RBRACKET
+ClassAssertion                  <-  LIT_CLASS_ASSERTION  LBRACKET  AxiomAnnotations  ClassExpression  Individual  RBRACKET
+ObjectPropertyAssertion         <-  LIT_OBJECT_PROPERTY_ASSERTION  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  SourceIndividual  TargetIndividual  RBRACKET
+NegativeObjectPropertyAssertion <-  LIT_NEGATIVE_OBJECT_PROPERTY_ASSERTION  LBRACKET  AxiomAnnotations  ObjectPropertyExpression  SourceIndividual  TargetIndividual  RBRACKET
+DataPropertyAssertion           <-  LIT_DATA_PROPERTY_ASSERTION  LBRACKET  AxiomAnnotations  DataProperty  SourceIndividual  Literal  RBRACKET
+NegativeDataPropertyAssertion   <-  LIT_NEGATIVE_DATA_PROPERTY_ASSERTION  LBRACKET  AxiomAnnotations  DataProperty  SourceIndividual  Literal  RBRACKET
+
+# --- Annex: SWRL Rules -----------------------------------------------------
+
+# This is a definiton of an OWL2 Functional Syntax extension for the
+# serialization of SWRL rules. While SWRL rules are not supported by `horned-owl`
+# yet, this shouldn't prevent parsing of ontologies containing them.
+# source: http://webont.org/owled/2009/papers/owled2009_submission_16.pdf
+
+LIT_DL_SAFE_RULE               <-  "DLSafeRule"
+LIT_BODY                       <-  "Body"
+LIT_HEAD                       <-  "Head"
+LIT_CLASS_ATOM                 <-  "ClassAtom"
+LIT_DATA_RANGE_ATOM            <-  "DataRangeAtom"
+LIT_OBJECT_PROPERTY_ATOM       <-  "ObjectPropertyAtom"
+LIT_DATA_PROPERTY_ATOM         <-  "DataPropertyAtom"
+LIT_BUILT_IN_ATOM              <-  "BuiltInAtom"
+LIT_SAME_INDIVIDUAL_ATOM       <-  "SameIndividualAtom"
+LIT_DIFFERENT_INDIVIDUALS_ATOM <-  "DifferentIndividualsAtom"
+LIT_VARIABLE                   <-  "Variable"
+#LIT_GRAPH_RULE                 <-  "GraphRule"
+LIT_DESCRIPTION_GRAPH          <-  "DescriptionGraph"
+LIT_NODES                      <-  "Nodes"
+LIT_EDGES                      <-  "Edges"
+LIT_NODE_ASSERTION             <-  "NodeAssertion"
+LIT_EDGE_ASSERTION             <-  "EdgeAssertion"
+LIT_DESCRIPTION_GRAPH_RULE     <-  "DescriptionGraphRule"
+LIT_MAIN_CLASSES               <-  "MainClasses"
+
+# Axioms <-  Axiom / Rule / DGAxiom
+Rule <-  DLSafeRule / DGRule
+
+DLSafeRule <-  LIT_DL_SAFE_RULE  LBRACKET  Annotations  DLBody  DLHead  RBRACKET
+DLBody     <-  LIT_BODY  LBRACKET  Atom*  RBRACKET
+DLHead     <-  LIT_HEAD  LBRACKET  Atom*  RBRACKET
+
+Atom <-
+    AtomClass
+  / AtomDataRange
+  / AtomObjectProperty
+  / AtomDataProperty
+  / AtomBuiltIn
+  / AtomSameIndividual
+  / AtomDifferentIndividuals
+
+
+AtomClass                <-  LIT_CLASS_ATOM  LBRACKET  ClassExpression  IArg  RBRACKET
+AtomDataRange            <-  LIT_DATA_RANGE_ATOM  LBRACKET  DataRange  DArg  RBRACKET
+AtomObjectProperty       <-  LIT_OBJECT_PROPERTY_ATOM  LBRACKET  ObjectPropertyExpression  IArg  IArg  RBRACKET
+AtomDataProperty         <-  LIT_DATA_PROPERTY_ATOM  LBRACKET  DataProperty  DArg  DArg  RBRACKET
+AtomBuiltIn              <-  LIT_BUILT_IN_ATOM  LBRACKET  IRI  DArg+  RBRACKET
+AtomSameIndividual       <-  LIT_SAME_INDIVIDUAL_ATOM  LBRACKET  IArg  IArg  RBRACKET
+AtomDifferentIndividuals <-  LIT_DIFFERENT_INDIVIDUALS_ATOM  LBRACKET  IArg  IArg  RBRACKET
+
+Variable <-  LIT_VARIABLE  LBRACKET  IRI  RBRACKET
+IArg <-  Individual / Variable
+DArg <-  Literal / Variable
+
+DGRule <-  LIT_DESCRIPTION_GRAPH_RULE  LBRACKET  Annotations  DGBody  DGHead  RBRACKET
+DGBody <-  LIT_BODY  LBRACKET  DGAtom*  RBRACKET
+DGHead <-  LIT_HEAD  LBRACKET  DGAtom*  RBRACKET
+
+DGAtom  <-
+    (LIT_CLASS_ATOM  LBRACKET  ClassExpression  IArg  RBRACKET)
+  / (LIT_OBJECT_PROPERTY_ATOM  LBRACKET  ObjectPropertyExpression  IArg  IArg  RBRACKET)
+
+DGAxiom <-  (LIT_DESCRIPTION_GRAPH  LBRACKET  Annotations  DGNodes  DGEdges  MainClasses  RBRACKET)
+
+DGNodes       <-  LIT_NODES  LBRACKET  NodeAssertion+  RBRACKET
+NodeAssertion <-  LIT_NODE_ASSERTION  LBRACKET  Class  DGNode  RBRACKET
+DGNode        <-  IRI
+DGEdges       <-  LIT_EDGES  LBRACKET  EdgeAssertion+  RBRACKET
+EdgeAssertion <-  LIT_EDGE_ASSERTION  LBRACKET  ObjectProperty  DGNode  DGNode  RBRACKET
+MainClasses   <-  LIT_MAIN_CLASSES  LBRACKET  Class+  RBRACKET
+
+EOI <- !.
+ASCII_DIGIT <- [0-9]
+ASCII_NONZERO_DIGIT <- [1-9]
+ASCII_HEX_DIGIT <- [0-9A-Fa-f]
+ASCII_ALPHA <- [A-Za-z]
+ASCII_ALPHANUMERIC <- [A-Za-z0-9]
+ANY <- .
+%whitespace <- (WHITESPACE+ / COMMENT)*

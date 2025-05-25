@@ -1,0 +1,143 @@
+#From: https://github.com/owo-lang/minitt-rs/blob/ff8b37516990be1267dd23b7bc86f436ac5557f2/src/grammar.pest
+
+# File
+file <-  WHITESPACE*  expression
+
+# Lexical rules
+WHITESPACE <-  " " / "\t" / NEWLINE / ("--"  (!NEWLINE  ANY)*)
+
+# Primitive helpers
+character <-  ASCII_ALPHA
+  / "_"
+  / "\'"
+  / "\\"
+  / [0-9]
+
+characters <- <character+>
+
+identifier_simple <-  !"let"
+   !"rec"
+   !"split"
+   !"const"
+   !"\\lambda"
+   !"\\Sigma"
+   !"\\Pi"
+   !"0"
+   !"1"
+   !"_"
+   characters
+
+identifier_raw <-  ("split"  characters)
+  / ("let"  characters)
+  / ("rec"  characters)
+  / ("const"  characters)
+  / ("0"  characters)
+  / ("1"  characters)
+  / ("_"  characters)
+
+identifier <-  identifier_simple / identifier_raw
+constructor_name <-  <ASCII_ALPHA_UPPER  identifier?>
+level <-  <ASCII_DIGIT*>
+pi <-  "\\Pi" / "\u03A0"
+sigma <-  "\\Sigma" / "\u03A3"
+lambda <-  "\\lambda" / "\u03BB"
+multiplication <-  "*" / "\\times" / "\xd7" / "\u2716"
+#for_all <-  "\\forall" / "\u2200"
+double_arrow <-  "=>" / "\u21d2"
+single_arrow <-  "->" / "\u2192"
+#/#E0957B
+let_or_rec <-  "let" / "rec"
+#/#E0957B
+one <-  "1"
+#/#E0957B
+unit <-  "0"
+#/Cyan
+universe <-  "Type"  level
+#void <-  EOI
+meta_var <-  "_"
+
+# Prefixed parameters
+prefix_parameter <-  "("  typed_pattern  ")"
+prefix_parameters <-  prefix_parameter*
+
+# Patterns
+atom_pattern <-  identifier / meta_var / "("  pattern  ")"
+pair_pattern <-  atom_pattern  ","  pattern
+#/Orange
+pattern <-  pair_pattern / atom_pattern
+maybe_pattern <-  pattern?
+
+# Extracted helpers
+typed_pattern <-  pattern  ":"  expression
+typed_abstraction <-  typed_pattern  "."  expression
+branches <-  "{"  (constructor  ("|"  constructor)*)?  "}"
+choices <-  "{"  (pattern_match  ("|"  pattern_match)*)?  "}"
+
+# Atomic expressions
+pi_type <-  pi  typed_abstraction
+lambda_expression <-  lambda  pattern  "."  expression
+constructor <-  constructor_name  expression?
+pattern_match <-  constructor_name
+  maybe_pattern
+  double_arrow
+  expression
+
+sigma_type <-  sigma  typed_abstraction
+split <-  "split"  choices
+sum <-  "Sum"  branches
+variable <-  identifier
+atom <-  universe
+  / sum
+  / constructor
+  / variable
+  / split
+  / one
+  / unit
+  / pi_type
+  / sigma_type
+  / lambda_expression
+  / "("  expression  ")"
+
+
+# Syntactic sugars: short-hand for unit patterns
+function_type <-  atom  single_arrow  expression
+pair_type <-  atom  multiplication  expression
+
+# Higher-level expressions
+application <-  atom  expression
+pair <-  atom  ","  expression
+merge_sum <-  atom  "++"  expression
+first <-  atom  ".1"
+second <-  atom  ".2"
+expression <-  declaration
+ / const_declaration
+ / merge_sum
+ / application
+ / function_type
+ / pair_type
+ / first
+ / second
+ / pair
+ / atom
+
+
+# Declaration
+const_declaration <-  "const"
+  pattern
+  "="  expression
+  ";"  expression?
+
+declaration <-  let_or_rec
+  pattern
+  prefix_parameters
+  ":"  expression
+  "="  expression
+  ";"  expression?
+
+#EOI <- !.
+ASCII_ALPHA_UPPER <- [A-Z]
+ASCII_DIGIT <- [0-9]
+ASCII_ALPHA <- [A-Za-z]
+ANY <- .
+NEWLINE <- '\n' '\r'? / '\r' '\n'?
+%whitespace <- WHITESPACE*

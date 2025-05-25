@@ -1,0 +1,103 @@
+#From: https://github.com/thalo-rs/esdl/blob/63481ca72ce76374d7fc777054babdf5af0c7483/schema.pest
+
+main <-
+	(
+    version_stmt
+    / aggregate_def
+    / event_def
+    / struct_def
+    / type_def
+  )*
+   EOI
+
+
+# Version
+version_stmt <-  "version"  "="  string  sep
+
+# Aggregate
+aggregate_def <-
+	"aggregate"  item_ident  "{"
+	 (command_def)*
+   "}"  sep?
+
+
+# Command
+command_def <-
+	ident  "("
+   field_list
+   ")"  "->"  command_return  sep
+
+command_return <-
+	command_multi_return
+	/ command_single_return
+
+command_multi_return <-
+	"("
+   command_single_return
+   (","  command_single_return)*
+   ")"
+command_single_return <-  item_ident_opt / item_ident
+
+# Event
+event_def <-
+	"event"  item_ident  "{"
+   field_list
+   "}"  sep?
+
+
+# Struct
+struct_def <-
+	"struct"  item_ident  "{"
+   field_list
+   "}"  sep?
+
+
+# Type alias
+type_def <-  "type"  item_ident  "="  ty  sep
+
+field_list <-  field  (","  field)*  ","?
+field <-  ident  ":"  ty
+
+ty <-  optional_ty / required_ty
+required_ty <-  scalar / item_ident
+optional_ty <-  (scalar / item_ident)  "?"
+
+scalar <-
+	"String"
+	| "Int"
+  / "UInt"
+  / "Float"
+  / "Bool"
+  / "Timestamp"
+
+
+item_ident_opt <-  <item_ident  "?">
+item_ident <-  <ASCII_ALPHA_UPPER  ASCII_ALPHA*>
+
+ident <-  optional_ident / required_ident
+required_ident <-  <( ASCII_ALPHA_LOWER / "_" )+>
+optional_ident <-  <( ASCII_ALPHA_LOWER / "_" )+  "?">
+
+string <-  <"\""  inner  "\"">
+inner <-  char*
+char <-
+  !("\"" / "\\")  ANY
+  / "\\"  ("\"" / "\\" / "/" / "b" / "f" / "n" / "r" / "t")
+  / "\\"  ("u"  ASCII_HEX_DIGIT{4})
+
+sep <- ';'
+
+WHITESPACE <-  " " / NEWLINE
+COMMENT <-  "/*"  (!"*/"  ANY)*  "*/"
+
+ANY <- .
+ASCII_HEX_DIGIT <- [0-9A-Fa-f]
+ASCII_ALPHA_LOWER <- [a-z]
+ASCII_ALPHA_UPPER <- [A-Z]
+ASCII_ALPHA <- [A-Za-z]
+NEWLINE <- '\n' '\r'? / '\r' '\n'?
+EOI <- !.
+
+%whitespace <- (WHITESPACE+ / COMMENT)*
+
+
