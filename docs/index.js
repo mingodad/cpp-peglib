@@ -62,6 +62,7 @@ const sampleList = [
 	["c-pegged parser", "c-pegged.peglib", "test.c", "ace/mode/c_cpp"],
 	["c11-lpegrex parser", "c11_lpegrex.peglib", "test.c", "ace/mode/c_cpp"],
 	["c17-WG14/N1256 parser", "std_c17.peglib", "test.c", "ace/mode/c_cpp"],
+	["c17-WG14/N1256-prec parser", "std_c17-prec.peglib", "test.c", "ace/mode/c_cpp"],
 	["c++-23 parser", "c++23.peglib", "test.c", "ace/mode/c_cpp"],
 	["c99-mouse parser", "c99-mouse-dict.peglib", "test.c", "ace/mode/c_cpp"],
 	["cinamon parser", "cinamon.peglib", "test.cinamon", "ace/mode/text"],

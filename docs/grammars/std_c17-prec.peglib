@@ -392,45 +392,45 @@ cast_expression <-
 	unary_expression
 	/ '(' type_name ')' cast_expression
 
-#//(6.5.5)
-multiplicative_expression <-
-	cast_expression ( ('*' / '/' / '%') cast_expression )*
-
-#//(6.5.6)
-additive_expression <-
-	multiplicative_expression ( ('+' / '-') multiplicative_expression )*
-
-#//(6.5.7)
-shift_expression <-
-	additive_expression ( ("<<" / ">>")  additive_expression )*
-
-#//(6.5.8)
-relational_expression <-
-	shift_expression ( ('<' / '>' / "<=" / ">=") shift_expression )*
-
-#//(6.5.9)
-equality_expression <-
-	relational_expression ( ("==" / "!=") relational_expression )*
-
-#//(6.5.10)
-AND_expression <-
-	equality_expression ( '&' equality_expression )*
-
-#//(6.5.11)
-exclusive_OR_expression <-
-	AND_expression ( '^' AND_expression )*
-
-#//(6.5.12)
-inclusive_OR_expression <-
-	exclusive_OR_expression ( '|' exclusive_OR_expression )*
-
-#//(6.5.13)
-logical_AND_expression <-
-	inclusive_OR_expression ( "&&" inclusive_OR_expression )*
-
-#//(6.5.14)
-logical_OR_expression <-
-	logical_AND_expression ( "||" logical_AND_expression )*
+####//(6.5.5)
+###multiplicative_expression <-
+###	cast_expression ( ('*' / '/' / '%') cast_expression )*
+###
+####//(6.5.6)
+###additive_expression <-
+###	multiplicative_expression ( ('+' / '-') multiplicative_expression )*
+###
+####//(6.5.7)
+###shift_expression <-
+###	additive_expression ( ("<<" / ">>")  additive_expression )*
+###
+####//(6.5.8)
+###relational_expression <-
+###	shift_expression ( ('<' / '>' / "<=" / ">=") shift_expression )*
+###
+####//(6.5.9)
+###equality_expression <-
+###	relational_expression ( ("==" / "!=") relational_expression )*
+###
+####//(6.5.10)
+###AND_expression <-
+###	equality_expression ( '&' equality_expression )*
+###
+####//(6.5.11)
+###exclusive_OR_expression <-
+###	AND_expression ( '^' AND_expression )*
+###
+####//(6.5.12)
+###inclusive_OR_expression <-
+###	exclusive_OR_expression ( '|' exclusive_OR_expression )*
+###
+####//(6.5.13)
+###logical_AND_expression <-
+###	inclusive_OR_expression ( "&&" inclusive_OR_expression )*
+###
+####//(6.5.14)
+###logical_OR_expression <-
+###	logical_AND_expression ( "||" logical_AND_expression )*
 
 #//(6.5.15)
 conditional_expression <-
@@ -452,6 +452,54 @@ expression <-
 #//(6.6)
 constant_expression <-
 	conditional_expression
+
+
+logical_OR_expression <-
+	INFIX_EXPRESSION(cast_expression, operator)
+
+operator <-
+	<
+	  '||'
+	/ '&&'
+
+    / '|'
+    / '^'
+    / '&'
+
+	/ '=='
+	/ '!='
+
+	/ '<='
+	/ '<'
+	/ '>='
+	/ '>'
+
+	/ '<<'
+	/ '>>'
+
+	/ '+'
+	/ '-'
+
+	/ '*'
+	/ '/'
+	/ '%'
+	 >
+
+
+# Declare order of precedence
+INFIX_EXPRESSION(A, O) <-  A (O A)* {
+    precedence
+      L '||' # operators should be literal tokens
+      L '&&'
+      L '|'
+      L '^'
+      L '&'
+      L '==' '!='
+      L '<' '<=' '>=' '>'
+      L '<<' '>>'
+      L '+' '-'
+      L '*' '/' '%'
+}
 
 #//A.2.2 Declarations
 #//(6.7)
