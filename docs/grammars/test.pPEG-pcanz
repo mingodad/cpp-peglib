@@ -1,0 +1,22 @@
+Peg   = _ rule+ _
+rule  = id _ '=' _ alt
+
+alt   = seq ('/'_ seq)*
+seq   = rep*
+rep   = pre sfx? _
+pre   = pfx? term
+term  = call / sq / chs / group / extn
+
+group = '('_ alt ')'
+pfx   = [&!~]
+sfx   = [+?] / '*' range?
+range = num (dots num?)?
+num   = [0-9]+
+dots  = '..'
+
+call  = id _ !'='
+id    = [a-zA-Z_] [a-zA-Z0-9_-]*
+sq    = ['] ~[']* ['] 'i'?
+chs   = '[' ~']'* ']'
+extn  = '<' ~'>'* '>'
+_     = ('#' ~[\n\r]* / [ \t\n\r]+)*
