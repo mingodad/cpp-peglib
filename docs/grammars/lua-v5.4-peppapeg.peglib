@@ -1,0 +1,283 @@
+#From: https://github.com/soasme/PeppaPEG/blob/6ed07665ea0b17e3f993359db7c3025f6338b1f9/configs/lua-v5.4.peg
+
+# Peppa PEG -  Ultra lightweight PEG Parser in ANSI C.
+#
+# MIT License
+#
+# Copyright (c) 2021 Ju
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# @file       lua-v5.3.peg
+# @brief      A complete grammar for Lua 5.3 <http://www.lua.org/manual/5.3/manual.html>.
+# @author     Ju Lin
+# @copyright  MIT
+# @date       2021
+# @see        https://github.com/soasme/PeppaPEG
+
+# 9 – The Complete Syntax of Lua
+
+Chunk <- &. Shebang? Block EOF
+EOF <- !.
+
+#@scoped
+Block <- Stat* RetStat?
+
+#@lifted
+Stat <- ";"
+    / Label
+    / KeywordBreak
+    / GotoStmt
+    / DoStmt
+    / WhileStmt
+    / RepeatStmt
+    / IfStmt
+    / ForPairStmt
+    / ForInStmt
+    / LocalFunctionDefStmt
+    / LocalAssignStmt
+    / FunctionDefStmt
+    / FunctionCall
+    / AssignStmt
+
+
+RetStat <- KeywordReturn ExpList? ";"?
+
+DoStmt <- KeywordDo ↑ Block "end"
+
+IfStmt <- KeywordIf ↑ Exp KeywordThen Block (KeywordElseIf Exp KeywordThen Block)* (KeywordElse Block)? KeywordEnd
+
+GotoStmt <- KeywordGoto ↑ Name
+
+WhileStmt <- KeywordWhile ↑ Exp KeywordDo Block KeywordEnd
+
+RepeatStmt <- KeywordRepeat ↑ Block KeywordUntil Exp
+
+AssignStmt <- VarList "=" ↑ ExpList
+
+ForPairStmt <- KeywordFor Name "=" ↑ Exp "," Exp ("," Exp)? "do" Block KeywordEnd
+
+ForInStmt <- KeywordFor ↑ NameList KeywordIn ExpList KeywordDo Block KeywordEnd
+
+LocalAssignStmt <- KeywordLocal AttrNameList ↑ ("=" ↑ ExpList)?
+
+LocalFunctionDefStmt <- KeywordLocal KeywordFunction ↑ Name FuncBody
+
+FunctionDefStmt <- KeywordFunction FuncName FuncBody
+
+AttrNameList <- Name Attrib? ("," Name Attrib?)*
+
+Attrib <- "<" ↑ Name ">"
+
+Label <- "::" Name "::"
+
+FuncName <- DotNameList (":" Name)?
+
+DotNameList <-  Name ("." Name)*
+
+#@nonterminal
+VarList <- Var ("," Var)*
+
+PrefixExp <- VarOrExp NameAndArgs*
+FunctionCall <- VarOrExp NameAndArgs NameAndArgs*
+
+#@lifted
+VarOrExp <- Var / "(" Exp ")"
+
+#@nonterminal
+Var <- (DotNameList / "(" Exp ")" VarSuffix) VarSuffix*
+
+VarSuffix <- NameAndArgs* ("[" Exp "]" / "." Name)
+NameAndArgs <- (!"::" ":" ↑ Name)? Args
+
+#@nonterminal
+NameList <- Name ("," Name)*
+
+#@nonterminal
+ExpList <- Exp ("," Exp)*
+
+#@nonterminal
+Exp <- UnExp (BinOp UnExp)*
+
+#@nonterminal
+UnExp <- PrimaryExp / UnOp UnExp
+
+#@lifted
+PrimaryExp <- KeywordNil / KeywordFalse / KeywordTrue / Numeral / LiteralString / Elipse
+    / FunctionLiteral / PrefixExp / TableConstructor
+
+Elipse <- "..."
+
+Args <- "(" ↑ ExpList? ")" / TableConstructor / LiteralString
+
+FunctionLiteral <- "function" ↑ FuncBody
+
+FuncBody <- "(" ParList? ")" Block KeywordEnd
+
+ParList <- NameList ("," Elipse)? / Elipse
+
+TableConstructor <- "{" ↑ FieldList? "}"
+
+FieldList <- Field (FieldSep Field)* FieldSep?
+
+Field <- "[" Exp "]" "=" Exp
+    / Name "=" Exp
+    / Exp
+
+FieldSep <- <[,;]>
+
+BinOp <- "+"/"-"/"*"/ "//" / "/" / "^" / "%"
+    / "<=" / "<<" / "<" / ">=" / ">>" / ">" / "==" / "~="
+    / "&" / "~" / "|" / ".."
+    / KeywordAnd / KeywordOr
+
+#@nonterminal
+UnOp <- "-" / KeywordNot / "#" / "~"
+
+Keyword <- <("and" | "break" | "do" | "elseif" | "else" | "end" | "false" | "for"
+     | "function" | "goto" | "if" | "in" | "local" | "nil" | "not" | "or" | "repeat"
+     | "return" | "then" | "true" | "until" | "while") !IdentChars>
+
+#@tight @squashed
+Name <- !Keyword <[A-Za-z_] IdentChars*>
+
+#@lifted
+LiteralString <- NormalString / CharString / LongString
+
+#@tight @squashed
+NormalString <- <"\"" ↑ (EscapeSequence / (!"\"" .))* "\"">
+
+#@tight @squashed
+CharString <- <"'" ↑ (EscapeSequence / (!"'" .))* "'">
+
+#@tight @squashed
+LongString <- <"[" $eql<"="*> "[" (!("]" $eql "]") .)* "]" $eql "]">
+
+#@tight
+Numeral <- HexFloat / Float / Hex / Int
+
+Int <- <Digit+>
+Hex <- <"0x"i HexDigit+>
+Float <- <Digit+ "." Digit* ExponentPart?
+    / "." Digit+ ExponentPart?
+    / Digit+ ExponentPart>
+HexFloat <- <"0x"i HexDigit+ "." HexDigit* HexExponentPart?
+    / "0x"i "." HexDigit+ HexExponentPart?
+    / "0x"i HexDigit+ HexExponentPart>
+ExponentPart <- [Ee] [+-]? Digit+
+HexExponentPart <- [Pp] [+-]? Digit+
+EscapeSequence <- UtfEscape / HexEscape / DecimalEscape / "\\" "\r"? "\n"
+    / "\\a" / "\\b" / "\\f" / "\\n" / "\\r" / "\\t" / "\\v" / "\\z"
+    / "\\\"" / "\\'" / "\\\\"
+DecimalEscape <- "\\" ([0-2]? Digit{2} / Digit)
+HexEscape <- "\\x{" HexDigit{2} "}"
+UtfEscape <- "\\u{" HexDigit+ "}"
+
+Digit <- [0-9]
+
+HexDigit <- [0-9a-fA-F]
+
+Newline <- "\n" '\r'? / "\r" '\n'?
+
+#@spaced @squashed @lifted
+#Ws <- "\n" / "\r" / "\t" / " "
+%whitespace <- ([ \t\r\n]+ / LineComment / Comment)*
+
+#@tight @squashed @lifted
+Shebang <- "#" "!"? (!Newline .)* (Newline / EOF)
+
+#@spaced @squashed @lifted
+Comment <- "--[" $eql<"="*> "[" (!("]" $eql "]") .)* "]" $eql "]"
+
+#@spaced @squashed @lifted
+LineComment <- "--" (
+    "[" "="* (!([=[\r\n]) .) (!Newline .)*
+    / "[" "="*
+    / !([[\r\n]) (!Newline .)*
+)? (Newline / EOF)
+
+#NestedStr <- $eql<"="*> "[" (!("]" $eql) .)* ("]" $eql)
+
+#@tight
+KeywordAnd <- "and"
+
+#@tight
+KeywordBreak <- "break"
+
+#@tight
+KeywordDo <- "do"
+
+#@tight
+KeywordEnd <- "end"
+
+#@tight
+KeywordElseIf <- "elseif"
+
+#@tight
+KeywordElse <- "else"
+
+#@tight
+KeywordFalse <- "false"
+
+#@tight
+KeywordFor <- "for"
+
+#@tight
+KeywordFunction <- "function"
+
+#@tight
+KeywordGoto <- "goto"
+
+#@tight
+KeywordIf <- "if"
+
+#@tight
+KeywordIn <- "in"
+
+#@tight
+KeywordLocal <- "local"
+
+#@tight
+KeywordNil <- "nil"
+
+#@tight
+KeywordNot <- "not"
+
+#@tight
+KeywordOr <- "or"
+
+#@tight
+KeywordRepeat  <- "repeat"
+
+#@tight
+KeywordReturn <- "return"
+
+#@tight
+KeywordThen <- "then"
+
+#@tight
+KeywordTrue <- "true"
+
+#@tight
+KeywordUntil <- "until"
+
+#@tight
+KeywordWhile <- "while"
+
+IdentChars <- [A-Za-z0-9_]

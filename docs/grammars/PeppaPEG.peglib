@@ -1,0 +1,121 @@
+#From: https://www.soasme.com/PeppaPEG/spec.html#appendix-peppa-peg-of-peppa-peg
+
+grammar <- start_of_input rule+ end_of_input
+
+start_of_input <- &.
+end_of_input <- !.
+
+rule <- decorators name ↑ "=" expression ";"
+
+decorators <- decorator*
+decorator <- "@" ↑ (
+    "squashed"
+    / "scoped"
+    / "spaced"
+    / "lifted"
+    / "tight"
+    / "nonterminal"
+)
+
+#@squashed
+name <- reference
+
+#@lifted
+expression <- left_recursion
+
+#@nonterminal
+left_recursion <- choice ("|" ↑ reference choice)?
+
+#@nonterminal
+choice <- sequence ("/" sequence)*
+
+#@nonterminal
+sequence <- repeat+
+
+#@nonterminal
+repeat <- primary (
+    onceormore
+    / zeroormore
+    / zerooronce
+    / repeatexact
+    / repeatminmax
+    / repeatmin
+    / repeatmax
+)?
+onceormore <- "+"
+zeroormore <- "*"
+zerooronce <- "?"
+repeatexact <- "{" number "}"
+repeatminmax <- "{" number "," number "}"
+repeatmin <- "{" number "," "}"
+repeatmax <- "{" "," number "}"
+
+#@lifted
+primary <- literal
+        / insensitive
+        / range
+        / (reference !"=")
+        / back_reference
+        / positive
+        / negative
+        / "(" choice ")"
+        / dot
+        / cut
+
+#@squashed @tight
+literal <- <"\"" ↑ chars "\"">
+chars <- char*
+#@squashed @tight
+char <- [\x20-\x21] / [\x23-\x5b] / [\x5d-\u0010ffff] / (
+    "\\" (
+        "\""
+        / "/"
+        / "\\"
+        / "b"
+        / "f"
+        / "n"
+        / "r"
+        / "t"
+        / ("x" ↑ two_hexdigits)
+        / ("u" ↑ four_hexdigits)
+        / ("U" ↑ eight_hexdigits)
+    )
+)
+
+#@squashed @tight
+range_category <- ([a-z] / [A-Z] / [0-9] / "_" / " ")+
+
+range <- <"[" (
+    (char "-" char (".." number)?)
+    / ("\\p{" range_category "}")
+) "]">
+
+#@tight
+insensitive <- "i" (literal / back_reference)
+
+#@squashed @tight
+reference <- <([a-z] / [A-Z] / "_") ([a-z] / [A-Z] / [0-9] / "_")*>
+
+#@tight
+back_reference <- <"\\" ↑ number>
+
+positive <- "&" ↑ primary
+negative <- "!" ↑ primary
+
+dot <- "."
+cut <- "~"
+
+hexdigit <- [0-9] / [a-f] / [A-F]
+two_hexdigits <- hexdigit{2}
+four_hexdigits <- hexdigit{4}
+eight_hexdigits <- hexdigit{8}
+
+#@squashed @tight
+number <- <"0" / [1-9] [0-9]*>
+#@lifted @spaced
+comment <- "#" (!"\n" .)* "\n"?
+
+#@lifted @spaced
+whitespace <- " " / "\t" / "\r" / "\n"
+
+%whitespace <- (whitespace+ / comment)*

@@ -1,0 +1,143 @@
+#From: https://github.com/soasme/solang/blob/0b93b16c62e7ccd21704b2e5a3706a983a390ec3/src/grammar.peg
+
+prog <- _ import_decl* _ top_decl+ _
+
+import_decl <- IMPORT _ string_lit _ package_name?
+
+package_name <- ident
+
+top_decl <- decl _
+
+decl <- (const_decl / func_decl)
+
+const_decl <- CONST _ ident _ EQ _ expr
+
+func_decl <- FUNC _l func_name _l func_signature (_l func_body)?
+
+func_name <- ident
+func_signature <- func_params (_b result)?
+result <- type / func_params
+func_body <- block
+func_params <- LPAREN _ param_list? _ RPAREN
+param_list <- param_decl (_l COMMA _ param_decl)*
+param_decl <- ident_list _b type
+ident_list <- ident (_l COMMA _ ident)*
+
+ident <- !keywords <L (L / D)*>
+
+type <- operand
+
+block <- LBRACE _ stmt_list _ RBRACE
+stmt_list <- (stmt (eol+ _ stmt)*)?
+stmt <- decl / block / if_stmt / return_stmt / simple_stmt
+return_stmt <- RETURN _ expr_list?
+if_stmt <- IF _ LPAREN _ expr _ RPAREN _ block (_l ELSE _ (if_stmt / block))?
+simple_stmt <- expr_stmt
+expr_stmt <- expr
+eol <- _b (SEMICOLON / NEWLINE / !. / line_comment)
+
+expr <- logical_or
+
+logical_or <- logical_and (_b PIPE2 _l logical_and)*
+
+logical_and <- comparison (_b AMPERSAND2 _l comparison)*
+
+comparison <- addition (_b comparison_op _l addition)*
+
+addition <- multiplication (_b addition_op  _l multiplication)*
+
+multiplication <- unary (_b multiplication_op _l unary)*
+
+unary <- unary_op* primary
+
+primary <- int_lit / char_lit / string_lit / LPAREN _ expr _ RPAREN / operand (arguments / selector / slice / index)*
+
+int_lit <- bin_lit / oct_lit / hex_lit / dec_lit
+
+operand <- package_name DOT method_name QUESTION?
+         / ident QUESTION?
+
+selector <- DOT _ ident
+index <- LBRACKET _ expr _ RBRACKET
+slice <- LBRACKET _ expr? _ COLON _ expr? _ RBRACKET
+arguments <- LPAREN _ expr_list _ RPAREN
+
+expr_list <- expr (_l COMMA _ expr)*
+
+method_name <- ident
+
+comparison_op <- "==" / "!=" / "<=" / "<" !("<" / "-") / ">=" / ">" !">"
+addition_op <- "+" !"+" / "-" !"-" / "|" !"|" / "^"
+multiplication_op <- "*" / "/" !"*" / "%" / "<<" / ">>" / "&^" / "&" !"&"
+unary_op <- "+" / "-" / "!" / "^" / "*" / "&" / "<-"
+
+comment <- line_comment / block_comment
+line_comment <- SLASH2 (!NEWLINE .)* (NEWLINE / !.)
+block_comment <- SLASHASTERISK (!ASTERISKSLASH .)* ASTERISKSLASH
+~_b <- (SPACE / TAB / block_comment)*
+~_l <- (SPACE / TAB / comment)*
+~_ <- (SPACE / TAB / NEWLINE / comment)*
+
+bin_digit <- [0-1]
+bin_digits <- bin_digit (UNDERSCORE? bin_digit)*
+bin_lit <-
+  <ZEROB (UNDERSCORE? bin_digits)>
+
+oct_digit <- [0-7]
+oct_digits <- oct_digit (UNDERSCORE? oct_digit)*
+oct_lit <-
+  <ZEROO (UNDERSCORE? oct_digits)>
+
+hex_digit <- [0-9a-fA-F]
+hex_digits <- hex_digit (UNDERSCORE? hex_digit)*
+hex_lit <-
+  <ZEROX (UNDERSCORE? hex_digits)>
+
+dec_digit <- [0-9]
+dec_digits <- dec_digit (UNDERSCORE? dec_digit)*
+dec_lit <- <ZERO / [1-9] (UNDERSCORE? dec_digits)?>
+
+char_lit <- <'\'' (!'\'' char)* '\''>
+string_lit <- <'"' (!'"' char)* '"'>
+char <- escaped_chr / xhex2_chr / uhex4_chr / uhex8_chr / unicode_chr
+escaped_chr <- '\\' [abfnrtv"\\]
+unicode_chr <- !'\x0a' .
+xhex2_chr <- "\\x" hex_digit hex_digit
+uhex4_chr <- "\\u" hex_digit hex_digit hex_digit hex_digit
+uhex8_chr <- "\\U" hex_digit hex_digit hex_digit hex_digit hex_digit hex_digit hex_digit hex_digit
+
+AMPERSAND2 <- "&&"
+ASTERISKSLASH <- "*/"
+COLON <- ":"
+COMMA <- ','
+DOT <- '.'
+EQ <- "=" !"="
+LBRACE <- "{"
+LBRACKET <- "["
+LPAREN <- "("
+NEWLINE <- '\n'
+PIPE2 <- "||"
+QUESTION <- "?"
+RBRACE <- "}"
+RBRACKET <- "]"
+RPAREN <- ")"
+SEMICOLON <- ";"
+SLASH2 <- "//"
+SLASHASTERISK <- "/*"
+SPACE <- ' '
+TAB <- '\t'
+UNDERSCORE <- "_"
+ZERO <- "0"
+ZEROB <- "0b" / "0B"
+ZEROO <- "0o" / "0O"
+ZEROX <- "0x" / "0X"
+L <- [a-zA-Z_]
+D <- [0-9]
+
+keywords <- CONST / FUNC / IMPORT / RETURN
+CONST <- "const" !(L/D)
+FUNC <- "func" !(L/D)
+IF <- "if" !(L/D)
+ELSE <- "else" !(L/D)
+IMPORT <- "import" !(L/D)
+RETURN <- "return" !(L/D)

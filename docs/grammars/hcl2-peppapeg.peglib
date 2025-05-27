@@ -1,0 +1,167 @@
+#From: https://github.com/soasme/PeppaPEG/blob/6ed07665ea0b17e3f993359db7c3025f6338b1f9/configs/hcl2.peg
+
+# Peppa PEG -  Ultra lightweight PEG Parser in ANSI C.
+#
+# MIT License
+#
+# Copyright (c) 2021 Ju
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# @file       hcl2.peg
+# @brief      A complete grammar for HCL2.
+# @author     Ju Lin
+# @copyright  MIT
+# @date       2021
+# @see        https://github.com/soasme/PeppaPEG
+
+#@lifted
+ConfigFile <- &. Body EOF
+
+#@lifted
+EOF <- !.
+
+#@lifted
+#Eval <- Expression
+
+#@scoped
+Body <- (Attribute / Block / OneLineBlock)*
+
+#@tight
+Attribute <- Identifier Whitespace* "=" ↑ Whitespace* Expression Whitespace* Newline
+
+#@tight
+Block <- Identifier Whitespace* BlockLabels Whitespace* "{" Whitespace* Newline ↑ Ignore* Body Ignore* "}" Newline
+
+BlockLabels <- (Identifier / StringLit)*
+
+#@tight
+OneLineBlock <- Identifier Whitespace* BlockLabels Whitespace* "{" ↑ Whitespace* (Identifier Whitespace* "=" Whitespace* Expression)? Whitespace* "}" Newline
+
+#@tight @squashed
+#Identifier <- [\p{ID_Start}] ([\p{ID_Continue}] / "-")*
+Identifier <- <[A-Za-z_] [A-Za-z0-9_-]*>
+
+#@lifted
+Expression <- Conditional
+
+#@nonterminal
+Conditional <- Operation (Ignore* "?" Ignore* Operation Ignore* ":" Ignore* Operation)?
+
+#@lifted @scoped
+Operation <- UnaryExpression / BinaryOrExpression
+
+UnaryExpression <- UnaryOp ExprTerm
+UnaryOp <- "-" / "!"
+
+BinaryOrExpression <- BinaryAndExpression ( "||" BinaryAndExpression )*
+BinaryAndExpression <- BinaryEqExpression ( "&&" BinaryEqExpression )*
+BinaryEqExpression <- BinaryTestExpression ( BinaryEqOp BinaryTestExpression )*
+BinaryEqOp <- "==" / "!="
+BinaryTestExpression <- BinaryTermExpression ( BinaryTestOp BinaryTermExpression )*
+BinaryTestOp <- ">=" / ">" / "<=" / "<"
+BinaryTermExpression <- BinaryFactorExpression ( BinaryTermOp BinaryFactorExpression )*
+BinaryTermOp <- "+" / "-"
+BinaryFactorExpression <- ExprTerm ( BinaryFactorOp ExprTerm )*
+BinaryFactorOp <- "*" / "/" / "%"
+
+ExprTerm <- (
+    "(" Expression ")"
+    / FloatLit
+    / IntLit
+    / FunctionCall
+    / Identifier
+    / QuotedTemplate
+    / HeredocTemplate
+    / ForTupleExpr
+    / ForObjectExpr
+    / Tuple
+    / Object
+) (Index / GetAttr / AttrSplat / FullSplat)?
+
+#@squashed
+QuotedTemplate <- StringLit
+
+#@tight @squashed
+StringLit <- <"\"" (!("\"" / "${") . / Interpolation)* "\"">
+
+#@scoped
+Interpolation <- "${" Expression "}"
+
+#@tight @squashed
+IntLit <- <Decimal+>
+
+#@tight @squashed
+FloatLit <- <Decimal+ "." Decimal+ (ExpMark Decimal+)?
+    / Decimal+ ("." Decimal+)? ExpMark Decimal+>
+
+Decimal <- [0-9]
+ExpMark <- [Ee] [+-]?
+
+Tuple <- "[" ↑ (Expression ("," Expression)* ","?)? "]"
+
+#@tight
+Object <- "{" ↑ Ignore* (Item (ItemSep Ignore* Item)* Ignore* ItemSep?)? "}"
+
+#@tight
+Item <- (Identifier / Expression) Ignore* ("=" / ":") Ignore* Expression
+
+#@tight @lifted @squashed
+ItemSep <- Newline+ / "," Newline*
+
+#@tight @lifted @squashed
+Heredoc <- ([a-z] / [A-Z]) ([a-z] / [A-Z] / [0-9] / "." / "-" / "_")+
+
+#@tight @squashed
+HeredocTemplate <- "<<" "-"? $hd<Heredoc> <"\n" (!((" " / "\t")* $hd ("\n" / &.)) (!"\n" .)* "\n")* (" " / "\t")*> $hd &("\n" / &.)
+
+FunctionCall <- Identifier "(" Arguments? ")"
+Arguments <- Expression ("," Expression)* ("," / Kwargs)?
+Kwargs <- "..."
+
+Index <- "[" Expression "]" / "." IntLit
+
+GetAttr <- "." Identifier
+
+AttrSplat <- ".*" GetAttr
+
+FullSplat <- "[" "*" "]" (GetAttr / Index)
+
+ForTupleExpr <- "[" ForIntro Expression ForCond? "]"
+ForObjectExpr <- "{" ForIntro Expression "=>" Expression Kwargs? ForCond? "}"
+ForIntro <- "for" ↑ ForElem "in" Expression ":"
+#@nonterminal
+ForElem <- Identifier ("," Identifier)?
+#@tight
+ForCond <- "if" Expression
+
+#@squashed @lifted
+~Newline <- "\r" / "\n" / Comment
+
+#@squashed @lifted
+~Whitespace <- " " / "\t"
+
+#@spaced @lifted
+~Ignore <- " " / "\t" / "\r" / "\n" / Comment / InlineComment
+
+#@squashed @lifted
+Comment <- ("#" / "//") (!"\n" .)* ("\n" / !.)
+
+#@squashed @lifted
+InlineComment <- "/*" (!"*/" .)* "*/"

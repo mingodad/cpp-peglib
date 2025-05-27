@@ -1,0 +1,40 @@
+#From: https://github.com/soasme/PeppaPEG/blob/6ed07665ea0b17e3f993359db7c3025f6338b1f9/configs/json.peg
+
+#@lifted
+value <- object / array / string / number / true / false / null
+
+object <- "{" (item ("," item)*)? "}"
+item <- string ":" value
+
+array <- "[" (value ("," value)*)? "]"
+
+#@tight
+string <- <"\"" ([\u0020-\u0021] / [\u0023-\u005b] / [\u005d-\u0010ffff] / escape )* "\"">
+
+true <- "true"
+false <- "false"
+null <- "null"
+
+#@tight @squashed
+number <- <minus? integral fractional? exponent?>
+
+#@tight @squashed @lifted
+escape <- "\\" ("\"" / "/" / "\\" / "b" / "f" / "n" / "r" / "t" / unicode)
+
+#@tight @squashed
+unicode <- "u" ([0-9] / [a-f] / [A-F]){4}
+
+minus <- "-"
+plus <- "+"
+
+#@squashed @tight
+integral <- "0" / [1-9] [0-9]*
+
+#@squashed @tight
+fractional <- "." [0-9]+
+
+#@tight
+exponent <- [Ee] (plus / minus)? [0-9]+
+
+#@spaced @lifted
+%whitespace <- [ \r\n\t]*

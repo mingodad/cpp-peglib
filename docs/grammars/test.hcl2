@@ -1,0 +1,8 @@
+fractional_number           = 3.2
+string_ascii           = "hello"
+a "label" { b = "foo" }
+basic = <<EOT
+  Foo
+  Bar
+  Baz
+EOT
