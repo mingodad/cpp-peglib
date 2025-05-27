@@ -8,13 +8,12 @@ program <- (statements (_ EOL)* / (_ EOL)*) !.
 fstring <- star_expressions _ (':' format_spec)? _ !.
 
 # Macros
-#list(c, e)  <- e (_ c _ e)*
-#tlist(c, e) <- e (_ c _ e)* (_ <c>)?
+list(c, e)  <- e (_ c _ e)*
+tlist(c, e) <- e (_ c _ e)* (_ <c>)?
 
 statements <- ((_ EOL)* statement)+
 statement <- SAMEDENT compound_stmt / SAMEDENT simple_stmt
-#simple_stmt <- tlist(';', small_stmt) _ EOL
-simple_stmt <- small_stmt (_ ';' _ small_stmt)* (_ ';')? _ EOL
+simple_stmt <- tlist(';', small_stmt) _ EOL
 small_stmt <-
   / assignment
   / 'pass' &(SPACE / ';' / EOL)
@@ -39,14 +38,14 @@ assignment <-
 augassign <- <
   '+' / '-' / '**' / '*' / '@' / '//' / '/' / '%' / '&' / '|' / '^' / '<<' / '>>'
 >
-global_stmt <- 'global' SPACE (NAME (_ ',' _ NAME)* (_ ',')?)
-nonlocal_stmt <- 'nonlocal' SPACE (NAME (_ ',' _ NAME)* (_ ',')?)
+global_stmt <- 'global' SPACE tlist(',', NAME)
+nonlocal_stmt <- 'nonlocal' SPACE tlist(',', NAME)
 yield_stmt <-
   / 'yield' SPACE 'from' SPACE expression
   / 'yield' (SPACE expressions)?
 assert_stmt <- 'assert' SPACE expression (_ ',' _ expression)?
 # TODO: do targets as in Python
-del_stmt <- 'del' SPACE (expression (_ ',' _ expression)* (_ ',')?)
+del_stmt <- 'del' SPACE tlist(',', expression)
 return_stmt <- 'return' (SPACE expressions)?
 # TODO: raise expression 'from' expression
 raise_stmt <- 'raise' (SPACE expression)?
@@ -54,21 +53,21 @@ print_stmt <-
   / 'print' SPACE star_expression (_ ',' _ star_expression)* (_ <','>)?
   / 'print' _ &EOL
 import_stmt <- import_name / import_from
-import_name <- 'import' SPACE (as_name (_ ',' _ as_name)*)
+import_name <- 'import' SPACE list(',', as_name)
 as_name <- dot_name (SPACE 'as' SPACE NAME)?
 import_from <-
   / 'from' SPACE (_ <'.'>)* (_ dot_name)? SPACE 'import' SPACE '*'
   / 'from' SPACE (_ <'.'>)* (_ dot_name)? SPACE 'import' SPACE
     (from_as_parens / from_as_items)
-from_as_parens <- '(' _ (from_as (_ ',' _ from_as)* (_ ',')?) _ ')'
-from_as_items <- (from_as (_ ',' _ from_as)*)
+from_as_parens <- '(' _ tlist(',', from_as) _ ')'
+from_as_items <- list(',', from_as)
 from_as <- from_id (SPACE 'as' SPACE NAME)?
 from_id <-
   / dot_name _ ':' _ expression
   / dot_name _ from_params (_ '->' _ expression)?
   / dot_name
 dot_name <- id (_ '.' _ NAME)*
-from_params <- '(' _ (from_param (_ ',' _ from_param)* (_ ',')?)? _ ')'
+from_params <- '(' _ tlist(',', from_param)? _ ')'
 from_param <- expression
 #TODO expand import logic / param
 
@@ -93,8 +92,8 @@ for_stmt <- ('for' SPACE star_targets)
             (SPACE 'in' SPACE star_expressions _ ':' _ suite)
             (SAMEDENT 'else' (SPACE 'not' SPACE 'break')* _ ':' _ suite)?
 with_stmt <- 'with' SPACE (with_parens_item / with_item) _ ':' _ suite
-with_parens_item <- '(' _ (as_item (_ ',' _ as_item)* (_ ',')?) _ ')'
-with_item <- (as_item (_ ',' _ as_item)*)
+with_parens_item <- '(' _ tlist(',', as_item) _ ')'
+with_item <- list(',', as_item)
 as_item <-
   / expression SPACE 'as' SPACE id &(_ (',' / ')' / ':'))
   / expression
@@ -112,22 +111,22 @@ function <-
   / extern_decorators function_def (_ EOL)+ &INDENT extern (_ EOL)* &DEDENT
   / decorators? function_def _ suite
 extern <- (empty_line* EXTERNDENT (!EOL .)* EOL empty_line*)+
-empty_line <- [ \t]* EOL
+~empty_line <- [ \t]* EOL
 function_def <-
   / 'def' SPACE NAME _ generics _ params (_ '->' _ expression)? _ ':'
   / 'def' SPACE NAME _ params (_ '->' _ expression)? _ ':'
-params <- '(' _ (param (_ ',' _ param)* (_ ',')?)? _ ')'
+params <- '(' _ tlist(',', param)? _ ')'
 param <-
   / param_name _ ':' _ expression (_ '=' _ expression)?
   / param_name (_ '=' _ expression)?
 param_name <- <'**' / '*'>? _ NAME
-generics <- '[' _ (param (_ ',' _ param)* (_ ',')?) _ ']'
+generics <- '[' _ tlist(',', param) _ ']'
 decorators <- decorator+
 decorator <- ('@' _ !(('llvm' / 'python') _ EOL) named_expression _ EOL SAMEDENT)
 extern_decorators <-
   / decorators? ('@' _ <'llvm'/'python'> _ EOL SAMEDENT) decorators?
 class <- decorators? class_def
-base_class_args <- '(' _ (expression (_ ',' _ expression)* (_ ',')?)? _ ')'
+base_class_args <- '(' _ tlist(',', expression)? _ ')'
 class_args <-
   / generics _ base_class_args
   / generics
@@ -149,14 +148,14 @@ custom_small_stmt <- NAME SPACE expressions custom_small_stmt__PREDICATE
 # (2) Expressions
 ########################################################################################
 
-expressions <- (expression (_ ',' _ expression)* (_ ',')?)
+expressions <- tlist(',', expression)
 expression <-
   / lambdef
   / disjunction SPACE 'if' SPACE disjunction SPACE 'else' SPACE expression
   / pipe
 # TODO: make it more pythonic
 lambdef <-
-  / 'lambda' SPACE (NAME (_ ',' _ NAME)*) _ ':' _ expression
+  / 'lambda' SPACE list(',', NAME) _ ':' _ expression
   / 'lambda' _ ':' _ expression
 pipe <-
   / disjunction (_ <'|>' / '||>'> _ disjunction)+
@@ -194,7 +193,7 @@ primary_tail <-
   / genexp
   / arguments
   / slices
-slices <- '[' _ (slice (_ ',' _ slice)* (_ ',')?) _ ']'
+slices <- '[' _ tlist(',', slice) _ ']'
 slice <-
   / slice_part _ ':' _ slice_part (_ ':' _ slice_part)?
   / expression
@@ -215,15 +214,15 @@ parentheses <- (
 )
 tuple <-
   / '(' _ ')'
-  / '(' _ (star_named_expression (_ ',' _ star_named_expression)* (_ ',')?) _ ')'
+  / '(' _ tlist(',', star_named_expression) _ ')'
 yield <- '(' _ 'yield' _ ')'
 named <- '(' _ named_expression _ ')'
 genexp <- '(' _ named_expression SPACE for_if_clauses _ ')'
-listexpr <- '[' _ (star_named_expression (_ ',' _ star_named_expression)* (_ ',')?)? _ ']'
+listexpr <- '[' _ tlist(',', star_named_expression)? _ ']'
 listcomp <- '[' _ named_expression SPACE for_if_clauses _ ']'
-set <- '{' _ (star_named_expression (_ ',' _ star_named_expression)* (_ ',')?) _ '}'
+set <- '{' _ tlist(',', star_named_expression) _ '}'
 setcomp <- '{' _ named_expression SPACE for_if_clauses _ '}'
-dict <- '{' _ (double_starred_kvpair (_ ',' _ double_starred_kvpair)* (_ ',')?)? _ '}'
+dict <- '{' _ tlist(',', double_starred_kvpair)? _ '}'
 dictcomp <- '{' _ kvpair SPACE for_if_clauses _ '}'
 double_starred_kvpair <-
   / '**' _ bitwise_or
@@ -233,16 +232,16 @@ for_if_clauses <- for_if_clause (SPACE for_if_clause)*
 for_if_clause <- 'for' SPACE star_targets SPACE 'in' SPACE disjunction
                  (SPACE 'if' SPACE disjunction)*
 
-star_targets <- (star_target (_ ',' _ star_target)* (_ ',')?)
+star_targets <- tlist(',', star_target)
 star_target <-
   / '*' _ !'*' star_target
   / star_parens
   / primary
 star_parens <-
-  / '(' _ (star_target (_ ',' _ star_target)* (_ ',')?) _ ')'
-  / '[' _ (star_target (_ ',' _ star_target)* (_ ',')?) _ ']'
+  / '(' _ tlist(',', star_target) _ ')'
+  / '[' _ tlist(',', star_target) _ ']'
 
-star_expressions <- (star_expression (_ ',' _ star_expression)* (_ ',')?)
+star_expressions <- tlist(',', star_expression)
 star_expression <-
   / '*' _ bitwise_or
   / expression
@@ -252,15 +251,14 @@ star_named_expression <-
 named_expression <-
   / NAME _ ':=' _ ^ expression
   / expression !(_ ':=')
-arguments <- '(' _ (args (_ ',' _ args)* (_ ',')?)? _ ')'
+arguments <- '(' _ tlist(',', args)? _ ')'
 args <- (simple_args (_ ',' _ kwargs)? / kwargs)
-#simple_args <- list(',', (starred_expression / named_expression !(_ '=')))
-simple_args <- (starred_expression / named_expression !(_ '=')) (',' (starred_expression / named_expression !(_ '=')))*
+simple_args <- list(',', (starred_expression / named_expression !(_ '=')))
 starred_expression <- '*' _ expression
 kwargs <-
-  / (kwarg_or_starred (_ ',' _ kwarg_or_starred)*) _ ',' _ (kwarg_or_double_starred (_ ',' _ kwarg_or_double_starred)*)
-  / (kwarg_or_starred (_ ',' _ kwarg_or_starred)*)
-  / (kwarg_or_double_starred (_ ',' _ kwarg_or_double_starred)*)
+  / list(',', kwarg_or_starred) _ ',' _ list(',', kwarg_or_double_starred)
+  / list(',', kwarg_or_starred)
+  / list(',', kwarg_or_double_starred)
 kwarg_or_starred <-
   / NAME _ '=' _ expression
   / starred_expression
@@ -284,17 +282,18 @@ STR <- <
   '"'   (!('"' / EOL) CHAR)* '"'     /  '\''     (!('\'' / EOL) CHAR)* '\''
 >
 CHAR <- ('\\' . / .)
-COMMENT <- <'#' (!EOL .)*>
-INDENT__NOPACKRAT <- <[ \t]*> INDENT__PREDICATE
-SAMEDENT__NOPACKRAT <- <[ \t]*> SAMEDENT__PREDICATE
-DEDENT__NOPACKRAT <- <[ \t]*> DEDENT__PREDICATE
-EXTERNDENT__NOPACKRAT <- <[ \t]*> EXTERNDENT__PREDICATE
-EOL <- <[\r][\n] / [\r\n]>
-SPACE <- ([ \t]+ / COMMENT / NLP EOL) SPACE?
-_ <- SPACE?
+~COMMENT <- <'#' (!EOL .)*>
+~INDENT__NOPACKRAT <- <[ \t]*> INDENT__PREDICATE
+~SAMEDENT__NOPACKRAT <- <[ \t]*> SAMEDENT__PREDICATE
+~DEDENT__NOPACKRAT <- <[ \t]*> DEDENT__PREDICATE
+~EXTERNDENT__NOPACKRAT <- <[ \t]*> EXTERNDENT__PREDICATE
+~EOL <- <[\r][\n] / [\r\n]>
+~SPACE <- ([ \t]+ / COMMENT / NLP EOL) SPACE?
+NLP <- '\\'
+~_ <- SPACE?
 
 # TODO: add async / await
-keyword <- <
+~keyword <- <
   'False' / 'else' / 'import' / 'pass' / 'None' / 'break' / 'except' / 'in' / 'raise' /
   'True' / 'class' / 'finally' / 'is' / 'return' / 'and' / 'continue' / 'for' / 'as'  /
   'lambda' / 'try' / 'def' / 'from' / 'while' / 'assert' / 'del' / 'global' / 'not' /
