@@ -1,0 +1,124 @@
+#From: https://github.com/swayf/grako/blob/f8ab1cc84b25ed132fb6feaa906cfc31ce140f1f/etc/grako.ebnf
+#(*
+# * This grammar defines the Grako variation of EBNF.
+# *
+# * Grako uses its own hand-written bootstrap parser, and this
+# * grammar is only used for testing.
+# *
+# * See the accompanying README for details.
+# *
+# *)
+
+grammar
+    <-
+    rule+
+    !.
+
+rule
+    <-
+    word '=' expre ('.' / ';')
+
+expre
+    <-
+      choice
+    / sequence
+
+choice
+    <-
+    sequence ('|' sequence)+
+
+sequence
+    <-
+    element+
+
+element
+    <-
+      named
+    / override
+    / term
+
+named
+    <-
+    word ('+:'/':') element
+
+override
+    <-
+    '@' element
+
+term
+    <-
+      void
+    / subexp
+    / closure
+    / optional
+    / special
+    / kif
+    / knot
+    / atom
+
+subexp
+    <-
+    '('  expre ')'
+
+closure
+    <-
+    '{'  expre '}'  ('-' / '+' / '*')?
+
+optional
+    <-
+    '[' expre ']'
+
+special
+    <-
+    '?('  (!')?' .)* ')?'
+
+kif
+    <-
+    '&' term
+
+knot
+    <-
+    '!' term
+
+atom
+    <-
+      cut
+    / token
+    / call
+    / pattern
+    / eof
+
+call
+    <-
+    word
+
+void
+    <-
+    '()'
+
+cut
+    <-
+    '>>'
+
+token
+    <-
+      <'"'  ([^"\\\n] / '\\"' / "\\\\")* '"'>
+    / <"'" ([^'\\\n] / "\\'" / "\\\\")* "'">
+
+word
+    <-
+    <[A-Za-z_][-_A-Za-z0-9]*>
+
+pattern
+    <-
+    PATTERN
+
+PATTERN
+    <-
+    <'?/'  (!'/?' .)+ '/?'>
+
+eof
+    <-
+    '$'
+
+%whitespace <- ([ \t\r\n]+ / "(*" (!"*)" .)* "*)")*

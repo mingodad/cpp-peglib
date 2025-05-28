@@ -1,0 +1,103 @@
+#From: https://github.com/dpranke/glop/blob/c685b6f08364b38f244ea25b3bc8e0894e50c9a1/grammars/glop.g
+
+grammar     <- (sp rule)* sp end
+
+~sp          <- ws*
+
+~ws          <- '\x20' / '\x09' / eol / comment
+
+eol         <- '\x0D' '\x0A' / '\x0D' / '\x0A'
+
+comment     <- '//' (!eol anything)*
+            / '/*' (!'*/' anything)* '*/'
+
+rule        <- ident sp '=' sp choice sp ','?
+
+ident       <- <id_start id_continue*>
+
+id_start    <- [a-zA-Z_]
+
+id_continue <- id_start / digit
+
+choice      <- seq (sp '|' sp seq)*
+
+seq         <- (expr (ws sp expr)*)?
+
+expr        <- post_expr ':' ident
+            / post_expr
+
+post_expr   <- prim_expr post_op
+            / prim_expr
+
+post_op     <- '?' / '*' / '+'
+
+prim_expr   <- lit sp '..' sp lit
+            / lit
+            / ident !(sp '=')
+            / '->' sp ll_expr
+            / '~' prim_expr
+            / '?(' sp ll_expr sp ')'
+            / '(' sp choice sp ')'
+
+lit         <- <squote sqchar* squote>
+            / <dquote dqchar* dquote>
+
+sqchar      <- bslash esc_char
+            / !squote anything
+
+dqchar      <- bslash esc_char
+            / !dquote anything
+
+bslash      <- '\x5C'
+
+squote      <- '\x27'
+
+dquote      <- '\x22'
+
+esc_char    <- 'b'
+            / 'f'
+            / 'n'
+            / 'r'
+            / 't'
+            / 'v'
+            / squote
+            / dquote
+            / bslash
+            / hex_esc
+            / unicode_esc
+
+hex_esc     <- 'x' hex hex
+
+unicode_esc <- 'u' hex hex hex hex
+            / 'U' hex hex hex hex
+                  hex hex hex hex
+
+ll_exprs    <- (ll_expr (sp ',' sp ll_expr)*)?
+
+ll_expr     <- ll_qual sp '+' sp ll_expr
+            / ll_qual
+
+ll_qual     <- ll_prim ll_post_op+
+            / ll_prim
+
+ll_post_op  <- '[' sp ll_expr sp ']'
+            / '(' sp ll_exprs sp ')'
+            / '.' ident
+
+ll_prim     <- ident
+            / digits
+            / '0x' hexdigits
+            / lit
+            / '(' sp ll_expr sp ')'
+            / '[' sp ll_exprs sp ']'
+
+digits      <- <digit+>
+
+hexdigits   <- <hex+>
+
+hex         <- digit / [a-fA-F]
+
+digit       <- [0-9]
+
+anything <- .
+end <- !.
