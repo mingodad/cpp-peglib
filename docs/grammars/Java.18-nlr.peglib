@@ -1,0 +1,378 @@
+#From: https://mousepeg.sourceforge.net/Grammars/Java.18.peg
+#Using the output of ExplorePEG that rework the grammar to replace left recursion
+# $$ replaced by __
+# $ replaced by _
+#
+
+#//===========================================================================
+#//
+#//  Parsing Expression Grammar of Java for Mouse 2.3.
+#//  Based on Java Language Specification, Java SE 18 Edition, 2022-02-23.
+#//
+#//---------------------------------------------------------------------------
+#//
+#//  Copyright (C) 2021, 2022
+#//  by Roman R Redziejowski(www.romanredz.se).
+#//
+#//  The author gives unlimited permission to copy and distribute
+#//  this file, with or without modifications, as long as this notice
+#//  is preserved, and any changes are properly documented.
+#//
+#//  This file is distributed in the hope that it will be useful,
+#//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#//
+#//---------------------------------------------------------------------------
+#//
+#//  Latest update 2022-08-05.
+#//
+#//---------------------------------------------------------------------------
+
+Compilation <- Spacing CompilationUnit SUB? EOT
+SUB <- "\u001a"
+EOT <- !.
+~Spacing <- ([ \t\r\n\f]+ / "/*" !("*/" .)* "*/" / "//"[^\r\n]* [\r\n]?)*
+Word <- Letter LetterOrDigit*
+Identifier <- !Reserved <Word> Spacing
+TypeIdentifier <- !(Reserved / "var" / "yield" / "record" / "permits" / "sealed") <Word> Spacing
+Letter <- [a-z] / [A-Z] / [_$]
+LetterOrDigit <- [a-z] / [A-Z] / [0-9] / [_$]
+Reserved <- <("abstract" | "assert" | "boolean" | "break" | "byte" | "case" | "catch" | "char" | "class" | "const" | "continue" | "default" | "double" | "do" | "else" | "enum" | "extends" | "false" | "finally" | "final" | "float" | "for" | "goto" | "if" | "implements" | "import" | "interface" | "int" | "instanceof" | "long" | "native" | "new" | "null" | "package" | "private" | "protected" | "public" | "return" | "short" | "static" | "strictfp" | "super" | "switch" | "synchronized" | "this" | "throws" | "throw" | "transient" | "true" | "try" | "void" | "volatile" | "while" | "_") !Word>
+ABSTRACT <- "abstract" Spacing
+ASSERT <- "assert" Spacing
+BOOLEAN <- "boolean" Spacing
+BREAK <- "break" Spacing
+BYTE <- "byte" Spacing
+CASE <- "case" Spacing
+CATCH <- "catch" Spacing
+CHAR <- "char" Spacing
+CLASS <- "class" Spacing
+CONTINUE <- "continue" Spacing
+DEFAULT <- "default" Spacing
+DOUBLE <- "double" Spacing
+DO <- "do" Spacing
+ELSE <- "else" Spacing
+ENUM <- "enum" Spacing
+EXTENDS <- "extends" Spacing
+FALSE <- "false" Spacing
+FINALLY <- "finally" Spacing
+FINAL <- "final" Spacing
+FLOAT <- "float" Spacing
+FOR <- "for" Spacing
+IF <- "if" Spacing
+IMPLEMENTS <- "implements" Spacing
+IMPORT <- "import" Spacing
+INTERFACE <- "interface" Spacing
+INT <- "int" Spacing
+INSTANCEOF <- "instanceof" Spacing
+LONG <- "long" Spacing
+NATIVE <- "native" Spacing
+NEW <- "new" Spacing
+NULL <- "null" Spacing
+PACKAGE <- "package" Spacing
+PRIVATE <- "private" Spacing
+PROTECTED <- "protected" Spacing
+PUBLIC <- "public" Spacing
+RETURN <- "return" Spacing
+SHORT <- "short" Spacing
+STATIC <- "static" Spacing
+STRICTFP <- "strictfp" Spacing
+SUPER <- "super" Spacing
+SWITCH <- "switch" Spacing
+SYNCHRONIZED <- "synchronized" Spacing
+THIS <- "this" Spacing
+THROWS <- "throws" Spacing
+THROW <- "throw" Spacing
+TRANSIENT <- "transient" Spacing
+TRUE <- "true" Spacing
+TRY <- "try" Spacing
+VOID <- "void" Spacing
+VOLATILE <- "volatile" Spacing
+WHILE <- "while" Spacing
+EXPORTS <- "exports" Spacing
+MODULE <- "module" Spacing
+NONSEALED <- "non-sealed" Spacing
+OPEN <- "open" Spacing
+OPENS <- "opens" Spacing
+PERMITS <- "permits" Spacing
+PROVIDES <- "provides" Spacing
+RECORD <- "record" Spacing
+REQUIRES <- "requires" Spacing
+SEALED <- "sealed" Spacing
+TO <- "to" Spacing
+TRANSITIVE <- "transitive" Spacing
+USES <- "uses" Spacing
+VAR <- "var" Spacing
+WITH <- "with" Spacing
+YIELD <- "yield" Spacing
+Literal <- FloatLiteral / IntegerLiteral / BooleanLiteral / CharLiteral / TextBlock / StringLiteral / NullLiteral
+IntegerLiteral <- <(HexNumeral / BinaryNumeral / OctalNumeral / DecimalNumeral) [lL]?> Spacing
+DecimalNumeral <- "0" / [1-9] ([_]* [0-9])*
+HexNumeral <- ("0x" / "0X") HexDigits
+OctalNumeral <- "0" ([_]* [0-7])+
+BinaryNumeral <- ("0b" / "0B") [01] ([_]* [01])*
+FloatLiteral <- (HexadecimalFloatingPointLiteral / DecimalFloatingPointLiteral) Spacing
+DecimalFloatingPointLiteral <- <Digits "." Digits? Exponent? [fFdD]? / "." Digits Exponent? [fFdD]? / Digits Exponent [fFdD]? / Digits Exponent? [fFdD]>
+Exponent <- [eE] [+-]? Digits
+HexadecimalFloatingPointLiteral <- <HexSignificand BinaryExponent [fFdD]?>
+HexSignificand <- ("0x" / "0X") HexDigits? "." HexDigits / HexNumeral "."?
+HexDigits <- HexDigit ([_]* HexDigit)*
+HexDigit <- [a-f] / [A-F] / [0-9]
+BinaryExponent <- [pP] [+-]? Digits
+Digits <- [0-9] ([_]* [0-9])*
+BooleanLiteral <- TRUE / FALSE
+CharLiteral <- <"'" (Escape / [^'\n\r]) "'"> Spacing
+StringLiteral <- <'"' (Escape / [^"\n\r])* '"'> Spacing
+TextBlock <- <TRIQUOTE [ \t\f]* [\r\n] [\r\n]? (StrongEscape / .)* TRIQUOTE> Spacing
+TRIQUOTE <- '"""'
+Escape <- "\\" ([bstnfr"'\\] / OctalEscape / UnicodeEscape)
+StrongEscape <- Escape / "\\" LineEscape
+LineEscape <- "\n\r" / "\r\n" / [\r\n]
+OctalEscape <- [0-3] [0-7] [0-7] / [0-7] [0-7] / [0-7]
+UnicodeEscape <- "u"+ HexDigit HexDigit HexDigit HexDigit
+NullLiteral <- NULL
+AT <- "@" Spacing
+COLONCOLON <- "::" Spacing
+COMMA <- "," Spacing
+DOT <- "." Spacing
+ELLIPSIS <- "..." Spacing
+LPAR <- "(" Spacing
+LBRK <- "[" Spacing
+RBRK <- "]" Spacing
+RPAR <- ")" Spacing
+LWING <- "{" Spacing
+RWING <- "}" Spacing
+SEMI <- ";" Spacing
+ARROW <- "->" Spacing
+AND <- "&" Spacing
+BANG <- "!" Spacing
+COLON <- ":" Spacing
+DEC <- "--" Spacing
+EQU <- "=" Spacing
+INC <- "++" Spacing
+LPOINT <- "<" Spacing
+MINUS <- "-" Spacing
+OR <- "|" Spacing
+QUERY <- "?" Spacing
+PLUS <- "+" Spacing
+RPOINT <- ">" Spacing
+STAR <- "*" Spacing
+TILDE <- "~" Spacing
+InfixOperator <- ("||" / "&&" / "|" / "^" / "&" / "==" / "!=" / ">>>" / "<<" / ">>" / "<=" / ">=" / "<" / ">" / "+" / "-" / "*" / "/" / "%") Spacing
+AssignmentOperator <- ("=" / "*=" / "/=" / "%=" / "+=" / "-=" / ">>>=" / "<<=" / ">>=" / "&=" / "^=" / "|=") Spacing
+PrimitiveType <- Annotation* NumericType / Annotation* BOOLEAN
+NumericType <- IntegralType / FloatingPointType
+IntegralType <- BYTE / SHORT / INT / LONG / CHAR
+FloatingPointType <- FLOAT / DOUBLE
+ReferenceType <- ArrayType / ClassType / TypeVariable
+ClassType <- (Annotation* TypeIdentifier TypeArguments? / Name DOT Annotation* TypeIdentifier TypeArguments?) (DOT Annotation* TypeIdentifier TypeArguments?)*
+TypeVariable <- Annotation* TypeIdentifier
+ArrayType <- PrimitiveType Dims / ClassType Dims / TypeVariable Dims
+Dims <- Annotation* LBRK RBRK (Annotation* LBRK RBRK)*
+TypeParameter <- TypeParameterModifier* Identifier TypeBound?
+TypeParameterModifier <- Annotation
+TypeBound <- EXTENDS ClassType AdditionalBound* / EXTENDS TypeVariable
+AdditionalBound <- AND ClassType
+TypeArguments <- LPOINT TypeArgumentList RPOINT
+TypeArgumentList <- TypeArgument (COMMA TypeArgument)*
+TypeArgument <- ReferenceType / Wildcard
+Wildcard <- Annotation* QUERY WildcardBounds?
+WildcardBounds <- EXTENDS ReferenceType / SUPER ReferenceType
+Name <- Identifier (DOT Identifier)*
+TypeName <- TypeIdentifier (DOT TypeIdentifier)*
+CompilationUnit <- ModularCompilationUnit / OrdinaryCompilationUnit
+OrdinaryCompilationUnit <- PackageDeclaration? ImportDeclaration* TopLevelClassOrInterfaceDeclaration*
+ModularCompilationUnit <- ImportDeclaration* ModuleDeclaration
+PackageDeclaration <- PackageModifier* PACKAGE Identifier (DOT Identifier)* SEMI
+PackageModifier <- Annotation
+ImportDeclaration <- SingleTypeImportDeclaration / TypeImportOnDemandDeclaration / SingleStaticImportDeclaration / StaticImportOnDemandDeclaration / SEMI
+SingleTypeImportDeclaration <- IMPORT TypeName SEMI
+TypeImportOnDemandDeclaration <- IMPORT Name DOT STAR SEMI
+SingleStaticImportDeclaration <- IMPORT STATIC TypeName (DOT Identifier)? SEMI
+StaticImportOnDemandDeclaration <- IMPORT STATIC TypeName DOT STAR SEMI
+TopLevelClassOrInterfaceDeclaration <- ClassDeclaration / InterfaceDeclaration / SEMI
+ModuleDeclaration <- Annotation* OPEN? MODULE Identifier (DOT Identifier)* LWING ModuleDirective* RWING
+ModuleDirective <- REQUIRES RequiresModifier* Name SEMI / EXPORTS Name (TO Name (COMMA Name)*)? SEMI / OPENS Name (TO Name (COMMA Name)*)? SEMI / USES TypeName SEMI / PROVIDES TypeName WITH TypeName (COMMA TypeName)* SEMI
+RequiresModifier <- TRANSITIVE / STATIC
+ClassDeclaration <- NormalClassDeclaration / EnumDeclaration / RecordDeclaration
+NormalClassDeclaration <- ClassModifier* CLASS Identifier TypeParameters? ClassExtends? ClassImplements? ClassPermits? ClassBody
+ClassModifier <- Annotation / PUBLIC / PROTECTED / PRIVATE / ABSTRACT / STATIC / FINAL / SEALED / NONSEALED / STRICTFP
+TypeParameters <- LPOINT TypeParameterList RPOINT
+TypeParameterList <- TypeParameter (COMMA TypeParameter)*
+ClassExtends <- EXTENDS ClassType
+ClassImplements <- IMPLEMENTS InterfaceTypeList
+InterfaceTypeList <- ClassType (COMMA ClassType)*
+ClassPermits <- PERMITS ClassType (COMMA ClassType)*
+ClassBody <- LWING ClassBodyDeclaration* RWING
+ClassBodyDeclaration <- ClassMemberDeclaration / InstanceInitializer / StaticInitializer / ConstructorDeclaration
+ClassMemberDeclaration <- FieldDeclaration / MethodDeclaration / ClassDeclaration / InterfaceDeclaration / SEMI
+FieldDeclaration <- FieldModifier* UnannType VariableDeclaratorList SEMI
+FieldModifier <- Annotation / PUBLIC / PROTECTED / PRIVATE / STATIC / FINAL / TRANSIENT / VOLATILE
+VariableDeclaratorList <- VariableDeclarator (COMMA VariableDeclarator)*
+VariableDeclarator <- VariableDeclaratorId (EQU VariableInitializer)?
+VariableDeclaratorId <- Identifier Dims?
+VariableInitializer <- Expression / ArrayInitializer
+UnannType <- UnannReferenceType / UnannPrimitiveType
+UnannPrimitiveType <- NumericType / BOOLEAN
+UnannReferenceType <- UnannArrayType / UnannClassType / UnannTypeVariable
+UnannClassType <- (TypeIdentifier TypeArguments? / Name DOT Annotation* TypeIdentifier TypeArguments?) (DOT Annotation* TypeIdentifier TypeArguments?)*
+UnannTypeVariable <- TypeIdentifier
+UnannArrayType <- UnannPrimitiveType Dims / UnannClassType Dims / UnannTypeVariable Dims
+MethodDeclaration <- MethodModifier* MethodHeader MethodBody
+MethodModifier <- Annotation / PUBLIC / PROTECTED / PRIVATE / ABSTRACT / STATIC / FINAL / SYNCHRONIZED / NATIVE / STRICTFP
+MethodHeader <- Result MethodDeclarator Throws? / TypeParameters Annotation* Result MethodDeclarator Throws?
+Result <- UnannType / VOID
+MethodDeclarator <- Identifier LPAR FormalParametersWithReceiver RPAR Dims?
+FormalParametersWithReceiver <- ReceiverParameter (COMMA FormalParameterList)? / FormalParameterList?
+ReceiverParameter <- Annotation* UnannType (Identifier DOT)* THIS
+FormalParameterList <- FormalParameter (COMMA FormalParameter)* (COMMA VariableArityParameter)? / VariableArityParameter
+FormalParameter <- VariableModifier* UnannType VariableDeclaratorId
+VariableArityParameter <- VariableModifier* UnannType Annotation* ELLIPSIS Identifier
+VariableModifier <- Annotation / FINAL
+Throws <- THROWS ExceptionTypeList
+ExceptionTypeList <- ExceptionType (COMMA ExceptionType)*
+ExceptionType <- ClassType / TypeVariable
+MethodBody <- Block / SEMI
+InstanceInitializer <- Block
+StaticInitializer <- STATIC Block
+ConstructorDeclaration <- ConstructorModifier* ConstructorDeclarator Throws? ConstructorBody
+ConstructorModifier <- Annotation / PUBLIC / PROTECTED / PRIVATE
+ConstructorDeclarator <- TypeParameters? SimpleTypeName LPAR FormalParametersWithReceiver RPAR
+SimpleTypeName <- TypeIdentifier
+ConstructorBody <- LWING ExplicitConstructorInvocation? BlockStatements? RWING
+ExplicitConstructorInvocation <- TypeArguments? THIS LPAR ArgumentList? RPAR SEMI / TypeArguments? SUPER LPAR ArgumentList? RPAR SEMI / Primary DOT TypeArguments? SUPER LPAR ArgumentList? RPAR SEMI / Name DOT TypeArguments? SUPER LPAR ArgumentList? RPAR SEMI
+EnumDeclaration <- EnumModifier* ENUM TypeIdentifier ClassImplements? EnumBody
+EnumModifier <- Annotation / PUBLIC / PROTECTED / PRIVATE / STATIC / STRICTFP
+EnumBody <- LWING EnumConstantList? COMMA? EnumBodyDeclarations? RWING
+EnumConstantList <- EnumConstant (COMMA EnumConstant)*
+EnumConstant <- EnumConstantModifier* Identifier (LPAR ArgumentList? RPAR)? ClassBody?
+EnumConstantModifier <- Annotation
+EnumBodyDeclarations <- SEMI ClassBodyDeclaration*
+RecordDeclaration <- RecordModifier* RECORD TypeIdentifier TypeParameters? RecordHeader ClassImplements? RecordBody
+RecordModifier <- Annotation / PUBLIC / PROTECTED / PRIVATE / STATIC / FINAL / STRICTFP
+RecordHeader <- LPAR RecordComponentList? RPAR
+RecordComponentList <- RecordComponent (COMMA RecordComponent)*
+RecordComponent <- RecordComponentModifier* UnannType Identifier / VariableArityRecordComponent
+VariableArityRecordComponent <- RecordComponentModifier* UnannType Annotation* ELLIPSIS Identifier
+RecordComponentModifier <- Annotation
+RecordBody <- LWING RecordBodyDeclaration* RWING
+RecordBodyDeclaration <- ClassBodyDeclaration / CompactConstructorDeclaration
+CompactConstructorDeclaration <- ConstructorModifier* SimpleTypeName ConstructorBody
+InterfaceDeclaration <- NormalInterfaceDeclaration / AnnotationTypeDeclaration
+NormalInterfaceDeclaration <- InterfaceModifier* INTERFACE TypeIdentifier TypeParameters? InterfaceExtends? InterfacePermits? InterfaceBody
+InterfaceModifier <- Annotation / PUBLIC / PROTECTED / PRIVATE / ABSTRACT / STATIC / SEALED / NONSEALED / STRICTFP
+InterfaceExtends <- EXTENDS InterfaceTypeList
+InterfacePermits <- PERMITS ClassType (COMMA ClassType)*
+InterfaceBody <- LWING InterfaceMemberDeclaration* RWING
+InterfaceMemberDeclaration <- ConstantDeclaration / InterfaceMethodDeclaration / ClassDeclaration / InterfaceDeclaration / SEMI
+ConstantDeclaration <- ConstantModifier* UnannType VariableDeclaratorList SEMI
+ConstantModifier <- Annotation / PUBLIC / STATIC / FINAL
+InterfaceMethodDeclaration <- InterfaceMethodModifier* MethodHeader MethodBody
+InterfaceMethodModifier <- Annotation / PUBLIC / PRIVATE / ABSTRACT / DEFAULT / STATIC / STRICTFP
+AnnotationTypeDeclaration <- InterfaceModifier* AT INTERFACE TypeIdentifier AnnotationTypeBody
+AnnotationTypeBody <- LWING AnnotationTypeMemberDeclaration* RWING
+AnnotationTypeMemberDeclaration <- AnnotationTypeElementDeclaration / ConstantDeclaration / ClassDeclaration / InterfaceDeclaration / SEMI
+AnnotationTypeElementDeclaration <- AnnotationTypeElementModifier* UnannType Identifier LPAR RPAR Dims* DefaultValue? SEMI
+AnnotationTypeElementModifier <- Annotation / PUBLIC / ABSTRACT
+DefaultValue <- DEFAULT ElementValue
+Annotation <- NormalAnnotation / SingleElementAnnotation / MarkerAnnotation
+NormalAnnotation <- AT TypeName LPAR ElementValuePairList? RPAR
+ElementValuePairList <- ElementValuePair (COMMA ElementValuePair)*
+ElementValuePair <- Identifier EQU ElementValue
+ElementValue <- ConditionalExpression / ElementValueArrayInitializer / Annotation
+ElementValueArrayInitializer <- LWING ElementValueList? COMMA? RWING
+ElementValueList <- ElementValue (COMMA ElementValue)*
+MarkerAnnotation <- AT TypeName
+SingleElementAnnotation <- AT TypeName LPAR ElementValue RPAR
+ArrayInitializer <- LWING VariableInitializerList? COMMA? RWING
+VariableInitializerList <- VariableInitializer (COMMA VariableInitializer)*
+Block <- LWING BlockStatements? RWING
+BlockStatements <- BlockStatement BlockStatement*
+BlockStatement <- LocalVariableDeclarationStatement / LocalClassOrInterfaceDeclaration / Statement
+LocalClassOrInterfaceDeclaration <- ClassDeclaration / NormalInterfaceDeclaration
+LocalVariableDeclarationStatement <- LocalVariableDeclaration SEMI
+LocalVariableDeclaration <- VariableModifier* LocalVariableType VariableDeclaratorList
+LocalVariableType <- UnannType / VAR
+Statement <- Block / EmptyStatement / ExpressionStatement / AssertStatement / SwitchStatement / LabeledStatement / IfThenElseStatement / IfThenStatement / WhileStatement / ForStatement / DoStatement / BreakStatement / ContinueStatement / ReturnStatement / SynchronizedStatement / ThrowStatement / TryStatement / YieldStatement
+EmptyStatement <- SEMI
+LabeledStatement <- Identifier COLON Statement
+ExpressionStatement <- StatementExpression SEMI
+StatementExpression <- Assignment / PreIncrementExpression / PreDecrementExpression / PostfixExpression / MethodInvocation / ClassInstanceCreationExpression
+IfThenStatement <- IF LPAR Expression RPAR Statement
+IfThenElseStatement <- IF LPAR Expression RPAR Statement ELSE Statement
+AssertStatement <- ASSERT Expression SEMI / ASSERT Expression COLON Expression SEMI
+SwitchStatement <- SWITCH LPAR Expression RPAR SwitchBlock
+SwitchBlock <- LWING SwitchRule+ RWING / LWING SwitchBlockStatementGroup* RWING
+SwitchRule <- SwitchLabel ARROW Expression SEMI / SwitchLabel ARROW Block / SwitchLabel ARROW ThrowStatement
+SwitchBlockStatementGroup <- (SwitchLabel COLON)+ BlockStatements?
+SwitchLabel <- CASE CaseConstant (COMMA CaseConstant)* / DEFAULT
+CaseConstant <- ConditionalExpression
+WhileStatement <- WHILE LPAR Expression RPAR Statement
+DoStatement <- DO Statement WHILE LPAR Expression RPAR SEMI
+ForStatement <- BasicForStatement / EnhancedForStatement
+BasicForStatement <- FOR LPAR ForInit? SEMI Expression? SEMI ForUpdate? RPAR Statement
+ForInit <- LocalVariableDeclaration / StatementExpressionList
+ForUpdate <- StatementExpressionList
+StatementExpressionList <- StatementExpression (COMMA StatementExpression)*
+EnhancedForStatement <- FOR LPAR VariableModifier* LocalVariableType VariableDeclaratorId COLON Expression RPAR Statement
+BreakStatement <- BREAK Identifier? SEMI
+ContinueStatement <- CONTINUE Identifier? SEMI
+ReturnStatement <- RETURN Expression? SEMI
+ThrowStatement <- THROW Expression SEMI
+SynchronizedStatement <- SYNCHRONIZED LPAR Expression RPAR Block
+TryStatement <- TRY Block Catches? Finally / TRY Block Catches / TryWithResourcesStatement
+Catches <- CatchClause CatchClause*
+CatchClause <- CATCH LPAR CatchFormalParameter RPAR Block
+CatchFormalParameter <- VariableModifier* CatchType VariableDeclaratorId
+CatchType <- UnannClassType (OR ClassType)*
+Finally <- FINALLY Block
+TryWithResourcesStatement <- TRY ResourceSpecification Block Catches? Finally?
+ResourceSpecification <- LPAR ResourceList SEMI? RPAR
+ResourceList <- Resource (SEMI Resource)*
+Resource <- VariableModifier* LocalVariableType Identifier EQU Expression / VariableAccess
+VariableAccess <- Name / FieldAccess
+YieldStatement <- YIELD Expression SEMI
+Pattern <- VariableModifier* UnannReferenceType Identifier
+Expression <- LambdaExpression / Assignment / ConditionalExpression
+ClassLiteral <- TypeName (LBRK RBRK)* DOT CLASS / NumericType (LBRK RBRK)* DOT CLASS / BOOLEAN (LBRK RBRK)* DOT CLASS / VOID DOT CLASS
+UnqualifiedClassInstanceCreationExpression <- NEW TypeArguments? ClassOrInterfaceTypeToInstantiate LPAR ArgumentList* RPAR ClassBody?
+ClassOrInterfaceTypeToInstantiate <- Annotation* Identifier TypeArgumentsOrDiamond? (DOT Annotation* Identifier TypeArgumentsOrDiamond?)*
+TypeArgumentsOrDiamond <- TypeArguments / LPOINT RPOINT &LPAR
+ArrayCreationExpression <- ArrayCreationExpressionWithoutInitializer / ArrayCreationExpressionWithInitializer
+ArrayCreationExpressionWithoutInitializer <- NEW PrimitiveType DimExprs Dims? / NEW ClassType DimExprs Dims?
+ArrayCreationExpressionWithInitializer <- NEW PrimitiveType Dims ArrayInitializer / NEW ClassType Dims ArrayInitializer
+DimExprs <- DimExpr DimExpr*
+DimExpr <- Annotation* LBRK Expression RBRK
+FieldAccess <- Primary DOT Identifier / SUPER DOT Identifier / TypeName DOT SUPER DOT Identifier
+ArgumentList <- Expression (COMMA Expression)*
+PostfixExpression <- Primary (INC / DEC)? / Name (INC / DEC)?
+UnaryExpression <- PreIncrementExpression / PreDecrementExpression / PLUS UnaryExpression / MINUS UnaryExpression / UnaryExpressionNotPlusMinus
+PreIncrementExpression <- INC UnaryExpression
+PreDecrementExpression <- DEC UnaryExpression
+UnaryExpressionNotPlusMinus <- CastExpression / PostfixExpression / TILDE UnaryExpression / BANG UnaryExpression / SwitchExpression
+CastExpression <- LPAR ReferenceType AdditionalBound* RPAR LambdaExpression / LPAR ReferenceType AdditionalBound* RPAR UnaryExpressionNotPlusMinus / LPAR PrimitiveType RPAR UnaryExpression
+InfixExpression <- UnaryExpression (InfixOperator UnaryExpression / INSTANCEOF (Pattern / ReferenceType))*
+ConditionalExpression <- InfixExpression QUERY Expression COLON (LambdaExpression / ConditionalExpression) / InfixExpression
+Assignment <- LeftHandSide AssignmentOperator Expression
+LeftHandSide <- ArrayOrFieldAccess / Name / LPAR LeftHandSide RPAR
+LambdaExpression <- LambdaParameters ARROW LambdaBody
+LambdaParameters <- LPAR LambdaParameterList? RPAR / Identifier
+LambdaParameterList <- LambdaParameter (COMMA LambdaParameter)* (COMMA VariableArityParameter)? / VariableArityParameter / Identifier (COMMA Identifier)*
+LambdaParameter <- VariableModifier* LambdaParameterType VariableDeclaratorId
+LambdaParameterType <- UnannType / VAR
+LambdaBody <- Expression / Block
+SwitchExpression <- SWITCH LPAR Expression RPAR SwitchBlock
+__Primary <- Literal _Primary / ClassLiteral _Primary / THIS _Primary / (TypeName DOT THIS) _Primary / (LPAR Expression RPAR) _Primary / ArrayCreationExpression _Primary / (Name DOT UnqualifiedClassInstanceCreationExpression) __ClassInstanceCreationExpression / UnqualifiedClassInstanceCreationExpression __ClassInstanceCreationExpression / (Name DOT TypeArguments Identifier LPAR ArgumentList? RPAR) __MethodInvocation / (Name LPAR ArgumentList? RPAR) __MethodInvocation / (SUPER DOT TypeArguments? Identifier LPAR ArgumentList? RPAR) __MethodInvocation / (TypeName DOT SUPER DOT TypeArguments? Identifier LPAR ArgumentList? RPAR) __MethodInvocation / (Name COLONCOLON TypeArguments? Identifier) __MethodReference / (ReferenceType COLONCOLON TypeArguments? Identifier) __MethodReference / (SUPER COLONCOLON TypeArguments? Identifier) __MethodReference / (TypeName DOT SUPER COLONCOLON TypeArguments? Identifier) __MethodReference / (ArrayType COLONCOLON NEW) __MethodReference / (ClassType COLONCOLON TypeArguments? NEW) __MethodReference / (Name LBRK Expression RBRK) __ArrayOrFieldAccess / (ArrayCreationExpressionWithInitializer LBRK Expression RBRK) __ArrayOrFieldAccess / (SUPER DOT Identifier) __ArrayOrFieldAccess / (TypeName DOT SUPER DOT Identifier) __ArrayOrFieldAccess
+Primary <- __Primary
+ClassInstanceCreationExpression <- __Primary
+MethodInvocation <- __Primary
+ArrayOrFieldAccess <- __Primary
+_Primary <- (_ClassInstanceCreationExpression_0 / _MethodInvocation_0 / _MethodReference_0 / _ArrayOrFieldAccess_0)?
+__ClassInstanceCreationExpression <- _Primary?
+__MethodInvocation <- _Primary?
+__MethodReference <- _Primary
+__ArrayOrFieldAccess <- _Primary?
+_ClassInstanceCreationExpression_0 <- DOT UnqualifiedClassInstanceCreationExpression __ClassInstanceCreationExpression
+_MethodInvocation_0 <- DOT TypeArguments? Identifier LPAR ArgumentList? RPAR __MethodInvocation
+_MethodReference_0 <- COLONCOLON TypeArguments? Identifier __MethodReference
+_ArrayOrFieldAccess_0 <- (LBRK Expression RBRK / DOT Identifier) __ArrayOrFieldAccess
