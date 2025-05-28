@@ -1,0 +1,51 @@
+#From: https://janet-lang.org/docs/syntax.html
+
+janet <- root
+
+~ws <- [ \t\r\f\n\v]
+readermac <- [';~,|]
+symchars <- [0-9A.Za-z\x80-\xFF] / [!$%&*+./:<?=>@^_-]
+token <- <symchars+>
+hex <- [0-9a-fA-F]
+escape <- "\\" (
+		["'0?\\abefnrtvz]
+		/ "x" hex hex
+		/ "u" hex{4}
+		/ "U" hex{6}
+	       )
+comment <- "#" (!"\n" .)*
+symbol <- <token>
+keyword <- <":" symchars*>
+constant <- ("true" / "false" / "nil") !symchars
+bytes <- "\"" (escape / (! "\"" .))* "\""
+string <- <bytes>
+buffer <- <"@" bytes>
+long_bytes <- $delim<"`"+> (!$delim .)* $delim
+long_string <- <long_bytes>
+long_buffer <- <"@" long_bytes>
+number <- <[0-9]+ ("." [0-9]+)?>
+raw_value <-
+    comment
+    / constant
+    / number
+    / keyword
+	/ string
+	/ buffer
+	/ long_string
+	/ long_buffer
+	/ parray
+	/ barray
+	/ ptuple
+	/ btuple
+	/ struct
+	/ dict
+	/ symbol
+value <- (ws / readermac)* raw_value ws*
+root <- value*
+root2 <- (value value)*
+ptuple <- "(" root ")"
+btuple <- "[" root "]"
+struct <- "{" root2 "}"
+parray <- "@" ptuple
+barray <- "@" btuple
+dict <- "@" struct
