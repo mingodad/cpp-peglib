@@ -141,6 +141,7 @@ const sampleList = [
 	["peg-gpeg-transform parser", "gpeg-transform.peglib", "test.gpeg-transform", "ace/mode/text"],
 	["peg-grako parser", "grako-swayf.peglib", "test.grako-swayf", "ace/mode/text"],
 	["peg-language parser", "language.peglib", "test.language", "ace/mode/text"],
+	["peg-mouse parser", "peg-mouse.peglib", "test.peg-mouse", "ace/mode/text"],
 	["peg-naigama parser", "naigama.peglib", "test.naigama", "ace/mode/text"],
 	["peg-pkanz parser", "pPEG-pcanz.peglib", "test.pPEG-pcanz", "ace/mode/text"],
 	["peg-pegged parser", "pegged.peglib", "test.pegged", "ace/mode/text"],
