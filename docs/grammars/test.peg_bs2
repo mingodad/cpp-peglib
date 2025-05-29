@@ -1,0 +1,121 @@
+#From: https://sourceforge.net/p/narwhal/code/HEAD/tree/trunk/src/pgbs2/peg_bs2.peg
+
+#
+# PEG File Parser Bootstrap 2
+#
+
+Grammar <- Space Header Body EOF
+
+Header <- VarDef* Code?
+Body <- Rule*
+
+#
+# Variable definitions
+#
+
+VarDef <- VarName EQUAL VarBody EOL Space
+VarName <- Identifier
+VarBody <- (!EOL .)+
+
+#
+# Rules
+#
+
+Rule <- RuleName LEFT Disjunction Code?
+RuleName <- Identifier
+
+Disjunction <- Conjunction (SLASH Conjunction)*
+Conjunction <- Prefixed+
+
+Prefixed <- Prefix? Suffixed
+Prefix <- AND / NOT / HIDE
+
+Suffixed <- Term Suffix?
+Suffix <- QUES / STAR / PLUS
+
+Term <- Identifier !LEFT / Literal / Class / DOT / Group
+
+Group <- OPEN Disjunction CLOSE
+
+#
+# Code
+#
+
+Code <- '{' CodeBody '}' Space
+
+CodeBody <- CodeBodyItem*
+CodeBodyItem <- SQuoted / DQuoted / CodeItem / Code
+CodeItem <- CodeOutput / CodeChildren / CodeVar / ![{}] .
+CodeOutput <- '$$'
+CodeChildren <- '$@'
+CodeVar <- '${' CodeVarName '}'
+CodeVarName <- (!([{}]/EOL) .)+
+
+#
+# Tokens
+#
+
+Identifier <- IdentStartItem IdentBody Space
+IdentStartItem <- [A-Za-z]
+IdentBody <- IdentBodyItem*
+IdentBodyItem <- IdentStartItem / [0-9_]
+
+Literal <- (SQuoted / DQuoted) Space
+SQuoted <- ['] SQuotedBody [']
+DQuoted <- ["] DQuotedBody ["]
+
+SQuotedBody <- SQuotedBodyItem*
+SQuotedBodyItem <- "\\'" / (!['] Char)
+
+DQuotedBody <- DQuotedBodyItem*
+DQuotedBodyItem <- '\\"' / (!["] Char)
+
+Class <- '[' ClassBody ']' Space
+ClassBody <- ClassBodyItem*
+ClassBodyItem <- Range / ClassChar
+
+Range <- ClassChar '-' ClassChar
+ClassChar <- !(']'/EOL) Char
+
+Char <- Escaped / HexChar / .
+
+Escaped <- '\\]' / '\\' ['"?\\abfnrtv]
+
+HexChar <- ByteChar / UnicodeChar
+ByteChar <- '\\x' HexDigit HexDigit
+UnicodeChar <- '\\u' HexDigit HexDigit HexDigit HexDigit
+HexDigit <- [0-9a-fA-F]
+
+#
+# Whitespace and Comments
+#
+
+Space <- SpaceItem*
+SpaceItem <- Whitespace / Comment
+
+Whitespace <- ' ' / '\t' / EOL
+
+Comment <- CommentStart CommentBody EOL
+CommentStart <- '#' / '//'
+CommentBody <- CommentBodyItem*
+CommentBodyItem <- !EOL .
+
+#
+# Symbols
+#
+
+EQUAL <- '='  Space
+LEFT  <- '<-' Space
+SLASH <- '/'  Space
+AND   <- '&'  Space
+NOT   <- '!'  Space
+HIDE  <- '~'  Space
+QUES  <- '?'  Space
+STAR  <- '*'  Space
+PLUS  <- '+'  Space
+DOT   <- '.'  Space
+OPEN  <- '('  Space
+CLOSE <- ')'  Space
+
+EOL   <- '\r\n' / '\n' / '\r'
+EOF   <- !.

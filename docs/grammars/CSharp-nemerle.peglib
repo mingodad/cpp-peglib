@@ -1,0 +1,587 @@
+#From: https://github.com/rsdn/nemerle/blob/b5f7046239c8027184909722cfbd3cbe29c3eff1/snippets/csharp-parser/CSharpParser/Parser.n
+
+start <-  compilationUnit !.
+semicolon <-  ";"s
+semicolonOpt            <- (";"s)?
+
+#region Line terminators
+
+newLineCharacter <- '\n'
+		/ '\r'
+		/ '\u2028'    #/*  line separator       */
+		/ '\u2029'   #/*  paragraph separator  */
+newLine   <- "\r\n" / newLineCharacter
+
+#endregion
+
+#region White space
+
+whitespace <-
+	  ' ' #[Zs]
+	/ '\t'
+	/ '\v'        #/*  vertial tab          */
+	/ '\f'        #/*  form feed            */
+
+#endregion
+
+#region Spacer
+
+comment <- "//"[^\n]* / "/*" (!"*/" .)* "*/"
+
+space <- whitespace / newLine / comment
+
+#[InlineAllSubrules]
+~s <-  space*                      #/* optional spacer          */
+~S <-  !identifierPartCharacters s #/* identifier break spacer  */
+
+#endregion
+
+#region Identifiers
+
+# illegal identifiers:
+keyword <- ("abstract"     / "as"          / "base"        / "bool"        / "break"
+	/ "byte"        / "case"        / "catch"       / "char"        / "checked"
+	/ "class"       / "const"       / "continue"    / "decimal"     / "default"
+	/ "delegate"    / "do"          / "double"      / "else"        / "enum"
+	/ "event"       / "explicit"    / "extern"      / "false"       / "finally"
+	/ "fixed"       / "float"       / "for"         / "foreach"     / "goto"
+	/ "if"          / "implicit"    / "in"          / "int"         / "interface"
+	/ "internal"    / "is"          / "lock"        / "long"        / "namespace"
+	/ "new"         / "null"        / "object"      / "operator"    / "out"
+	/ "override"    / "params"      / "private"     / "protected"   / "public"
+	/ "readonly"    / "ref"         / "return"      / "sbyte"       / "sealed"
+	/ "short"       / "sizeof"      / "stackalloc"  / "static"      / "string"
+	/ "struct"      / "switch"      / "this"        / "throw"       / "true"
+	/ "try"         / "typeof"      / "uint"        / "ulong"       / "unchecked"
+	/ "unsafe"      / "ushort"      / "using"       / "virtual"     / "void"
+	/ "volatile"    / "while"       ) !identifierPartCharacters
+
+letterCharacter       <- [A-Za-z] #[Lu, Ll, Lt, Lm, Lo, Nl]
+#combiningCharacter    <- [Mn, Mc]
+decimalDigitCharacter <- [0-9] #[Nd]
+#connectingCharacter   <- [Pc]
+#formattingCharacter   <- [Cf]
+
+identifierStartCharacter  <- letterCharacter / "_"
+identifierPartCharacters  <- letterCharacter / decimalDigitCharacter #/ connectingCharacter / combiningCharacter / formattingCharacter
+normalIdentifierBody <-  identifierStartCharacter identifierPartCharacters* !unicodeEscapeSequence
+escapedIdentifierPartCharacter <-  identifierPartCharacters
+escapedIdentifierStartCharacter <-  identifierStartCharacter
+escapedIdentifierBody <-  (unicodeEscapeSequence / escapedIdentifierStartCharacter) (unicodeEscapeSequence / escapedIdentifierPartCharacter)*
+identifierBody <-  normalIdentifierBody / &escapedIdentifierBody escapedIdentifierBody
+identifier <-  !keyword <"@"? identifierBody> s
+
+qualifiedIdentifierPartTypeArguments <-  "<"s typeArguments ">"s
+qualifiedIdentifierPartOpenTypeArguments <-  "<"s rankSeparators ">"s
+qualifiedIdentifierPart <-  identifier (qualifiedIdentifierPartTypeArguments / qualifiedIdentifierPartOpenTypeArguments)?
+qualifiedIdentifier <-  (identifier "::"s)? qualifiedIdentifierPart ("."s qualifiedIdentifierPart)*
+
+# same as 'qualifiedIdentifierPart' but avoids capturing type arguments of method name
+typeMemberIdentifierPart <-  identifier ((qualifiedIdentifierPartTypeArguments / qualifiedIdentifierPartOpenTypeArguments) !"(")?
+typeMemberIdentifier <-  (identifier "::"s)? typeMemberIdentifierPart ("."s typeMemberIdentifierPart)*
+
+#endregion
+
+#region Literals
+
+nullLiteral <-  "null"S
+
+booleanLiteral <-  ("true" / "false")S
+
+decimalDigit                        <- [0-9]
+hexDigit                            <- [0-9a-fA-F]
+integerTypeSuffixTerminal           <- ('U' / 'u') ('l' / 'L')? / ('l' / 'L') ('U' / 'u')?
+integerTypeSuffix <-  integerTypeSuffixTerminal # "UL" / "ul" / "uL" / "Ul" / "LU" / "lu" / "Lu" / "lU" / "U" / "u" / "L" / "l"
+decimalIntegerLiteral <-  decimalDigit+ integerTypeSuffix?
+hexadecimalIntegerLiteral <-  ("0x" / "0X") hexDigit+ integerTypeSuffix?
+integerLiteral <-  <(hexadecimalIntegerLiteral / decimalIntegerLiteral)> s
+
+realTypeSuffix <-  "F" / "f" / "D" / "d" / "M" / "m"
+exponentPart <-  ("E" / "e") ("-" / "+")? decimalDigit+
+realLiteral_1 <-  decimalDigit* "." decimalDigit+ exponentPart? realTypeSuffix?
+realLiteral_2 <-  decimalDigit+ exponentPart realTypeSuffix?
+realLiteral_3 <-  decimalDigit+ realTypeSuffix
+realLiteral <-  <(realLiteral_1 / realLiteral_2 / realLiteral_3)> s
+
+unicodeEscapeSequence_u <-  "\\u" hexDigit hexDigit hexDigit hexDigit
+unicodeEscapeSequence_U <-  "\\U" hexDigit hexDigit hexDigit hexDigit hexDigit hexDigit hexDigit hexDigit
+unicodeEscapeSequence <-  unicodeEscapeSequence_u / unicodeEscapeSequence_U
+hexadecimalEscapeSequence <-  "\\x" hexDigit hexDigit? hexDigit? hexDigit?
+simpleEscapeSequence <-  "\\'" / "\\\"" / "\\\\" / "\\0" / "\\a" / "\\b" / "\\f" / "\\n" / "\\r" / "\\t" / "\\v"
+singleCharacter <-  !(newLineCharacter / "'" / "\\") .
+character <-  simpleEscapeSequence / unicodeEscapeSequence / hexadecimalEscapeSequence / singleCharacter
+characterLiteral <-  <"'" character "'"> s
+
+singleRegularStringLiteralCharacter                <- !(newLineCharacter / "\"" / "\\") .
+regularStringLiteralCharacterSequence <-  singleRegularStringLiteralCharacter+
+regularStringLiteralPart <-  simpleEscapeSequence
+						  / unicodeEscapeSequence
+						  / hexadecimalEscapeSequence
+						  / regularStringLiteralCharacterSequence
+regularStringLiteral <-  <"\"" regularStringLiteralPart* "\"">
+
+singleVerbatimStringLiteralCharacter               <- !"\"" .
+verbatimStringLiteralCharacterSequence <-  singleVerbatimStringLiteralCharacter+
+quoteEscapeSequence <-  "\"\""
+verbatimStringLiteralPart <-  quoteEscapeSequence
+						  / verbatimStringLiteralCharacterSequence
+verbatimStringLiteral <-  <"@\"" verbatimStringLiteralPart* "\"">
+
+stringLiteral <-  (regularStringLiteral / verbatimStringLiteral) s
+
+literal <-  booleanLiteral / nullLiteral / realLiteral / integerLiteral  / characterLiteral / stringLiteral
+
+#endregion
+
+#region Types
+
+predefinedType <-  ("sbyte" / "byte"   / "short" / "ushort"  / "int"   / "uint"
+			  / "long" / "ulong"  / "char"  / "decimal" / "void"  / "bool"
+			  / "string" / "dynamic" / "object" / "float" / "double" )S
+typeName <-  qualifiedIdentifier
+
+rankSeparators <-  (","s)*
+rankSpecifier <-  "["s rankSeparators "]"s
+pointerSpecifier <-  "*"s
+nullableSpecifier                         <- "?" !"?" s # dont't collide with `??' operator
+typeSpecifier <-  rankSpecifier / pointerSpecifier
+
+anyNonArrayType <-  (predefinedType / typeName) nullableSpecifier?
+anyNonArrayTypeNullableHack <-  (predefinedType / typeName) (nullableSpecifier !(expression ":"s expression))?  # don't collide with ternary op ? :
+anyType <-  anyNonArrayType typeSpecifier*
+anyTypeWithSpecifier_1 <-  anyNonArrayType typeSpecifier+
+anyTypeWithSpecifier_2 <-  (predefinedType / typeName) nullableSpecifier
+anyTypeWithSpecifier <-  anyTypeWithSpecifier_1 / anyTypeWithSpecifier_2
+anyTypeNullableHack <-  anyNonArrayTypeNullableHack typeSpecifier*
+typeArgument <-  anyType
+typeArguments <-  typeArgument (","s typeArgument)*
+
+mayBeGenericArgumentList <-  "<"s typeArguments ">"s &('(' / ')' / ']' / '}' / ':' / ';' / ',' / '.' / '?' / "==" / "!=")
+
+typeDeclaration <-  classStructInterfaceDeclaration
+				/ enumDeclaration
+				/ delegateDeclaration
+
+#endregion
+
+#region Namespaces
+
+externAliasDirective <-  "extern"S "alias"S identifier semicolon
+externAliasDirectives <-  externAliasDirective*
+
+usingAliasDirective <-  "using"S identifier "="s qualifiedIdentifier semicolon
+usingNamespaceDirective <-  "using"S qualifiedIdentifier semicolon
+usingDirective <-  usingAliasDirective
+					    / usingNamespaceDirective
+usingDirectives <-  usingDirective*
+
+namespaceBody <-  "{"s externAliasDirectives usingDirectives namespaceMemberDeclarations "}"s
+namespaceDeclaration <-  "namespace"S qualifiedIdentifier namespaceBody semicolonOpt
+namespaceTypeDeclaration <-  typeDeclaration
+namespaceMemberDeclaration <-  namespaceDeclaration
+					      / namespaceTypeDeclaration
+namespaceMemberDeclarations <-  namespaceMemberDeclaration*
+
+compilationUnit <-  s externAliasDirectives usingDirectives globalAttributes namespaceMemberDeclarations
+
+#endregion
+
+#region Variables and Constants
+
+expressionInitializer <-  expression
+propertyInitializer <-  identifier "="s (complexInitializer / expressionInitializer)
+stackallocInitializer <-  "stackalloc"S anyType "["s expression "]"s
+variableInitializerList <-  variableInitializer (","s variableInitializer)*
+complexInitializer <-  "{"s (variableInitializerList (","s)?)? "}"s
+variableInitializer <-  complexInitializer
+						/ stackallocInitializer
+						/ propertyInitializer
+						/ expressionInitializer
+
+constantDeclarator <-  identifier "="s constantExpression
+constantDeclarators <-  constantDeclarator (","s constantDeclarator)*
+
+variableDeclarator <-  identifier ("="s (stackallocInitializer / expressionInitializer / complexInitializer))?
+variableDeclarators <-  variableDeclarator (","s variableDeclarator)*
+
+#endregion
+
+#region Expressions
+
+argumentName <-  identifier ":" !":" s  # avoid conflict with alias
+argumentModfier <-  ("ref" / "out")S
+argument <-  argumentName? argumentModfier? expression
+argumentList <-  argument (","s argument)*
+
+expression <-  lambdaExpression
+			  / assignmentExpression
+expressionList <-  expression (","s expression)*
+constantExpression <-  expression
+booleanExpression <-  expression
+
+simpleName <-  identifier ("::"s identifier)? mayBeGenericArgumentList?
+literalExpression <-  literal
+
+parenthesizedExpression <-  "("s expression ")"s
+
+thisAccess <-  "this"S
+baseAccess <-  "base"S
+predefinedAccess <-  predefinedType
+anyTypeNullableHackAccess <-  anyTypeNullableHack
+
+typeofExpression <-  "typeof"S "("s anyType ")"s
+checkedExpression <-  "checked"S "("s expression ")"s
+uncheckedExpression <-  "unchecked"S "("s expression ")"s
+defaultValueExpression <-  "default"S "("s anyType ")"s
+sizeofExpression <-  "sizeof"S "("s anyType ")"s
+
+newObject_1 <-  anyNonArrayType "("s argumentList? ")"s complexInitializer?
+newObject_2 <-  anyNonArrayType complexInitializer
+newArray_1 <-  anyNonArrayType "["s expressionList "]"s rankSpecifier* complexInitializer?
+newArray_2 <-  anyNonArrayType rankSpecifier+ complexInitializer
+newArray_3 <-  rankSpecifier complexInitializer
+newAnonymous <-  complexInitializer
+newExpression <-  "new"S (newObject_1 / newArray_1 / newArray_2 / newObject_2 / newArray_3 / newAnonymous)
+
+explicitAnonymousFunctionParameterModifier <-  ("ref" / "out")S
+explicitAnonymousFunctionParameter <-  explicitAnonymousFunctionParameterModifier? anyType identifier
+explicitAnonymousFunctionParameterList <-  explicitAnonymousFunctionParameter (","s explicitAnonymousFunctionParameter)*
+explicitAnonymousFunctionSignature <-  "("s explicitAnonymousFunctionParameterList? ")"s
+anonymousMethodExpression <-  "delegate"S explicitAnonymousFunctionSignature? block
+
+otherExpression <-  queryExpression
+		      / simpleName
+		      / literalExpression
+		      / parenthesizedExpression
+		      / thisAccess
+		      / baseAccess
+		      / predefinedAccess
+		      / newExpression
+		      / typeofExpression
+		      / checkedExpression
+		      / uncheckedExpression
+		      / defaultValueExpression
+		      / anonymousMethodExpression
+		      / sizeofExpression
+
+indexerArguments <-  "["s argumentList? "]"s
+callArguments <-  "("s argumentList? ")"s
+callOrIndexerExpression <-  otherExpression (indexerArguments / callArguments)*
+
+memberOperator <-  ("." / "->")s
+memberExpression <-  callOrIndexerExpression (memberOperator callOrIndexerExpression)*
+
+postfixOperator <-  ("++" / "--")s
+postfixExpression <-  memberExpression postfixOperator*
+
+prefixOperator <-  ("++" / "--" / "+" / "-" / "~" / "!" / "&" !"&" / "*")s
+castSuffix_1 <-  predefinedType ")"s
+castSuffix_2 <-  anyTypeWithSpecifier ")"s
+castSuffix_3 <-  anyType ")"s  &( '~'
+				    / '!' !'='
+				    / '&' !'&'
+				    / '('
+				    / !("as"S / "is"S) identifierStartCharacter
+				    / '@'
+				    / prefixOperator? literal)
+castOperator <-  "("s (castSuffix_1 / castSuffix_2 / castSuffix_3)
+prefixExpression <-  (prefixOperator / castOperator)* postfixExpression
+
+binaryOperator <-  ("??" / "||" / "|" / "&&" / "&" / "==" / "!=" / "<=" / "<<" / "<"
+						/ ">=" / ">>" / ">" / "*" / "/" / "%" / "+" / "-" / "^")s
+typeTestingOperator <-  ("is" / "as")S
+binaryOperatorExpression <-  prefixExpression ( (binaryOperator prefixExpression) / (typeTestingOperator anyTypeNullableHackAccess) )*
+
+conditionalExpression <-  binaryOperatorExpression ("?"s expression ":"s expression)?
+
+assignmentOperator <-  ("=" / "+=" / "-=" / "*=" / "/=" / "%=" / "&=" / "|=" / "^=" / "<<=" / ">>=")s
+assignmentExpression <-  conditionalExpression (assignmentOperator expression)?
+
+implicitAnonymousFunctionParameter <-  identifier
+implicitAnonymousFunctionParameterList <-  implicitAnonymousFunctionParameter (","s implicitAnonymousFunctionParameter)*
+
+implicitAnonymousFunctionSignature_1 <-  implicitAnonymousFunctionParameter
+implicitAnonymousFunctionSignature_2 <-  "("s implicitAnonymousFunctionParameterList? ")"s
+implicitAnonymousFunctionSignature <-  implicitAnonymousFunctionSignature_1
+							  / implicitAnonymousFunctionSignature_2
+
+anonymousFunctionSignature <-  explicitAnonymousFunctionSignature
+						/ implicitAnonymousFunctionSignature
+anonymousFunctionBody_expression <-  expression
+anonymousFunctionBody_block <-  block
+anonymousFunctionBody <-  anonymousFunctionBody_expression
+					    / anonymousFunctionBody_block
+lambdaExpression <-  anonymousFunctionSignature "=>"s anonymousFunctionBody
+
+fromClause_1 <-  identifier "in"S expression
+fromClause_2 <-  anyType identifier "in"S expression
+fromClause <-  "from"S (fromClause_1 / fromClause_2)
+
+letClause <-  "let"S identifier "="s expression
+
+whereClause <-  "where"S booleanExpression
+
+joinClause_1 <-  identifier "in"S expression "on"S expression "equals"S expression ("into"S identifier)?
+joinClause_2 <-  anyType identifier "in"S expression "on"S expression "equals"S expression ("into"S identifier)?
+joinClause <-  "join"S (joinClause_1 / joinClause_2)
+
+orderingDirection <-  ("ascending" / "descending")S
+ordering <-  expression orderingDirection?
+oderings <-  ordering (","s ordering)*
+orderbyClause <-  "orderby"S oderings
+
+selectClause <-  "select"S expression
+groupClause <-  "group"S expression "by"S expression
+selectOrGroupClause <-  selectClause
+			      / groupClause
+
+queryContinuation <-  "into"S identifier queryBody
+
+queryBodyClause <-  fromClause
+				  / letClause
+				  / whereClause
+				  / joinClause
+				  / orderbyClause
+queryBodyClauses <-  queryBodyClause+
+
+queryBody <-  queryBodyClauses? selectOrGroupClause queryContinuation?
+queryExpression <-  fromClause queryBody
+
+#endregion
+
+#region Statements
+
+emptyStatement <-  semicolon
+
+labeledStatement <-  identifier ":" !":" s statement  # don't collide with `::' operator
+
+localConstantDeclaration <-  "const"S anyType constantDeclarators
+
+localVariableType_var <-  "var"S
+localVariableType_any <-  anyType
+localVariableType <-  localVariableType_var / localVariableType_any
+localVariableDeclaration <-  localVariableType variableDeclarators
+
+declarationStatement <-  (localConstantDeclaration / localVariableDeclaration) semicolon
+
+statementExpression <-  expression
+statementExpressionList <-  statementExpression (","s statementExpression)*
+expressionStatement <-  statementExpression semicolon
+
+embeddedStatement <-  block
+			    / emptyStatement
+			    / expressionStatement
+			    / selectionStatement
+			    / iterationStatement
+			    / jumpStatement
+			    / tryStatement
+			    / checkedStatement
+			    / uncheckedStatement
+			    / lockStatement
+			    / usingStatement
+			    / yieldStatement
+			    / unsafeStatement
+			    / fixedStatement
+
+#[%(statementRecovery, (';' /  '}' / "case"S / "default"S / statement), (space+ / stringLiteral+ / block / .))]
+ifStatement <-  "if"S "("s booleanExpression ")"s embeddedStatement ("else"S embeddedStatement)?
+switchLabel_case <-  "case"S constantExpression ":"s
+switchLabel_default <-  "default"S ":"s
+switchSection <-  (switchLabel_case / switchLabel_default) statementList?
+switchSections <-  switchSection+
+switchStatement <-  "switch"S "("s expression ")"s "{"s switchSections? "}"s
+
+selectionStatement <-  ifStatement
+			      / switchStatement
+
+whileStatement <-  "while"S "("s booleanExpression ")"s embeddedStatement
+doStatement <-  "do"S embeddedStatement "while"S "("s booleanExpression ")"s semicolon
+
+forInitializer_var <-  localVariableDeclaration
+forInitializer_expr <-  statementExpressionList
+forInitializer <-  forInitializer_var / forInitializer_expr
+forCondition <-  booleanExpression
+forIterator <-  statementExpressionList
+forStatement <-  "for"S "("s forInitializer? semicolon forCondition? semicolon forIterator? ")"s embeddedStatement
+
+foreachStatement <-  "foreach"S "("s localVariableType identifier "in"s expression ")"s embeddedStatement
+
+iterationStatement <-  whileStatement
+			     / doStatement
+			     / forStatement
+			     / foreachStatement
+
+breakStatement <-  "break"S semicolon
+continueStatement <-  "continue"S semicolon
+gotoStatement_case <-  "goto"S "case"S constantExpression semicolon
+gotoStatement_default <-  "goto"S "default"S semicolon
+gotoStatement_id <-  "goto"S identifier semicolon
+gotoStatement <-  gotoStatement_case / gotoStatement_default / gotoStatement_id
+returnStatement <-  "return"S expression? semicolon
+throwStatement <-  "throw"S expression? semicolon
+
+jumpStatement <-  breakStatement
+			/ continueStatement
+			/ gotoStatement
+			/ returnStatement
+			/ throwStatement
+
+catchClause <-  "catch"S ("("s anyType identifier? ")"s)? block
+catchClauses <-  catchClause+
+finallyClause <-  "finally"S block
+tryStatement_catch <-  catchClauses finallyClause?
+tryStatement_finally <-  finallyClause
+tryStatement <-  "try"S block (tryStatement_catch / tryStatement_finally)
+
+checkedStatement <-  "checked"S block
+uncheckedStatement <-  "unchecked"S block
+
+lockStatement <-  "lock"S "("s expression ")"s embeddedStatement
+
+resourceAcquisition_var <-  localVariableDeclaration &")"
+resourceAcquisition_expr <-  expression
+resourceAcquisition <-  resourceAcquisition_var / resourceAcquisition_expr
+usingStatement <-  "using"S "("s resourceAcquisition ")"s embeddedStatement
+
+yieldStatement_return <-  "yield"S "return"S expression semicolon
+yieldStatement_break <-  "yield"S "break"S semicolon
+yieldStatement <-  yieldStatement_return / yieldStatement_break
+
+unsafeStatement <-  "unsafe"S block
+fixedStatement <-  "fixed"S "("s localVariableDeclaration ")"s embeddedStatement
+
+#[FailureRecovery(statementRecovery, ("}" / statement / switchSection), (space+ / stringLiteral+ / block / .))]
+statement <-  labeledStatement
+			    / declarationStatement
+			    / embeddedStatement
+statementList <-  statement+
+block <-  "{"s statementList? "}"s
+
+#endregion
+
+#region Type members
+
+varianceAnnotation <-  ("in" / "out")S
+typeParameter <-  attributes? varianceAnnotation? identifier
+typeParameterList <-  "<"s typeParameter (","s typeParameter)* ">"s
+
+typeParameterConstraint_ctor <-  "new"S "("s ")"s
+typeParameterConstraint_type <-  ("class" / "struct")S
+typeParameterConstraint_base <-  anyType
+typeParameterConstraint <-  typeParameterConstraint_ctor
+						      / typeParameterConstraint_type
+						      / typeParameterConstraint_base
+typeParameterConstraints <-  typeParameterConstraint (","s typeParameterConstraint)*
+typeParameterConstraintsClause <-  "where"S identifier ":"s typeParameterConstraints
+typeParameterConstraintsClauses <-  typeParameterConstraintsClause+
+
+modifier <-  ("new" / "public" / "protected" / "internal" / "private" / "partial" / "virtual"
+			  / "volatile" / "static" / "readonly" / "sealed" / "override" / "abstract" / "extern" / "unsafe")S
+modifiers <-  modifier+
+
+constantDeclaration <-  attributes? modifiers? "const"S anyType constantDeclarators semicolon
+
+fieldDeclaration <-  attributes? modifiers? anyType variableDeclarators semicolon
+
+fixedSizeBufferDeclarator <-  identifier "["s constantExpression "]"s
+fixedSizeBufferDeclarators <-  fixedSizeBufferDeclarator (","s fixedSizeBufferDeclarator)*
+fixedSizeBufferDeclaration <-  attributes? modifiers? "fixed"S anyType fixedSizeBufferDeclarators semicolon
+
+parameterModifier <-  ("ref" / "out" / "this" / "params")S
+defaultArgument <-  "="s expression
+formalParameter <-  attributes? parameterModifier? anyType identifier defaultArgument?
+formalParameterList <-  formalParameter (","s formalParameter)*
+
+methodBody <-  emptyStatement / block
+methodDeclaration <-  attributes? modifiers? anyType typeMemberIdentifier typeParameterList? "("s formalParameterList? ")"s typeParameterConstraintsClauses? methodBody
+
+getAccessorDeclaration <-  attributes? modifiers? "get"S methodBody
+setAccessorDeclaration <-  attributes? modifiers? "set"S methodBody
+accessorDeclarations_1 <-  getAccessorDeclaration setAccessorDeclaration?
+accessorDeclarations_2 <-  setAccessorDeclaration getAccessorDeclaration?
+accessorDeclarations <-  accessorDeclarations_1 / accessorDeclarations_2
+propertyDeclaration <-  attributes? modifiers? anyType typeMemberIdentifier "{"s accessorDeclarations "}"s
+
+addAccessorDeclaration <-  attributes? "add"S block
+removeAccessorDeclaration <-  attributes? "remove"S block
+eventAccessorDeclarations_1 <-  addAccessorDeclaration removeAccessorDeclaration
+eventAccessorDeclarations_2 <-  removeAccessorDeclaration addAccessorDeclaration
+eventAccessorDeclarations <-  eventAccessorDeclarations_1 / eventAccessorDeclarations_2
+eventDeclaration_1 <-  attributes? modifiers? "event"S anyType typeMemberIdentifier "{"s eventAccessorDeclarations "}"s
+eventDeclaration_2 <-  attributes? modifiers? "event"S anyType variableDeclarators semicolon
+eventDeclaration <-  eventDeclaration_1 / eventDeclaration_2
+
+indexerDeclaration <-  attributes? modifiers? anyType (typeMemberIdentifier "."s)? "this"S "["s formalParameterList? "]"s "{"s accessorDeclarations "}"s
+
+overloadableOperator <-  ("++" / "--" / "<<" / ">>" / "==" / "!=" / ">=" / "<=" / ">" / "<" / "true" / "false"
+				  / "^" / "!" / "~" / "+" / "-" / "*" / "/" / "%" / "&" / "|")S
+overloadableOperatorDeclarator <-  anyType "operator"S overloadableOperator
+conversionOperatorDeclarator <-  ("implicit" / "explicit")S "operator"S anyType
+operatorDeclarator <-  conversionOperatorDeclarator
+				      / overloadableOperatorDeclarator
+operatorDeclaration <-  attributes? modifiers? operatorDeclarator "("s formalParameterList? ")"s methodBody
+
+constructorInitializer <-  ":"s ("this" / "base")S "("s argumentList? ")"s
+constructorDeclaration <-  attributes? modifiers? identifier "("s formalParameterList? ")"s constructorInitializer? methodBody
+
+destructorDeclaration <-  attributes? modifiers? "~"s identifier "("s formalParameterList? ")"s methodBody
+
+nestedTypeDeclaration <-  typeDeclaration
+
+typeMemberDeclaration <-  methodDeclaration
+				  / propertyDeclaration
+				  / fieldDeclaration
+				  / constantDeclaration
+				  / constructorDeclaration
+				  / eventDeclaration
+				  / operatorDeclaration
+				  / indexerDeclaration
+				  / destructorDeclaration
+				  / nestedTypeDeclaration
+				  / fixedSizeBufferDeclaration
+typeMemberDeclarations <-  typeMemberDeclaration*
+
+#endregion
+
+#region Class, Struct, Interface
+
+typeBase <-  ":"s anyType (","s anyType)*
+typeBody <-  "{"s typeMemberDeclarations "}"s
+classStructInterfaceDeclaration <-  attributes? modifiers? ("class" / "struct" / "interface")S
+						  identifier typeParameterList? typeBase? typeParameterConstraintsClauses? typeBody semicolonOpt
+
+#endregion
+
+#region Enum
+
+enumBase <-  ":"s anyType
+enumMemberDeclaration <-  attributes? identifier ("="s constantExpression)?
+enumMemberDeclarations <-  enumMemberDeclaration (","s enumMemberDeclaration)* (","s)?
+enumBody <-  "{"s enumMemberDeclarations? "}"s
+enumDeclaration <-  attributes? modifiers? "enum"S identifier enumBase? enumBody semicolonOpt
+
+#endregion
+
+#region Delegate
+
+delegateDeclaration <-  attributes? modifiers? "delegate"S anyType identifier typeParameterList? "("s formalParameterList? ")"s typeParameterConstraintsClauses? semicolon
+
+#endregion
+
+#region Attributes
+
+attributeArguments <-  "("s argumentList? ")"s
+attribute <-  qualifiedIdentifier attributeArguments?
+attributeList <-  attribute (","s attribute)*
+
+globalAttributeTarget <-  ("assembly" / "module")S
+globalAttributeTargetSpecifier <-  globalAttributeTarget ":"s
+globalAttributeSection <-  "["s globalAttributeTargetSpecifier attributeList (","s)? "]"s
+globalAttributes <-  globalAttributeSection*
+
+attributeTarget <-  ("field" / "event" / "method" / "param" / "property" / "return" / "type")S
+attributeTargetSpecifier <-  attributeTarget ":"s
+attributeSection <-  "["s attributeTargetSpecifier? attributeList (","s)? "]"s
+attributes <-  attributeSection+
+
+#endregion
