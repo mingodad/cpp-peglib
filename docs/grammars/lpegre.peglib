@@ -1,0 +1,38 @@
+#From: https://github.com/roberto-ieru/LPeg/blob/80ec9f932aa01d445e86c699523265359055e1bd/re.html#L414C1-L450C1
+
+pattern         <- exp !.
+exp             <- S (grammar / alternative)
+
+alternative     <- seq ('/' S seq)*
+seq             <- prefix*
+prefix          <- '&' S prefix / '!' S prefix / suffix
+suffix          <- primary S (([+*?]
+                            / '^' [+-]? num
+                            / '->' S (string / '{}' / name)
+                            / '>>' S name
+                            / '=>' S name) S)*
+
+primary         <- '(' exp ')' / string / class / defined
+                 / '{:' (name ':')? exp ':}'
+                 / '=' name
+                 / '{}'
+                 / '{~' exp '~}'
+                 / '{|' exp '|}'
+                 / '{' exp '}'
+                 / '.'
+                 / name S !arrow
+                 / '<' name '>'          # old-style non terminals
+
+grammar         <- definition+
+definition      <- name S arrow exp
+
+class           <- <'[' '^'? item (!']' item)* ']'>
+item            <- defined / range / .
+range           <- . '-' [^\]]
+
+~S               <- ([ \t\r\n\f\v] / '--' [^\n]*)*   # spaces and comments
+name            <- <[A-Za-z_][A-Za-z0-9_]*>
+arrow           <- '<-'
+num             <- <[0-9]+>
+string          <- <'"' [^"]* '"' / "'" [^']* "'">
+defined         <- '%' name
