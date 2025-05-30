@@ -1,0 +1,38 @@
+# Example grammar of PEG in PEG syntax.
+# Comments start with '#'.
+# First symbol is the start symbol.
+
+grammar <- ig (rule* / expr)
+
+identifier <- <[A-Za-z][A-Za-z0-9_]*>
+charsetchar <- "\\" . / [^\]]
+charset <- <"[" "^"? (charsetchar ("-" charsetchar)?)+ "]">
+stringlit <- <identifier? ("\"" ("\\" . / [^"])* "\"" /
+                          "'" ("\\" . / [^'])* "'")>
+builtin <- <"\\" (identifier / [^\r\n])>
+
+comment <- '#' (!eol .)* eol?
+eol <- '\n' '\r'? / '\r''\n'?
+~ws <- [ \t\r\n\f\v]
+~ig <- (ws+ / comment)* # things to ignore
+
+rule <- identifier ws* "<-" expr ig
+identNoArrow <- identifier !(ws* "<-")
+prefixOpr <- ig '&' / ig '!' / ig '@' / ig '{@}' / ig '@@'
+literal <- ig identifier? '$' '^'? [0-9]+ / '$' / '^' /
+           ig identNoArrow /
+           ig charset /
+           ig stringlit /
+           ig builtin /
+           ig '.' /
+           ig '_' /
+           (ig "(" expr ig ")") /
+           (ig "{" expr? ig "}")
+postfixOpr <- ig <('?' / '*' / '+')>
+primary <- prefixOpr* (literal postfixOpr*)
+
+# Concatenation has higher priority than choice:
+# ``a b / c`` means ``(a b) / c``
+
+seqExpr <- primary+
+expr <- seqExpr (ig "/" expr)*

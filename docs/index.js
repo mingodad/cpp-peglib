@@ -147,6 +147,7 @@ const sampleList = [
 	["peg-naigama parser", "naigama.peglib", "test.naigama", "ace/mode/text"],
 	["peg-narwhal parser", "peg_bs2.peglib", "test.peg_bs2", "ace/mode/text"],
 	["peg-nez parser", "nez-peg.peglib", "test.nez", "ace/mode/text"],
+	["peg-nim-std parser", "peg-nim-std.peglib", "test.peg-nim-std", "ace/mode/text"],
 	["peg-pegn parser", "pegn.peglib", "test.pegn", "ace/mode/text"],
 	["peg-pegged parser", "pegged.peglib", "test.pegged", "ace/mode/text"],
 	["peg-peggen-quarnster parser", "peggen-quarnster.peglib", "test.peggen-quarnster", "ace/mode/text"],
