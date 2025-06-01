@@ -1,0 +1,97 @@
+#From: https://github.com/python/cpython/blob/2f2bee21118adce653ee5bc4eb31d30327465966/Tools/peg_generator/pegen/metagrammar.gram
+
+start <- grammar ENDMARKER
+
+grammar <-
+     meta* rules
+
+meta <-
+     "@" (NAME / STRING) #NEWLINE
+
+rules <-
+     rule+
+
+rule <-
+    # rulehead alts NEWLINE INDENT more_alts DEDENT
+    #/ rulehead NEWLINE INDENT more_alts DEDENT
+    #/ rulehead alts NEWLINE
+    rulehead alts
+
+rulehead <-
+    rulename memoflag? ":"
+
+rulename <-
+     NAME annotation?
+
+# In the future this may return something more complicated
+memoflag <-
+     '(' "memo" ')'
+
+alts <-
+    "|"? alt ("|" alt)*
+
+#more_alts <-
+#     ("|" alts NEWLINE)+
+
+alt <-
+     items ('$'? action)?
+
+items <-
+     named_item+
+
+named_item <-
+     NAME annotation '=' ↑ item
+    / NAME '=' ↑ item
+    / item
+    / forced_atom
+    / lookahead
+
+forced_atom <-
+     '&''&' ↑ atom
+
+lookahead <-
+     '&' ↑ atom
+    / '!' ↑ atom
+    / '~'
+
+item <-
+     '[' ↑ alts ']'
+    /  atom '?'
+    /  atom '*'
+    /  atom '+'
+    /  atom '.' atom '+'
+    /  atom
+
+atom <-
+     '(' ↑ alts ')'
+    / !rulehead NAME
+    / STRING
+
+# Mini-grammar for the actions and annotations
+
+action <- <"{" ↑ target_atoms "}">
+annotation <- <"[" ↑ target_atoms "]">
+
+target_atoms <-
+     target_atom+
+
+target_atom <-
+     "{" ↑ target_atoms? "}"
+    / "[" ↑ target_atoms? "]"
+    / NAME "*"?
+    / NUMBER
+    / STRING
+    / "?"
+    / ":"
+    / !"}" !"]" OP
+
+STRING <- <'"' (!("\\". / '"') .)* '"' / "'" (!("\\". / "'") .)* "'">
+NUMBER <- <[0-9]+>
+NAME <- <[A-Za-z_][A-Za-z0-9_]*>
+ENDMARKER <- !.
+NEWLINE <- <'\n' '\r'? / '\r' '\n'?>
+#INDENT <- [ \t]+
+#DEDENT <- "_DEDENT_"
+OP <- .
+
+%whitespace <- ([ \t\r\n\f\v]+ / '#'(!NEWLINE .)* )*

@@ -1,0 +1,192 @@
+{
+#include "syntax.h"
+}
+
+Grammar :: struct s_node *
+    ← _ p:Preamble ds:Defns →
+    { s_kid(grammar, cons(p, ds)) }
+
+Defns
+    ← d:Defn ds:Defns { cons(d, ds) }
+    / d:Defn → d
+
+Defn
+    ← n:Name t:TypeOptional lArrow r:Rule0 _ →
+	{ s_both(rule, n, cons(s_text(type, t), r)) }
+
+Rule0
+    ← s:Rule1 Slash r:Rule0 { s_alt(s, r) }
+    / s:Rule1 → s
+
+Rule1
+    ← Epsilon r:Result? → { s_kid(seq, r) }
+    / s:Rule2 r:Result? → { s_kid(seq, append(s, r)) }
+
+Rule2
+    ← r:Rule3 s:Rule2 { cons(r, s) }
+    / Dollar s:Rule2 { cons(s_new(cafe), s) }
+    / ε { 0 }
+
+Rule3
+    ← And u:Rule4 { s_kid(and, u) }
+    / Not u:Rule4 { s_kid(not, u) }
+    / And c:Code { s_retype(guard, c) }
+    / n:Name Colon u:Rule4 { s_both(bind, n, u) }
+    / l:StringLit Colon u:Rule4 { s_both(lit, l, u) }
+    / u:Rule4 → u
+
+Rule4
+    ← r:Rule5 Query { s_both(rep, ",1", r) }
+    / r:Rule5 Star { s_both(rep, 0, r) }
+    / r:Rule5 Plus { s_both(rep, "1,", r) }
+    / r:Rule5 → r
+
+Rule5
+    ← n:Name !lArrow !ColCol { s_text(call, n) }
+    / Dot { s_new(any) }
+    / l:StringLit { s_text(lit, l) }
+    / c:CClass0 → c
+    / lParen r:Rule0 rParen → r
+
+CClass0 ← "[" c:CClass1 "]" _ → c
+
+CClass1 ← "^"? c:CClass2 → { s_both(cclass, ref_str(), c) }
+
+CClass2
+    ← c:CCHyphen cs:CCRanges? { append(c, cs) }
+    / c:CCrBracket cs:CCRanges? { append(c, cs) }
+    / cs:CCRanges c:CCHyphen { append(c, cs) }
+    / cs:CCRanges → cs
+
+CCRanges
+    ← c:CCRange cs:CCRanges { append(c, cs) }
+    / c:CCRange → c
+
+CCRange
+    ← a:CCNode "-" b:CCNode &{ a->number < b->number } → { s_ccrange(a, b) }
+    / !"-" n:CCNode → n
+
+CCNode ← c:CCChar { s_ccnode(c) }
+
+CCChar :: const unsigned char *
+    ← "\\]" { (const unsigned char *)"]" }
+    / ! "]" y:QuotedChar → { (const unsigned char *)ref_dup(y) }
+
+CCHyphen :: struct s_node * ← "-" { s_ccnode((const unsigned char *)"-") }
+
+CCrBracket ← "]" { s_ccnode((const unsigned char *)"]") }
+
+Result
+    ← rArrow b:BareResult → b #n:Name { s_both(expr, n, s_text(ident, n)) }
+    #/ rArrow n:Number { s_text(expr, n) }
+    / rArrow? c:Code → c
+
+BareResult
+    ← n:Name { s_both(expr, n,
+            cons(s_coords(PACC_LINE, PACC_COL), s_text(ident, n))) }
+    / n:Number { s_both(expr, n, s_coords(PACC_LINE, PACC_COL)) }
+
+CodeNames
+    ← n:Name ns:CodeNames { s_set_cons(s_text(ident, n), ns) }
+    / StringLit ns:CodeNames → ns
+    / CharLit ns:CodeNames → ns
+    / C_Comment ns:CodeNames → ns
+    / [^{}] ns:CodeNames → ns
+    / lBrace ns:CodeNames rBrace ps:CodeNames → { append(ns, ps) }
+    / ε { 0 }
+
+/*
+CodeNames
+    ← n:Name ns:CodeNames { s_set_cons(s_text(ident, n), ns) }
+    / StringLit ns:CodeNames → ns
+    / CharLit ns:CodeNames → ns
+    / C_Comment ns:CodeNames → ns
+    / [^{}] ns:CodeNames → ns
+    / lBrace ns:CodeNames rBrace → ns
+    / ε { 0 }
+*/
+
+CodeAndNames ← n:CodeNames →
+	{ s_both(expr, ref_str(), cons(s_coords(PACC_LINE, PACC_COL), n)) }
+
+Code ← "{" n:CodeAndNames rBrace → n #{ s_child_cons(n, l) }
+
+TypeOptional :: char *
+    ← ColCol ts:TypeElements → { s_stash_type(ts) }
+    / ε { s_stashed_type() }
+
+TypeElements  :: struct s_node *
+    ← t:TypeElement ts:TypeElements → { append(t, ts) }
+    / TypeElement
+
+TypeElement ← t:TypeRaw → { s_text(type, t) }
+
+TypeRaw :: char * ← Name / Star → { "*" }
+
+#CodeStart ← "{" → { s_coords(pacc_coords) }
+
+# XXX unfortunately, emit assumes that there is always a preamble node,
+# even if there is no preamble. We could say
+# Preamble
+#     ← c:Code? { c ? s_retype(preamble, c) : s_text(preamble, 0) }
+# but that doesn't seem like an improvement. Perhaps the "optimizer" and
+# tree preener could insert an empty preamble when needed.
+Preamble :: struct s_node *
+    ← c:Code { s_retype(preamble, c) }
+    / ε { s_text(preamble, 0) }
+
+Name :: char * ← n:([_A-Za-z] [_A-Za-z0-9]*) _ { ref_dup(n) }
+
+Number ← n:[0-9]+ _ → { ref_dup(n) }
+
+StringLit ← "\"" q:QuotedChars "\"" _ → { ref_dup(q) }
+
+QuotedChars :: ref_t ← (!"\"" QuotedChar)* { ref() }
+
+QuotedChar ← (Escape / [^\\]) → { ref() }
+
+Escape :: void ← SimpleEscape / OctalEscape / HexEscape / UniversalEscape
+
+SimpleEscape
+    ← "\\" ("a" / "b" / "f" / "n" / "r" / "t" / "v" /
+	    "\\" / "\'" / "\"" / "\?")
+
+OctalEscape ← "\\" [0-7][0-7]?[0-7]?
+
+HexEscape ← "\\x" HexDigit HexDigit?
+
+UniversalEscape ← ("\\u" HexQuad / "\\U" HexQuad HexQuad)
+
+CharLit ← "'" QuotedChar "'" _
+
+HexQuad ← HexDigit HexDigit HexDigit HexDigit
+
+HexDigit ← [0-9A-Fa-f]
+
+Comment
+    ← "#" [^\n]* "\n"
+    / C_Comment
+
+C_Comment
+    ← "//" [^\n]* "\n"
+    / "/*" (!"*/" .)* "*/"
+
+_ ← ( [ \t\n] / Comment )*
+
+And ← "&" _
+lArrow  ← ("←" / "<-" / "=") _
+rArrow  ← ("→" / "->") _
+lBrace ← "{" _
+rBrace ← "}" _
+Colon ← ":" _
+ColCol ← "::" _
+Dollar ← "$" _
+Dot ← "." _
+Epsilon ← ("ε" / "%") _
+Not ← "!" _
+lParen ← "(" _
+rParen ← ")" _
+Plus ← "+" _
+Query ← "?" _
+Slash ← ("/" / "|") _
+Star ← "*" _

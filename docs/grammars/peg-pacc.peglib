@@ -1,0 +1,184 @@
+#From: https://github.com/TobyGoodwin/pacc/blob/8cc14a296190daff76332e0487d2b86d52911bf4/pacc.pacc
+
+Grammar <-
+    Preamble Defns
+
+Defns <-
+    Defn Defns
+    / Defn
+
+Defn <-
+    Name TypeOptional lArrow Rule0 _
+
+Rule0 <-
+    Rule1 Slash Rule0
+    / Rule1
+
+Rule1 <-
+    Epsilon Result?
+    / Rule2 Result?
+
+Rule2 <-
+    Rule3 Rule2
+    / Dollar Rule2
+    / '' #ε
+
+Rule3 <-
+    And Rule4
+    / Not Rule4
+    / And Code
+    / Name Colon Rule4
+    / StringLit Colon Rule4
+    / Rule4
+
+Rule4 <-
+    Rule5 Query
+    / Rule5 Star
+    / Rule5 Plus
+    / Rule5
+
+Rule5 <-
+    Name !lArrow !ColCol
+    / Dot
+    / StringLit
+    / CClass0
+    / lParen Rule0 rParen
+
+CClass0 <- <"[" CClass1 "]"> _
+
+CClass1 <- "^"? CClass2
+
+CClass2 <-
+    CCHyphen CCRanges?
+    / CCrBracket CCRanges?
+    / CCRanges CCHyphen
+    / CCRanges
+
+CCRanges <-
+    CCRange CCRanges
+    / CCRange
+
+CCRange <-
+    CCNode "-" CCNode #&{ a->number < b->number }
+    / !"-" CCNode
+
+CCNode <- CCChar
+
+CCChar <-
+     "\\]"
+    / ! "]" QuotedChar
+
+CCHyphen <- "-"
+
+CCrBracket <- "]"
+
+Result <-
+     rArrow BareResult
+    #/ rArrow Number
+    / rArrow? Code
+
+BareResult <-
+    Name
+    / Number
+
+CodeNames <-
+    Name CodeNames
+    / StringLit CodeNames
+    / CharLit CodeNames
+    / C_Comment CodeNames
+    / [^{}] CodeNames
+    / lBrace CodeNames rBrace CodeNames
+    / '' #ε
+
+#CodeNames <-
+#    Name CodeNames
+#    / StringLit CodeNames
+#    / CharLit CodeNames
+#    / C_Comment CodeNames
+#    / [^{}] CodeNames
+#    / lBrace CodeNames rBrace
+#    / '' #ε
+
+CodeAndNames <- CodeNames
+
+Code <- "{" CodeAndNames rBrace
+
+TypeOptional <-
+    ColCol TypeElements
+    / '' #ε
+
+TypeElements <-
+    TypeElement TypeElements
+    / TypeElement
+
+TypeElement <- TypeRaw
+
+TypeRaw <- Name / Star
+
+#CodeStart <- "{"
+
+# XXX unfortunately, emit assumes that there is always a preamble node,
+# even if there is no preamble. We could say
+# Preamble <-
+#     Code?
+# but that doesn't seem like an improvement. Perhaps the "optimizer" and
+# tree preener could insert an empty preamble when needed.
+Preamble <-
+    Code
+    / '' #ε
+
+Name <- <[_A-Za-z] [_A-Za-z0-9]*> _
+
+Number <- <[0-9]+> _
+
+StringLit <- <"\"" QuotedChars "\""> _
+
+QuotedChars <- (!"\"" QuotedChar)*
+
+QuotedChar <- (Escape / [^\\])
+
+Escape <- SimpleEscape / OctalEscape / HexEscape / UniversalEscape
+
+SimpleEscape <-
+    "\\" ("a" / "b" / "f" / "n" / "r" / "t" / "v" /
+	    "\\" / "'" / "\"" / "?")
+
+OctalEscape <- "\\" [0-7][0-7]?[0-7]?
+
+HexEscape <- "\\x" HexDigit HexDigit?
+
+UniversalEscape <- ("\\u" HexQuad / "\\U" HexQuad HexQuad)
+
+CharLit <- <"'" QuotedChar "'"> _
+
+HexQuad <- HexDigit HexDigit HexDigit HexDigit
+
+HexDigit <- [0-9A-Fa-f]
+
+Comment <-
+    "#" [^\n]* "\n"
+    / C_Comment
+
+C_Comment <-
+    "//" [^\n]* "\n"
+    / "/*" (!"*/" .)* "*/"
+
+~_ <- ( [ \t\n] / Comment )*
+
+And <- "&" _
+lArrow  <- ("←" / "<-" / "=") _
+rArrow  <- ("→" / "->") _
+lBrace <- "{" _
+rBrace <- "}" _
+Colon <- ":" _
+ColCol <- "::" _
+Dollar <- "$" _
+Dot <- "." _
+Epsilon <- ("ε" / "%") _
+Not <- "!" _
+lParen <- "(" _
+rParen <- ")" _
+Plus <- "+" _
+Query <- "?" _
+Slash <- ("/" / "|") _
+Star <- "*" _
