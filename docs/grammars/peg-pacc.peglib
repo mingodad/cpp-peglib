@@ -1,7 +1,7 @@
 #From: https://github.com/TobyGoodwin/pacc/blob/8cc14a296190daff76332e0487d2b86d52911bf4/pacc.pacc
 
 Grammar <-
-    Preamble Defns
+    _ Preamble Defns
 
 Defns <-
     Defn Defns
@@ -155,15 +155,17 @@ HexQuad <- HexDigit HexDigit HexDigit HexDigit
 
 HexDigit <- [0-9A-Fa-f]
 
+EOL <- '\n' '\r'? / '\r' '\n'?
+
 Comment <-
-    "#" [^\n]* "\n"
+    "#" (!EOL .)*
     / C_Comment
 
 C_Comment <-
-    "//" [^\n]* "\n"
+    "//" (!EOL .)* "\n"?
     / "/*" (!"*/" .)* "*/"
 
-~_ <- ( [ \t\n] / Comment )*
+~_ <- ( [ \t\r\n]+ / Comment )*
 
 And <- "&" _
 lArrow  <- ("←" / "<-" / "=") _
