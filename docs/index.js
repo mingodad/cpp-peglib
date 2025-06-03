@@ -79,6 +79,7 @@ const sampleList = [
 	["culebra parser", "culebra.peglib", "test.culebra", "ace/mode/text"],
 	["curl parser", "curl-parser.peglib", "test.curl-parser", "ace/mode/text"],
 	["D parser", "d-pegged.peglib", "test.d-pegged", "ace/mode/d"],
+	["dafny-lang parser", "dafny-lang.peglib", "test.dafny-lang", "ace/mode/text"],
 	["DAGOperator parser", "DAGOperator.peglib", "test.DAGOperator", "ace/mode/text"],
 	["dot parser", "dot-obermann.peglib", "test.dot-obermann", "ace/mode/text"],
 	["egg parser", "egg-bruceiv.peglib", "test.egg-bruceiv", "ace/mode/text"],

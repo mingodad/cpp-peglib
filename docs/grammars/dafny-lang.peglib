@@ -1,0 +1,576 @@
+#From: https://github.com/dafny-lang/dafny/blob/54d5c73498781b525a866e1ea117afa71be9d287/Source/DafnyCore/Dafny.atg
+
+Dafny <-  ( include stringToken )* ( AtAttributes TopDecl )* EOF
+AtAttributes <-  AtAttribute*
+TopDecl <-  DeclModifier* ( SubModuleDecl / ClassDecl / DatatypeDecl / NewtypeDecl / SynonymTypeDecl / IteratorDecl / TraitDecl / ClassMemberDecl )
+DeclModifier <-  abstract / replaceable / ghost / static / opaque
+SubModuleDecl <-  ( ModuleDefinition / ModuleImport / ModuleExport )
+ClassDecl <-  class Attribute* ClassName GenericParameters? ( ExtendsClause / ellipsis )? lbrace ( AtAttributes DeclModifier* ClassMemberDecl )* rbrace
+DatatypeDecl <-  ( datatype / codatatype ) Attribute* DatatypeName GenericParameters? ExtendsClause? ( singleeq ellipsis? verticalbar? DatatypeMemberDecl ( verticalbar DatatypeMemberDecl )* / ellipsis ) TypeMembers?
+NewtypeDecl <-  newtype Attribute* NewtypeName GenericParameters? ExtendsClause? ( singleeq ellipsis? ( LocalVarName ( colon Type )? verticalbar Expression WitnessClause TypeMembers? / Type WitnessClause TypeMembers? ) / ellipsis TypeMembers? )
+SynonymTypeDecl <-  type Attribute* SynonymTypeName TypeParameterCharacteristics* GenericParameters? ( singleeq ( LocalVarName ( colon Type )? verticalbar Expression WitnessClause / Type ) / ellipsis TypeMembers? / ExtendsClause TypeMembers? / TypeMembers )?
+IteratorDecl <-  iterator Attribute* IteratorName ( GenericParameters? Formals ( ( yields / returns ) Formals )? / ellipsis ) IteratorSpec BlockStmt?
+TraitDecl <-  trait Attribute* ClassName GenericParameters? ( ExtendsClause / ellipsis )? lbrace ( AtAttributes DeclModifier* ClassMemberDecl )* rbrace
+ClassMemberDecl <-  ( FieldDecl / ConstantFieldDecl / FunctionDecl / MethodDecl )
+ModuleDefinition <-  module Attribute* ModuleQualifiedName ( refines ModuleQualifiedName / replaces ModuleQualifiedName / Ident )? lbrace ( AtAttributes TopDecl )* rbrace
+ModuleImport <-  import opened? ( ModuleName colon QualifiedModuleExport / ModuleName singleeq QualifiedModuleExport / QualifiedModuleExport )
+ModuleExport <-  export ExportId? ellipsis? ( ( provides ( ExportSignature ( comma ExportSignature )* / star ) / reveals ( ExportSignature ( comma ExportSignature )* / star ) / extends ExportId ( comma ExportId )* ) comma? )*
+Attribute <-  lbracecolon AttributeName Expressions? rbrace
+ModuleQualifiedName <-  ModuleName ( dot ModuleName )*
+Ident <-  ( ident / least / greatest / older / opaque / hide / reveal / field / locals )
+ModuleName <-  Name
+QualifiedModuleExport <-  ModuleQualifiedName ( backtick ModuleExportSuffix )?
+ExportId <-  NoUSIdentOrDigits
+NoUSIdentOrDigits <-  ( NoUSIdent / digits )
+ExportSignature <-  TypeNameOrCtorSuffix ( dot TypeNameOrCtorSuffix )?
+TypeNameOrCtorSuffix <-  IdentOrDigits
+Name <-  NoUSIdent
+ModuleExportSuffix <-  ( ExportId / lbrace ExportId ( comma ExportId )* rbrace )
+ClassName <-  Name
+GenericParameters <-  openAngleBracket OneTypeParameter ( comma OneTypeParameter )* closeAngleBracket
+ExtendsClause <-  extends Type ( comma Type )*
+Type <-  TypeAndToken
+FieldDecl <-  var Attribute* FIdentType ( comma FIdentType )* OldSemi
+ConstantFieldDecl <-  const Attribute* ( / CIdentType ellipsis? ( ( gets / singleeq ) Expression )? OldSemi )
+FunctionDecl <-  twostate? ( function method? Attribute* MethodFunctionName ( GenericParameters? Formals colon ( openparen GIdentType closeparen / Type ) / ellipsis ) / predicate method? Attribute* MethodFunctionName ( GenericParameters? KType? Formals PredicateResult? / ellipsis ) / ( least / inductive ) predicate Attribute* MethodFunctionName ( GenericParameters? KType? Formals PredicateResult? / ellipsis ) / ( greatest predicate / copredicate ) Attribute* MethodFunctionName ( GenericParameters? KType? Formals PredicateResult? / ellipsis ) ) FunctionSpec FunctionBody?
+MethodDecl <-  ( method / lemma / ( greatest lemma / colemma ) / ( least / inductive ) lemma / twostate lemma / constructor ) Attribute* MethodFunctionName? ( GenericParameters? KType? Formals ( returns Formals )? / ellipsis ) MethodSpec ( DividedBlockStmt / BlockStmt )?
+DatatypeName <-  Name
+DatatypeMemberDecl <-  ghost? Attribute* DatatypeMemberName FormalsOptionalIds?
+TypeMembers <-  lbrace ( AtAttributes DeclModifier* ClassMemberDecl )* rbrace
+DatatypeMemberName <-  NoUSIdentOrDigits
+FormalsOptionalIds <-  openparen ( TypeIdentOptional ( comma TypeIdentOptional )* )? closeparen
+FIdentType <-  NoDigitName ( colon Type / ) ( ( gets / singleeq ) Expression )?
+OldSemi <-  semicolon?
+CIdentType <-  NoDigitName ( colon Type )?
+Expression <-  new? EquivExpression ( DecreasesTo EquivExpression )? #DAD CHECK LATER ( semicolon Expression )?
+NewtypeName <-  Name
+LocalVarName <-  NoUSIdent
+NoUSIdent <-  Ident
+WitnessClause <-  ( ( ghost witness Expression / witness ( star / Expression ) ) )?
+SynonymTypeName <-  Name
+TypeParameterCharacteristics <-  openparen TPCharOption ( comma TPCharOption )* closeparen
+TPCharOption <-  eq / digits / NegOp new / AnyNotCommaCloseParam #ANY
+AnyNotCommaCloseParam <- <[^,) \t\n\r]+>
+GIdentType <-  ( ( ghost / new / nameonly / older ) )* IdentType
+IdentType <-  WildIdent colon Type
+NoDigitName <-  NoUSIdentOrDigits
+WildIdent <-  Ident
+LocalIdentTypeOptional <-  WildIdent ( colon Type )?
+IdentTypeOptional <-  WildIdentN ( colon Type )?
+WildIdentN <-  WildIdent
+TypeIdentOptional <-  Attribute* ( ghost / nameonly )* ( TypeAndToken ( colon Type ParameterDefaultValue )? / digits colon Type ParameterDefaultValue )
+TypeAndToken <-  ( bool / char / int / nat / real / field / ORDINAL / bvToken / set OptGenericInstantiation / iset OptGenericInstantiation / multiset OptGenericInstantiation / seq OptGenericInstantiation / string / object / object_q / map OptGenericInstantiation / imap OptGenericInstantiation / arrayToken OptGenericInstantiation / TupleType / NamedType ) ( ( qarrow / larrow / sarrow ) Type )?
+ParameterDefaultValue <-  ( gets Expression )?
+IteratorName <-  Name
+Formals <-  openparen ( Attribute* GIdentType ParameterDefaultValue ( comma Attribute* GIdentType ParameterDefaultValue )* )? closeparen
+IteratorSpec <-  ( ReadsClause / ModifiesClause / yield? ( RequiresClause / EnsuresClause ) / DecreasesClause )*
+BlockStmt <-  lbrace Stmt* rbrace
+TypeVariableName <-  Name
+OneTypeParameter <-  Variance? TypeVariableName TypeParameterCharacteristics* ( extends Type )*
+Variance <-  ( star / plus / NegOp / minus )
+MethodFunctionName <-  NoDigitName
+KType <-  lbracket ( nat / ORDINAL ) rbracket
+MethodSpec <-  ( ReadsClause / ModifiesClause / RequiresClause / EnsuresClause / DecreasesClause )*
+DividedBlockStmt <-  lbrace Stmt* ( new semicolon Stmt* )? rbrace
+RequiresClause <-  requires Attribute* ( LabelName colon )? Expression OldSemi
+LabelName <-  NoUSIdentOrDigits
+EnsuresClause <-  ensures Attribute* ( '(' (Expression OldSemi)+  ')' / Expression OldSemi) #DADFIX?
+ModifiesClause <-  modifies Attribute* FrameExpression ( comma FrameExpression )* OldSemi
+FrameExpression <-  ( FrameField / Expression FrameField? )
+DecreasesClause <-  decreases Attribute* DecreasesList OldSemi
+DecreasesList <-  PossiblyWildExpression ( comma PossiblyWildExpression )*
+ReadsClause <-  reads Attribute* PossiblyWildFrameExpression ( comma PossiblyWildFrameExpression )* OldSemi
+PossiblyWildFrameExpression <-  ( star / FrameExpression )
+InvariantClause <-  invariant Attribute* Expression OldSemi
+OptGenericInstantiation <-  GenericInstantiation?
+TupleType <-  openparen ( ghost? Type ( comma ghost? Type )* )? closeparen
+NamedType <-  NameSegmentForTypeName ( dot TypeNameOrCtorSuffix OptGenericInstantiation )*
+NameSegmentForTypeName <-  Ident OptGenericInstantiation
+GenericInstantiation <-  openAngleBracket ( closeAngleBracket / Type ( comma Type )* closeAngleBracket )
+PredicateResult <-  colon ( openparen Attribute* GIdentType closeparen / Type )
+FunctionSpec <-  ( RequiresClause / ReadsClause / EnsuresClause / DecreasesClause )*
+FunctionBody <-  lbrace Expression (semicolon Expression)* rbrace ( by method BlockStmt )? #DADFIX?
+PossiblyWildExpression <-  ( star / Expression )
+FrameField <-  backtick IdentOrDigits
+IdentOrDigits <-  ( Ident / digits )
+Stmt <-  OneStmt
+OpaqueBlock <-  opaque ( ModifiesClause / EnsuresClause )* lbrace Stmt* rbrace
+
+OneStmt <-
+    BlockStmt
+    / OpaqueBlock
+    / RevealStmt
+    / AssignStatement
+    / VarDeclStatement
+    / ReturnStmt
+    / IfStmt
+    / WhileStmt
+    / ForLoopStmt
+    / AssertStmt
+    / AssumeStmt
+    / BreakOrContinueStmt
+    / CalcStmt
+    / ExpectStmt
+    / ForallStmt
+    / LabeledStmt
+    / MatchStmt
+    / ModifyStmt
+    / PrintStmt
+    / SkeletonStmt
+    / YieldStmt
+
+RevealStmt <-  ( reveal / hide ) ( Expression ( comma Expression )* / star ) semicolon
+
+AssignStatement <-
+	Lhs (
+		( comma Lhs )* (
+			gets Rhs ( comma Rhs )*
+			/ boredSmiley ( assume Attribute* )? Expression
+			/ colonMinus ( ( expect / assert / assume ) Attribute* )? Expression Attribute* ( comma Rhs )*
+			) ( by BlockStmt / semicolon )
+		/ colon
+		/ Attribute* ( by BlockStmt / semicolon )
+		/ Attribute*
+		)
+	/ colonMinus ( ( expect / assert / assume ) Attribute* )? Expression Attribute* ( comma Rhs )* ( by BlockStmt / semicolon )
+
+VarDeclStatement <-  ghost? var ( Attribute* LocalIdentTypeOptional ( comma Attribute* LocalIdentTypeOptional )* ( ( gets / singleeq ) Rhs ( comma Rhs )* / Attribute* boredSmiley ( assume Attribute* )? Expression / colonMinus ( ( expect / assert / assume ) Attribute* )? Expression Attribute* ( comma Rhs )* )? ( by BlockStmt / semicolon ) / CasePatternLocal ( gets / Attribute* boredSmiley ) Expression semicolon )
+ReturnStmt <-  return Attribute? ( Rhs ( comma Rhs )* )? semicolon
+IfStmt <-  if Attribute* ( AlternativeBlock / ( BindingGuard / Guard / ellipsis ) BlockStmt ( else ( IfStmt / Attribute* BlockStmt ) )? )
+WhileStmt <-  while Attribute* ( LoopSpec AlternativeBlock / ( Guard / ellipsis ) LoopSpec ( BlockStmt / ellipsis / ) )
+ForLoopStmt <-  for Attribute* IdentTypeOptional gets Expression ForLoopDirection ( Expression / star ) LoopSpec ( BlockStmt / )
+AssertStmt <-  assert Attribute* ( ( LabelName colon )? Expression ( by BlockStmt / semicolon / ) / ellipsis semicolon )
+AssumeStmt <-  assume Attribute* ( Expression / ellipsis ) semicolon
+BreakOrContinueStmt <-  ( continue Attribute? LabelName? / break ( LabelName / break* continue? ) ) semicolon
+CalcStmt <-  calc Attribute* CalcOp? lbrace ( Expression semicolon CalcOp? ( ( BlockStmt / CalcStmt ) )* )* rbrace
+ExpectStmt <-  expect Attribute* ( Expression / ellipsis ) ( comma Expression )? semicolon
+ForallStmt <-  forall ( openparen QuantifierDomain? closeparen / QuantifierDomain? ) ForallStatementEnsuresAndBody
+LabeledStmt <-  Label Label* ( ( WhileStmt / ForLoopStmt / IfStmt / BlockStmt / OpaqueBlock ) / )
+MatchStmt <-  match Attribute* Expression ( lbrace CaseStmt* rbrace / CaseStmt* )
+ModifyStmt <-  modify Attribute* ( FrameExpression ( comma FrameExpression )* / ellipsis ) ( BlockStmt / semicolon )
+PrintStmt <-  print Expression ( comma Expression )* semicolon
+SkeletonStmt <-  ellipsis semicolon
+YieldStmt <-  yield ( Rhs ( comma Rhs )* )? semicolon
+Label <-  label LabelName colon
+
+Rhs <- (
+	new ( NewArray / TypeAndToken ( NewArray / openparen ActualBindings? closeparen )? )
+	/ star
+	/ Expression ) Attribute*
+
+Lhs <-
+    NameSegment Suffix*
+    / ConstAtomExpression Suffix Suffix*
+
+NewArray <-  lbracket ( rbracket lbracket Expressions? rbracket / Expressions rbracket ( openparen Expression closeparen / lbracket Expressions? rbracket )? )
+ActualBindings <-  ActualBinding ( comma ActualBinding )*
+Expressions <-  Expression ( comma Expression )*
+CasePatternLocal <-  ( Ident openparen ( CasePatternLocal ( comma CasePatternLocal )* )? closeparen / openparen ( CasePatternLocal ( comma CasePatternLocal )* )? closeparen / LocalIdentTypeOptional )
+AlternativeBlock <-  ( lbrace AlternativeBlockCase* rbrace / AlternativeBlockCase AlternativeBlockCase* )
+BindingGuard <-  IdentTypeOptional ( comma IdentTypeOptional )* Attribute* boredSmiley Expression
+Guard <-  ( star / openparen star closeparen / Expression )
+AlternativeBlockCase <-  case Attribute* ( BindingGuard / Expression ) darrow Stmt*
+LoopSpec <-  ( InvariantClause / DecreasesClause / ModifiesClause )*
+ForLoopDirection <-  to / downto
+SingleExtendedPattern <-  ( openparen ( ExtendedPattern ( comma ExtendedPattern )* )? closeparen / Ident openparen ( ExtendedPattern ( comma ExtendedPattern )* )? closeparen / PossiblyNegatedLiteralExpr / IdentTypeOptional )
+ExtendedPattern <-  verticalbar? SingleExtendedPattern ( verticalbar SingleExtendedPattern )*
+PossiblyNegatedLiteralExpr <-  ( minus ( Nat / Dec ) / LiteralExpression )
+CaseStmt <-  case Attribute* ExtendedPattern darrow Stmt*
+QuantifierDomain <-  QuantifierVariableDecl ( comma QuantifierVariableDecl )*
+ForallStatementEnsuresAndBody <-  EnsuresClause* BlockStmt?
+CalcOp <-  ( eq ( hash lbracket Expression rbracket )? / openAngleBracket / closeAngleBracket / LessThanOp / GreatherThanOp / neq / EquivOp / ImpliesOp / ExpliesOp )
+QSep <-  doublecolon
+EquivExpression <-  ImpliesExpliesExpression ( EquivOp ImpliesExpliesExpression )*
+DecreasesTo <-  ( decreases / nonincreases ) ident
+ImpliesExpliesExpression <-  LogicalExpression ( ( ImpliesOp ImpliesExpression / ExpliesOp LogicalExpression ( ExpliesOp LogicalExpression )* ( ImpliesOp LogicalExpression ( ( ImpliesOp / ExpliesOp ) LogicalExpression )* )? ) )?
+LogicalExpression <-  ( ( AndOp / OrOp ) )? RelationalExpression ( ( AndOp / OrOp ) RelationalExpression )*
+ImpliesExpression <-  LogicalExpression ( ( ImpliesOp / ExpliesOp ) ImpliesExpression )?
+RelationalExpression <-  ShiftTerm ( RelOp ShiftTerm ( RelOp ShiftTerm )* )?
+ShiftTerm <-  Term ( ( openAngleBracket openAngleBracket / closeAngleBracket closeAngleBracket ) Term )*
+RelOp <-  ( eq ( hash lbracket Expression rbracket )? / openAngleBracket / closeAngleBracket / LessThanOp / GreatherThanOp / neq ( hash lbracket Expression rbracket )? / in / notIn / NegOp NegOp? )
+Term <-  Factor ( AddOp Factor )*
+Factor <-  BitvectorFactor ( MulOp BitvectorFactor )*
+AddOp <-  ( plus / minus )
+BitvectorFactor <-  AsExpression ( ( BAndOp / verticalbar / BXorOp ) AsExpression ( ( BAndOp / verticalbar / BXorOp ) AsExpression )* )?
+MulOp <-  ( star / div / mod )
+AsExpression <-  UnaryExpression ( ( as TypeAndToken / is TypeAndToken ) )*
+UnaryExpression <-  ( minus UnaryExpression / NegOp UnaryExpression / PrimaryExpression )
+
+PrimaryExpression <-
+	MapDisplayExpr Suffix*
+	/ SetDisplayExpr Suffix*
+	/ LambdaExpression
+	/ EndlessExpression
+	/ NameSegment Suffix*
+	/ SeqDisplayExpr Suffix*
+	/ ConstAtomExpression Suffix*
+
+MapDisplayExpr <-  ( map / imap ) lbracket MapLiteralExpressions? rbracket
+
+Suffix <-
+	dot (
+		openparen MemberBindingUpdate ( comma MemberBindingUpdate )* closeparen
+		/ DotSuffix ( GenericInstantiation AtCall? / HashCall / AtCall? )
+		)
+	/ lbracket (
+		Expression (
+			dotdot Expression?
+			/ gets Expression
+			/ colon ( Expression ( colon Expression )* colon? )?
+			/ ( comma Expression )*
+			)
+		/ dotdot Expression? ) rbracket
+	/ openparen ActualBindings? closeparen
+	/ FieldLocationSuffix
+
+SetDisplayExpr <-  ( ( iset / multiset ) )? ( lbrace Expressions? rbrace / openparen Expression closeparen )
+LambdaExpression <-  ( WildIdent / openparen ( IdentTypeOptional ( comma IdentTypeOptional )* )? closeparen ) LambdaSpec darrow Expression
+EndlessExpression <-  ( IfExpression / MatchExpression / QuantifierExpression / SetComprehensionExpr / StmtInExpr Expression / LetExpression / MapComprehensionExpr )
+NameSegment <-  Ident ( GenericInstantiation AtCall? / HashCall / AtCall? )
+SeqDisplayExpr <-  ( seq GenericInstantiation? openparen Expression comma Expression closeparen / lbracket Expressions? rbracket )
+ConstAtomExpression <-  ( LiteralExpression / this / allocated openparen Expression closeparen / fresh ( at LabelName )? openparen Expression closeparen / unchanged ( at LabelName )? openparen FrameExpression ( comma FrameExpression )* closeparen / old ( at LabelName )? openparen Expression closeparen / verticalbar Expression verticalbar / assigned openparen NameSegment closeparen / FieldLocationSuffix / ParensExpression )
+LiteralExpression <-  ( false / true / null / Nat / Dec / charToken / stringToken )
+FieldLocationSuffix <-  backtick ( NoDigitName / lbracket Expression ( comma Expression )* rbracket )
+ParensExpression <-  openparen ( closeparen / DecreasesTo DecreasesToExpressionList closeparen / TupleArgs ( DecreasesTo DecreasesToExpressionList )? closeparen )
+Nat <-  ( hexdigits / digits )
+Dec <-  decimaldigits
+LambdaSpec <-  ( ReadsClause / requires Expression )*
+DecreasesToExpressionList <-  ( Expression ( comma Expression )* )?
+TupleArgs <-  ghost? ActualBinding ( comma ghost? ActualBinding )*
+ActualBinding <-  ( NoUSIdentOrDigits gets )? Expression
+MapLiteralExpressions <-  Expression gets Expression ( comma Expression gets Expression )*
+MapComprehensionExpr <-  ( map / imap ) QuantifierDomain QSep Expression ( gets Expression )?
+IfExpression <-  if ( BindingGuard / Expression ) then Expression else Expression
+MatchExpression <-  match Expression ( lbrace CaseExpression* rbrace / CaseExpression* )
+QuantifierExpression <-  ( forall QuantifierDomain ( ForallStatementEnsuresAndBody Expression / QSep Expression ) / exists QuantifierDomain QSep Expression )
+SetComprehensionExpr <-  ( set / iset ) QuantifierDomain ( QSep Expression )?
+StmtInExpr <-  ( AssertStmt / ExpectStmt / AssumeStmt / RevealStmt / CalcStmt )
+LetExpression <-  ( LetExprWithLHS / LetExprWithoutLHS )
+LetExprWithLHS <-  ghost? var CasePattern ( comma CasePattern )* ( gets / Attribute* boredSmiley / colonMinus / singleeq ) Expression ( comma Expression )* semicolon Expression
+LetExprWithoutLHS <-  colonMinus Expression semicolon Expression
+CasePattern <-  ( Ident openparen ( CasePattern ( comma CasePattern )* )? closeparen / openparen ( CasePattern ( comma CasePattern )* )? closeparen / IdentTypeOptional )
+CaseExpression <-  case Attribute* ExtendedPattern darrow Expression
+AtCall <-  at LabelName openparen ActualBindings? closeparen
+HashCall <-  hash GenericInstantiation? lbracket Expression rbracket openparen ActualBindings? closeparen
+MemberBindingUpdate <-  NoUSIdentOrDigits gets Expression
+DotSuffix <-  ( Ident / digits / decimaldigits / requires / reads )
+QuantifierVariableDecl <-  IdentTypeOptional ( openAngleBracket minus Expression )? Attribute* ( verticalbar Expression )?
+AttributeName <-  NoUSIdent
+AtAttribute <-  at Expression
+
+#
+# tokens
+#
+
+LessThanOp <- <"<=" !"=">
+GreatherThanOp <- <">=" !"=">
+
+EquivOp <-  "<==>"
+ImpliesOp <-  "==>"
+ExpliesOp <-  "<=="
+AndOp <-  "&&"
+BAndOp <- <"&" !"&">
+BXorOp <- "^"
+OrOp <-  "||"
+NegOp <-  <"!" ![=]>
+
+at <- "@"
+backtick <- "`"
+boredSmiley <- ":|"
+closeAngleBracket <- <">" ![=]>
+closeparen <- ")"
+colon <- <":" ![=|:-]>
+colonMinus <- ":-"
+comma <- ","
+darrow <- "=>"
+dot <- <"." !".">
+dotdot <- ".."
+doublecolon <- "::"
+ellipsis <- "..."
+eq <- <"==" !">">
+gets <- ":="
+larrow <- "-->"
+lbrace <- <"{" ![:]>
+lbracecolon <- "{:"
+lbracket <- "["
+minus <- <"-" ![>]>
+plus <- "+"
+openAngleBracket <- <"<" ![=]>
+openparen <- "("
+qarrow <- "~>"
+rbrace <- "}"
+rbracket <- "]"
+sarrow <- "->"
+semicolon <- ";"
+singleeq <- <"=" ![=]>
+star <- "*"
+div <- "/"
+mod <- "%"
+neq <- "!="
+verticalbar <- <"|" !"|">
+hash <- "#"
+
+KW <- <(
+	   "abstract"
+	| "allocated"
+	| "as"
+	| "assert"
+	| "assigned"
+	| "assume"
+	| "bool"
+	| "break"
+	| "by"
+	| "calc"
+	| "case"
+	| "char"
+	| "class"
+	| "codatatype"
+	| "colemma"
+	| "constructor"
+	| "const"
+	| "continue"
+	| "copredicate"
+	| "datatype"
+	| "decreases"
+	| "downto"
+	| "else"
+	| "ensures"
+	| "exists"
+	| "expect"
+	| "export"
+	| "extends"
+	| "false"
+	| "field"
+	| "forall"
+	| "for"
+	| "fresh"
+	| "function"
+	| "ghost"
+	| "greatest"
+	| "hide"
+	| "if"
+	| "imap"
+	| "import"
+	| "inductive"
+	| "include"
+	| "int"
+	| "invariant"
+	| "in"
+	| "iset"
+	| "is"
+	| "iterator"
+	| "label"
+	| "least"
+	| "lemma"
+	| "locals"
+	| "map"
+	| "match"
+	| "method"
+	| "modifies"
+	| "modify"
+	| "module"
+	| "multiset"
+	| "nameonly"
+	| "nat"
+	| "new"
+	| "newtype"
+	| "nonincreases"
+	| "null"
+	| "object?"
+	| "object"
+	| "older"
+	| "old"
+	| "opaque"
+	| "opened"
+	| "ORDINAL"
+	| "predicate"
+	| "print"
+	| "provides"
+	| "reads"
+	| "real"
+	| "refines"
+	| "replaceable"
+	| "replaces"
+	| "requires"
+	| "returns"
+	| "return"
+	| "reveals"
+	| "reveal"
+	| "seq"
+	| "set"
+	| "static"
+	| "string"
+	| "then"
+	| "this"
+	| "to"
+	| "trait"
+	| "true"
+	| "twostate"
+	| "type"
+	| "unchanged"
+	| "var"
+	| "while"
+	| "witness"
+	| "yields"
+	| "yield"
+	) !idchar >
+
+abstract <- <"abstract" !idchar>
+allocated <- <"allocated" !idchar>
+as <- <"as" !idchar>
+assert <- <"assert" !idchar>
+assigned <- <"assigned" !idchar>
+assume <- <"assume" !idchar>
+bool <- <"bool" !idchar>
+break <- <"break" !idchar>
+by <- <"by" !idchar>
+calc <- <"calc" !idchar>
+case <- <"case" !idchar>
+char <- <"char" !idchar>
+class <- <"class" !idchar>
+codatatype <- <"codatatype" !idchar>
+colemma <- <"colemma" !idchar>
+const <- <"const" !idchar>
+constructor <- <"constructor" !idchar>
+continue <- <"continue" !idchar>
+copredicate <- <"copredicate" !idchar>
+datatype <- <"datatype" !idchar>
+decreases <- <"decreases" !idchar>
+downto <- <"downto" !idchar>
+else <- <"else" !idchar>
+ensures <- <"ensures" !idchar>
+exists <- <"exists" !idchar>
+expect <- <"expect" !idchar>
+export <- <"export" !idchar>
+extends <- <"extends" !idchar>
+false <- <"false" !idchar>
+field <- <"field" !idchar>
+for <- <"for" !idchar>
+forall <- <"forall" !idchar>
+fresh <- <"fresh" !idchar>
+function <- <"function" !idchar>
+ghost <- <"ghost" !idchar>
+greatest <- <"greatest" !idchar>
+hide <- <"hide" !idchar>
+if <- <"if" !idchar>
+imap <- <"imap" !idchar>
+import <- <"import" !idchar>
+inductive <- <"inductive" !idchar>
+in <- <"in" !idchar>
+include <- <"include" !idchar>
+int <- <"int" !idchar>
+invariant <- <"invariant" !idchar>
+iset <- <"iset" !idchar>
+is <- <"is" !idchar>
+iterator <- <"iterator" !idchar>
+label <- <"label" !idchar>
+least <- <"least" !idchar>
+lemma <- <"lemma" !idchar>
+locals <- <"locals" !idchar>
+map <- <"map" !idchar>
+match <- <"match" !idchar>
+method <- <"method" !idchar>
+modifies <- <"modifies" !idchar>
+modify <- <"modify" !idchar>
+module <- <"module" !idchar>
+multiset <- <"multiset" !idchar>
+nameonly <- <"nameonly" !idchar>
+nat <- <"nat" !idchar>
+new <- <"new" !idchar>
+newtype <- <"newtype" !idchar>
+nonincreases <- <"nonincreases" !idchar>
+null <- <"null" !idchar>
+object <- <"object" !idchar>
+object_q <- <"object?" !idchar>
+old <- <"old" !idchar>
+older <- <"older" !idchar>
+opaque <- <"opaque" !idchar>
+opened <- <"opened" !idchar>
+ORDINAL <- <"ORDINAL" !idchar>
+predicate <- <"predicate" !idchar>
+print <- <"print" !idchar>
+provides <- <"provides" !idchar>
+reads <- <"reads" !idchar>
+real <- <"real" !idchar>
+refines <- <"refines" !idchar>
+replaceable <- <"replaceable" !idchar>
+replaces <- <"replaces" !idchar>
+requires <- <"requires" !idchar>
+return <- <"return" !idchar>
+returns <- <"returns" !idchar>
+reveal <- <"reveal" !idchar>
+reveals <- <"reveals" !idchar>
+seq <- <"seq" !idchar>
+set <- <"set" !idchar>
+static <- <"static" !idchar>
+string <- <"string" !idchar>
+then <- <"then" !idchar>
+this <- <"this" !idchar>
+to <- <"to" !idchar>
+trait <- <"trait" !idchar>
+true <- <"true" !idchar>
+twostate <- <"twostate" !idchar>
+type <- <"type" !idchar>
+unchanged <- <"unchanged" !idchar>
+var <- <"var" !idchar>
+while <- <"while" !idchar>
+witness <- <"witness" !idchar>
+yields <- <"yields" !idchar>
+yield <- <"yield" !idchar>
+
+notIn <- NegOp in
+
+posDigit <- [1-9]
+posDigitFrom2 <- [2-9]
+digit <- [0-9]
+
+bvToken <- <"bv" ( '0' / posDigit digit* )>
+arrayToken <- <"array" (('1' digit / posDigitFrom2 ) digit*)? '?'?>
+
+digits <- <digit next_digit*>
+next_digit <- ('_'? digit)
+hexdigit <- [0-9A-Fa-f]
+hexdigits <- <"0x" hexdigit ('_'? hexdigit)*>
+decimaldigits <- <digit next_digit* '.' digit next_digit*>
+
+charToken <- <"'" ("\\". / [^'\n\r\\])+ "'">
+stringToken <- <'"' ("\\". / [^"\n\r\\])* '"' / '@"' ('""' / (!'"' .))* '"'>
+
+special <- ['_?]
+letter <- [A-Za-z]
+nondigit <- letter / special
+idchar <- nondigit / digit
+nondigitMinusABTick <-  [A-Zc-z_?] #nondigit - 'a' - 'b' - '\''
+nondigitMinusQuery <- [A-Za-z'_] #nondigit - '?'.
+idcharMinusA <- [A-Zb-z0-9'_?] #idchar - 'a'.
+idcharMinusR <- [A-Za-qs-z0-9'_?] #idchar - 'r'.
+idcharMinusY <- [A-Za-xz0-9'_?] #idchar - 'y'.
+idcharMinusV <- [A-Za-uw-z0-9'_?] #idchar - 'v'.
+idcharMinusPosDigitMinusQuery <- [A-Za-z0_] #idchar - posDigit - '?'.
+idcharMinusTick <- [A-Za-z0-9_?] #idchar - '\''.
+
+ident <-  !KW <
+	nondigitMinusABTick idchar*       #/* if char 0 is not an 'a' or 'b' or '\'', then anything else is fine */
+        /  'array1' '?'?
+        /  'array?' idchar+
+        /  'array' posDigit digit* nondigitMinusQuery idchar*
+        /  'array' posDigit digit* '?' idchar+
+        /  'array' idcharMinusPosDigitMinusQuery idchar*
+        /  'arra' ( idcharMinusY idchar* )?
+        /  'arr' ( idcharMinusA idchar* )?
+        /  'ar' ( idcharMinusR idchar* )? #/* etc. */
+        /  'a' ( idcharMinusR idchar* )?      #/* if char 0 is an 'a', then either there is no char 1 or char 1 is not an 'r' */
+        /  'bv0' idchar+
+        /  'bv' ( nondigit idchar* )?
+        /  'bv' posDigit idchar* nondigit idchar*
+        /  'b' ( idcharMinusV idchar* )?
+        #/  "'" idchar?  !"'"                        #/* if char 0 is a '\'' and length is 1 or 2, then it is an identifier */
+        /  "'" idchar idcharMinusTick  !"'"          # /* if char 0 is '\'' and length is 3, then it is an identifier provided char 2 is not '\'' */
+        /  "'" idchar idchar idchar+ !"'"  #/* if char 0 is '\'' and length exceeds 3, then it is an identifier */
+	>
+
+EOF <- !.
+EOL <- '\n' '\r'? / '\r' '\n'?
+COMMENT <- "//"(!EOL .)* / "/*" (!"*/" .)* "*/"
+WS <- [ \t\r\n\f\v]
+%whitespace <- (WS+ / COMMENT)*
