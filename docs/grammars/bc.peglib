@@ -81,7 +81,7 @@ expression <-
 
 operator <-
 	<
-	/ tk_eqeq
+	  tk_eqeq
 	/ tk_eq
 	/ tk_pluseq
 	/ tk_minuseq
@@ -105,7 +105,7 @@ operator <-
 
 
 atom <-
-	 NUMBER
+	< NUMBER
 	/ named_expression tk_inc
 	/ named_expression tk_dec
 	/ named_expression tk_lp argument_list? tk_rp
@@ -119,7 +119,7 @@ atom <-
 	/ Read tk_lp tk_rp
 	/ Random tk_lp tk_rp
 	/ tk_not expression
-	/ tk_minus expression #%prec UNARY_MINUS /*9N*/
+	/ tk_minus expression > #%prec UNARY_MINUS /*9N*/
 
 # Declare order of precedence
 INFIX_EXPRESSION(A, O) <-  A (O A)* {
