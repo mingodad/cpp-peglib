@@ -58,9 +58,9 @@ package <-  "package"  fullIdent  ";"
 option <-  "option"  optionName  "="  constant  ";"
 optionName <-  ( ident / "("  fullIdent  ")" )  ( "."  ident )*
 
-type_ <-  "double" / "float" / "int32" / "int64" / "uint32" / "uint64"
+type_ <-  <"double" / "float" / "int32" / "int64" / "uint32" / "uint64"
     / "sint32" / "sint64" / "fixed32" / "fixed64" / "sfixed32" / "sfixed64"
-    / "bool" / "string" / "bytes" / messageType / enumType
+    / "bool" / "string" / "bytes" / messageType / enumType>
 fieldNumber <-  intLit
 
 optional <-  "optional"
@@ -75,8 +75,8 @@ oneof <-  "oneof"  oneofName  "{"  ( option / oneofField / emptyStatement )*  "}
 oneofField <-  type_  fieldName  "="  fieldNumber  ( "["  fieldOptions  "]" )?  ";"
 
 mapField <-  "map"  "<"  keyType  ","  type_  ">"  mapName  "="  fieldNumber  ( "["  fieldOptions  "]" )?  ";"
-keyType <-  "int32" / "int64" / "uint32" / "uint64" / "sint32" / "sint64" /
-          "fixed32" / "fixed64" / "sfixed32" / "sfixed64" / "bool" / "string"
+keyType <-  <"int32" / "int64" / "uint32" / "uint64" / "sint32" / "sint64" /
+          "fixed32" / "fixed64" / "sfixed32" / "sfixed64" / "bool" / "string">
 
 reserved <-  "reserved"  ( ranges / fieldNames )  ";"
 ranges <-  range  ( ","  range )*
