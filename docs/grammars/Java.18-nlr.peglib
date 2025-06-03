@@ -31,7 +31,10 @@
 Compilation <- Spacing CompilationUnit SUB? EOT
 SUB <- "\u001a"
 EOT <- !.
-~Spacing <- ([ \t\r\n\f]+ / "/*" !("*/" .)* "*/" / "//"[^\r\n]* [\r\n]?)*
+EOL <- '\n' '\r'? / '\r' '\n'?
+COMMENT_BLOCK <- "/*" (!"*/" .)* "*/"
+COMMENT_LINE <- "//"(!EOL .)*
+~Spacing <- ([ \t\r\n\f]+ / COMMENT_BLOCK / COMMENT_LINE)*
 Word <- Letter LetterOrDigit*
 Identifier <- !Reserved <Word> Spacing
 TypeIdentifier <- !(Reserved / "var" / "yield" / "record" / "permits" / "sealed") <Word> Spacing
