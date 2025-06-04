@@ -169,6 +169,7 @@ const sampleList = [
 	["protobuf-protofish parser", "protofish.peglib", "test.protobuf", "ace/mode/text"],
 	["pscript parser", "pscript.peglib", "test.pscript", "ace/mode/text"],
 	["reelay regex parser", "reelay-regex.peglib", "test.reelay-regex", "ace/mode/text"],
+	["rex-parser-generator parser", "rex-ebnf.peglib", "test.rex-ebnf", "ace/mode/text"],
 	["rus parser", "rus_parser.peglib", "test.rus_parser", "ace/mode/text"],
 	["scc parser", "scc.peglib", "test.scc", "ace/mode/text"],
 	["sfl parser", "sfl-dmitry-vlasov.peglib", "test.sfl-dmitry-vlasov", "ace/mode/text"],

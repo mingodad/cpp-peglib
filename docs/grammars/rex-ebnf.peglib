@@ -1,0 +1,193 @@
+#From: https://github.com/GuntherRademacher/rex-parser-generator/blob/61a0f63101dfed24a2e4bfb822a5981b665001c7/rex/src/parser/EbnfParser.ebnf
+
+Grammar           <- Prolog SyntaxDefinition LexicalDefinition? Encore? EOF
+Prolog            <-
+                      ProcessingInstruction*
+ProcessingInstruction
+                  <- <"<?" !(TokensName / EncoreName) Name
+                      ( Space+
+                        ( DirPIContents
+                        )?
+                      )?
+                      "?>">
+                   #/* ws: explicit */
+SyntaxDefinition  <-
+                      SyntaxProduction+
+SyntaxProduction  <-
+                      Name
+                      RuleLHSSep SyntaxChoice
+                      Option*
+SyntaxChoice      <- SyntaxSequence
+                      ( ( "|"
+                          SyntaxSequence
+                        )+
+                      / ( "/"
+                          SyntaxSequence
+                        )+
+                      )?
+SyntaxSequence    <-
+                      SyntaxItem*
+SyntaxItem        <- SyntaxPrimary
+                      ( "?"
+                      / "*"
+                      / "+"
+                      )?
+SyntaxPrimary     <- NameOrString !(RuleLHSSep / LexSep)
+                    / "(" SyntaxChoice ")"
+                    / ProcessingInstruction
+LexicalDefinition <- LexSep
+                      ( LexicalProduction
+                      / Preference
+                      / Delimiter
+                      / Equivalence
+                      )*
+LexicalProduction <-
+                      ( Name
+                      / "."
+                      )
+                      ("?"
+                      )?
+                      RuleLHSSep ContextChoice
+                      Option*
+ContextChoice     <- ContextExpression
+                      ( "|"
+                        ContextExpression
+                      )*
+LexicalChoice     <- LexicalSequence
+                      ( "|"
+                        LexicalSequence
+                      )*
+ContextExpression <- "&"? LexicalSequence
+                      ( "&" LexicalSequence
+                      )?
+LexicalSequence   <-
+                      (
+                      / LexicalItem
+                        ( "-" LexicalItem
+                        / LexicalItem*
+                        )
+                      )
+LexicalItem       <- LexicalPrimary
+                      ( "?"
+                      / "*"
+                      / "+"
+                      )?
+LexicalPrimary    <- (Name !RuleLHSSep / ".")
+                    / StringLiteral !EncoreSep
+                    / "(" LexicalChoice ")"
+                    / "$"
+                    / CharCode
+                    / CharClass
+NameOrString      <- Name
+                      Context?
+                    / StringLiteral
+                      Context?
+Context           <- CaretName
+CharClass         <-
+                      <( "["
+                      / "[^"
+                      )
+                      ( Char
+                      / CharCode
+                      / CharRange
+                      / CharCodeRange
+                      )+
+                      "]">
+                      #/* ws: explicit */
+Option            <- <"/*" Space*
+                      ( "ws"  ":" Space*
+                                  ( "explicit"
+                                  / "definition"
+                                  )
+                                  Space*
+                      )
+                      "*/">
+                      #/* ws: explicit */
+Preference        <- NameOrString
+                    ( ">>"
+                      ( NameOrString
+                      )+
+                    / "<<"
+                      ( NameOrString
+                      )+
+                    )
+Delimiter         <- Name
+                      "\\" ( NameOrString
+                           )+
+Equivalence       <- EquivalenceLookAhead
+                      EquivalenceCharRange
+                      "=="
+                      EquivalenceCharRange
+EquivalenceCharRange
+                  <- StringLiteral
+                    / "["
+                      ( Char
+                      / CharCode
+                      / CharRange
+                      / CharCodeRange
+                      )
+                      "]"
+                      #/* ws: explicit */
+
+Encore            <- EncoreSep
+                      ProcessingInstruction*
+
+#<?TOKENS?>
+
+#// name definition as per https://www.w3.org/TR/xml/#d0e804 (except ':' is not a NameStartChar)
+
+NameStartChar     <- [A-Z]
+                    / "_"
+                    / [a-z]
+                    / [\xC0-\xD6]
+                    / [\xD8-\xF6]
+                    / [\u00F8-\u02FF]
+                    / [\u0370-\u037D]
+                    / [\u037F-\u1FFF]
+                    / [\u200C-\u200D]
+                    / [\u2070-\u218F]
+                    / [\u2C00-\u2FEF]
+                    / [\u3001-\uD7FF]
+                    / [\uF900-\uFDCF]
+                    / [\uFDF0-\uFFFD]
+                    / [\u10000-\uEFFFF]
+NameChar          <- NameStartChar
+                    / "-"
+                    / "."
+                    / [0-9]
+                    / [\xB7]
+                    / [\u0300-\u036F]
+                    / [\u203F-\u2040]
+Name              <- <NameStartChar NameChar*>
+
+Space             <- ([\x9] / [\xD] / [\x20])+ / [\xA]
+#DirPIContents     <- ([^?\x9\xD\x20\xA] / '?'+ [^?>])
+#                      ([^?]              / '?'+ [^?>])* '?'* & '?>'
+DirPIContents     <- < (!"?>" .)+ >
+StringLiteral     <- <('"' [^"\x9\xA\xD]* '"')
+                    / ("'" [^'\x9\xA\xD]* "'")>
+CaretName         <- "^" Name?
+CharCode          <- <"#x" [0-9a-fA-F]+>
+Char              <- [^\x9\xA\xD\x23\x5D]
+                    / '#' & [^0-9a-fA-F]
+CharRange         <- Char "-" Char
+CharCodeRange     <- CharCode "-" CharCode
+SingleLineComment <- '//' [^\xA]* [\xA]?
+MultiLineComment  <- '/*' (!'*/' .)* '*/'
+EOF               <- !. #$
+EquivalenceLookAhead
+                  <- & ("[" ( Char / CharCode / CharRange / CharCodeRange ) "]" Whitespace? "==")
+WS        <- ( Space
+                      / SingleLineComment
+                      / MultiLineComment
+                      )
+Whitespace <- WS+
+                   #/* ws: definition */
+RuleLHSSep <- "::="
+TokensName <- "TOKENS"
+LexSep <- "<?TOKENS?>"
+EncoreName <- "ENCORE"
+EncoreSep <- "<?ENCORE?>"
+%whitespace <- WS*
+
+# EoF
