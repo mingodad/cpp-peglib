@@ -1,0 +1,178 @@
+#From: https://github.com/yhirose/cpp-peglib/blob/527422aa38ce78c4214b21843e97584bc2db0150/peglib.h#L3365
+# Setup PEG syntax parser
+Grammar <- Spacing Definition+ EndOfFile
+
+Definition <-
+	Ignore IdentCont (
+	     &'(' Parameters LEFTARROW Expression (&[{] Instruction)?
+	    / Spacing LEFTARROW Expression (&[{] Instruction)?
+	    )
+
+Expression <- Sequence (SLASH Sequence)*
+
+Sequence <- (&'↑' CUT / Prefix)*
+
+Prefix <- (&[&!](AND / NOT))? SuffixWithLabel
+
+SuffixWithLabel <- Suffix (LABEL Identifier)?
+
+Suffix <- Primary (&[?*+{] Loop)?
+
+Loop <- STAR / QUESTION / PLUS / Repetition
+
+Primary <-
+	Ignore IdentCont (
+	    &'(' Arguments !LEFTARROW
+	    / Spacing !((&'(' Parameters)? LEFTARROW)
+	    )
+	/ OPEN Expression CLOSE
+	/ BeginTok Expression EndTok
+	/ &[$] (
+	    CapScope
+	    / BeginCap Expression EndCap
+    	/ BackRef
+	    )
+	/ &['"](
+    	 DictionaryI
+	    / Dictionary
+	    / LiteralI
+	    / Literal
+	    )
+	/ &[[](
+	    &'[^' (
+	        NegatedClassI
+	        / NegatedClass
+	        )
+	    / ClassI
+	    / Class
+	    )
+	/ &[.] DOT
+
+Identifier <- IdentCont Spacing
+
+IdentCont <- <IdentStart IdentRest*>
+
+IdentStart <- !"↑" !"⇑" ([a-zA-Z_%] / [\u0080-\uFFFF])
+
+IdentRest <- IdentStart / [0-9]
+
+Dictionary <- Literal (PIPE Literal)+
+
+DictionaryI <- LiteralI (PIPE LiteralI)+
+
+lit_ope_base <-
+	['] <(!['] Char)*> [']
+	/ ["] <(!["] Char)*> ["]
+
+Literal <-
+	lit_ope_base Spacing
+
+LiteralI <-
+	lit_ope_base "i" Spacing
+
+# NOTE: The original Brian Ford's paper uses 'zom' instead of 'oom'.
+Class_base <- '[' !'^' <(!']' Range)+> ']'
+Class <- Class_base Spacing
+ClassI <- Class_base "]i" Spacing
+
+NegatedClass_bse <- "[^" <(!']' Range)+> ']'
+NegatedClass <- NegatedClass_bse Spacing
+NegatedClassI <- NegatedClass_bse "i" Spacing
+
+# NOTE: This is different from The original Brian Ford's paper and this
+# modification allows us to specify `[+-]` as a valid char class.
+Range <- Char '-' !']' Char / Char
+
+Char <-
+	'\\' (
+	    [fnrtv'\"[\]\\^]
+	    / [0-3] [0-7] [0-7]
+	    / [0-7] [0-7]?
+	    / "x" [0-9a-fA-F] [0-9a-fA-F]?
+	    / "u" (((('0' [0-9a-fA-F]) / "10") [0-9a-fA-F]{4,4}) / [0-9a-fA-F]{4,5})
+	    )
+	/ .
+
+Repetition <- BeginBracket RepetitionRange EndBracket
+
+RepetitionRange <-
+	Number (COMMA Number?)?
+	/ COMMA Number
+
+Number <- [0-9]+ Spacing
+
+CapScope <- BeginCapScope Expression EndCapScope
+
+LEFTARROW <- ("<-" / "←") Spacing
+~SLASH <- '/' Spacing
+~PIPE <- '|' Spacing
+AND <- '&' Spacing
+NOT <- '!' Spacing
+QUESTION <- '?' Spacing
+STAR <- '*' Spacing
+PLUS <- '+' Spacing
+~OPEN <- '(' Spacing
+~CLOSE <- ')' Spacing
+DOT <- '.' Spacing
+
+CUT <- "↑" Spacing
+~LABEL <- ('^' / "⇑") Spacing
+
+~Spacing <- (Space / Comment)*
+Comment <- '#' (!EndOfLine . )* EndOfLine
+Space <- ' ' / '\t' / EndOfLine
+EndOfLine <- "\r\n" / '\n' / '\r'
+EndOfFile <- !.
+
+~BeginTok <- '<' Spacing
+~EndTok <- '>' Spacing
+
+~BeginCapScope <- '$' '(' Spacing
+~EndCapScope <- ')' Spacing
+
+BeginCap <- '$' <IdentCont> '<' Spacing
+~EndCap <- '>' Spacing
+
+BackRef <- '$' <IdentCont> Spacing
+
+Ignore <- '~'?
+
+Parameters <- OPEN Identifier (COMMA Identifier)* CLOSE
+
+Arguments <- OPEN Expression (COMMA Expression)* CLOSE
+
+~COMMA <- ',' Spacing
+
+# Instruction grammars
+Instruction <-
+	BeginBracket
+		(InstructionItem (InstructionItemSeparator InstructionItem)*)?
+	EndBracket
+
+InstructionItem <- PrecedenceClimbing / ErrorMessage / NoAstOpt
+~InstructionItemSeparator <- ';' Spacing
+
+~SpacesZom <- Space*
+~SpacesOom <- Space+
+~BeginBracket <- '{' Spacing
+~EndBracket <- '}' Spacing
+
+# PrecedenceClimbing instruction
+PrecedenceClimbing <-
+	"precedence" SpacesOom PrecedenceInfo
+		(SpacesOom PrecedenceInfo)* SpacesZom
+
+PrecedenceInfo <- PrecedenceAssoc (~SpacesOom PrecedenceOpe)+
+
+PrecedenceOpe <-
+	['] <(!(Space / [']) Char)*> [']
+	/ ["] <(!(Space / ["]) Char)*> ["]
+	/ <(!(PrecedenceAssoc / Space / '}') . )+>
+
+PrecedenceAssoc <- [LR]
+
+# Error message instruction
+ErrorMessage <- "error_message" SpacesOom Literal SpacesZom
+
+# No Ast node optimization instruction
+NoAstOpt <- "no_ast_opt" SpacesZom

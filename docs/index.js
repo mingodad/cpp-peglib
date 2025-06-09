@@ -134,6 +134,7 @@ const sampleList = [
 	["peg-chpeg parser", "chpeg-ext.peglib", "test.chpeg-ext", "ace/mode/yaml"],
 	["peg-cloudwebrtc parser", "peg-cloudwebrtc.peglib", "test.peg-cloudwebrtc", "ace/mode/text"],
 	["peg-cpp-peglib parser", "cpp-peglib.peglib", "cpp-peglib.peglib", "ace/mode/yaml"],
+	["peg-cpp-peglib-opt parser", "cpp-peglib-opt.peglib", "cpp-peglib.peglib", "ace/mode/yaml"],
 	["peg-glop parser", "glop-dpranke.peglib", "test.glop-dpranke", "ace/mode/text"],
 	["peg-gpeg parser", "gpeg.peglib", "test.gpeg", "ace/mode/text"],
 	["peg-gpeg-assembly parser", "gpeg-assembly.peglib", "test.gpeg-assembly", "ace/mode/text"],
