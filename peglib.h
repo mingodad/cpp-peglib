@@ -36,6 +36,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+//#include <future>
 
 #if !defined(__cplusplus) || __cplusplus < 201703L
 #error "Requires complete C++17 support"
@@ -3543,180 +3544,83 @@ private:
 #endif
     // Setup PEG syntax parser
     G("Grammar") <= seq(g["Spacing"], oom(g["Definition"]), g["EndOfFile"]);
-    G("Definition") <=
-        cho(seq(g["Ignore"], g["IdentCont"], g["Parameters"], g["LEFTARROW"],
-                g["Expression"], opt(g["Instruction"])),
-            seq(g["Ignore"], g["Identifier"], g["LEFTARROW"], g["Expression"],
-                opt(g["Instruction"])));
+    G("Definition") <= seq(g["Ignore"], g["IdentCont"], cho(seq(apd(lit("(")), g["Parameters"]), g["Spacing"]), g["LEFTARROW"], g["Expression"], opt(seq(apd(cls("{")), g["Instruction"])));
     G("Expression") <= seq(g["Sequence"], zom(seq(g["SLASH"], g["Sequence"])));
-    G("Sequence") <= zom(cho(g["CUT"], g["Prefix"]));
-    G("Prefix") <= seq(opt(cho(g["AND"], g["NOT"])), g["SuffixWithLabel"]);
-    G("SuffixWithLabel") <=
-        seq(g["Suffix"], opt(seq(g["LABEL"], g["Identifier"])));
-    G("Suffix") <= seq(g["Primary"], opt(g["Loop"]));
-    G("Loop") <= cho(g["QUESTION"], g["STAR"], g["PLUS"], g["Repetition"]);
-    G("Primary") <= cho(seq(g["Ignore"], g["IdentCont"], g["Arguments"],
-                            npd(g["LEFTARROW"])),
-                        seq(g["Ignore"], g["Identifier"],
-                            npd(seq(opt(g["Parameters"]), g["LEFTARROW"]))),
-                        seq(g["OPEN"], g["Expression"], g["CLOSE"]),
-                        seq(g["BeginTok"], g["Expression"], g["EndTok"]),
-                        g["CapScope"],
-                        seq(g["BeginCap"], g["Expression"], g["EndCap"]),
-                        g["BackRef"], g["DictionaryI"], g["LiteralI"],
-                        g["Dictionary"], g["Literal"], g["NegatedClassI"],
-                        g["NegatedClass"], g["ClassI"], g["Class"], g["DOT"]);
-
+    G("Sequence") <= zom(cho(seq(apd(lit("\u2191")), g["CUT"]), g["Prefix"]));
+    G("Prefix") <= seq(opt(seq(apd(cls("&!")), cho(g["AND"], g["NOT"]))), g["SuffixWithLabel"]);
+    G("SuffixWithLabel") <= seq(g["Suffix"], opt(seq(g["LABEL"], g["Identifier"])));
+    G("Suffix") <= seq(g["Primary"], opt(seq(apd(cls("?*+{")), g["Loop"])));
+    G("Loop") <= cho(g["STAR"], g["QUESTION"], g["PLUS"], g["Repetition"]);
+    G("Primary") <= cho(seq(g["OPEN"], g["Expression"], g["CLOSE"]), seq(g["BeginTok"], g["Expression"], g["EndTok"]), seq(apd(cls("$")), g["Captures"]), seq(apd(cls("'\"")), cho(g["DictionaryI"], g["Dictionary"], g["LiteralI"], g["Literal"])), seq(apd(cls("[")), cho(seq(apd(lit("[^")), cho(g["NegatedClassI"], g["NegatedClass"])), g["ClassI"], g["Class"])), seq(apd(cls(".")), g["DOT"]), seq(g["Ignore"], g["IdentCont"], cho(seq(apd(lit("(")), g["Arguments"], npd(g["LEFTARROW"])), seq(g["Spacing"], npd(seq(opt(seq(apd(lit("(")), g["Parameters"])), g["LEFTARROW"]))))));
+    G("Captures") <= cho(g["CapScope"], seq(g["BeginCap"], g["Expression"], g["EndCap"]), g["BackRef"]);
     G("Identifier") <= seq(g["IdentCont"], g["Spacing"]);
     G("IdentCont") <= tok(seq(g["IdentStart"], zom(g["IdentRest"])));
-
-    const static std::vector<std::pair<char32_t, char32_t>> range = {
-        {0x0080, 0xFFFF}};
-    G("IdentStart") <= seq(npd(lit(u8(u8"↑"))), npd(lit(u8(u8"⇑"))),
-                           cho(cls("a-zA-Z_%"), cls(range)));
-
+    G("IdentStart") <= seq(npd(lit("\u2191")), npd(lit("\u21D1")), cho(cls("a-zA-Z_%"), cls("\u0080-\uFFFF")));
     G("IdentRest") <= cho(g["IdentStart"], cls("0-9"));
-
     G("Dictionary") <= seq(g["LiteralD"], oom(seq(g["PIPE"], g["LiteralD"])));
-
-    G("DictionaryI") <=
-        seq(g["LiteralID"], oom(seq(g["PIPE"], g["LiteralID"])));
-
-    auto lit_ope = cho(seq(cls("'"), tok(zom(seq(npd(cls("'")), g["Char"]))),
-                           cls("'"), g["Spacing"]),
-                       seq(cls("\""), tok(zom(seq(npd(cls("\"")), g["Char"]))),
-                           cls("\""), g["Spacing"]));
-    G("Literal") <= lit_ope;
-    G("LiteralD") <= lit_ope;
-
-    auto lit_case_ignore_ope =
-        cho(seq(cls("'"), tok(zom(seq(npd(cls("'")), g["Char"]))), lit("'i"),
-                g["Spacing"]),
-            seq(cls("\""), tok(zom(seq(npd(cls("\"")), g["Char"]))), lit("\"i"),
-                g["Spacing"]));
-    G("LiteralI") <= lit_case_ignore_ope;
-    G("LiteralID") <= lit_case_ignore_ope;
-
-    // NOTE: The original Brian Ford's paper uses 'zom' instead of 'oom'.
-    G("Class") <= seq(chr('['), npd(chr('^')),
-                      tok(oom(seq(npd(chr(']')), g["Range"]))), chr(']'),
-                      g["Spacing"]);
-    G("ClassI") <= seq(chr('['), npd(chr('^')),
-                       tok(oom(seq(npd(chr(']')), g["Range"]))), lit("]i"),
-                       g["Spacing"]);
-
-    G("NegatedClass") <= seq(lit("[^"),
-                             tok(oom(seq(npd(chr(']')), g["Range"]))), chr(']'),
-                             g["Spacing"]);
-    G("NegatedClassI") <= seq(lit("[^"),
-                              tok(oom(seq(npd(chr(']')), g["Range"]))),
-                              lit("]i"), g["Spacing"]);
-
-    // NOTE: This is different from The original Brian Ford's paper, and this
-    // modification allows us to specify `[+-]` as a valid char class.
-    G("Range") <=
-        cho(seq(g["Char"], chr('-'), npd(chr(']')), g["Char"]), g["Char"]);
-
-    G("Char") <=
-        cho(seq(chr('\\'), cls("fnrtv'\"[]\\^-")),
-            seq(chr('\\'), cls("0-3"), cls("0-7"), cls("0-7")),
-            seq(chr('\\'), cls("0-7"), opt(cls("0-7"))),
-            seq(lit("\\x"), cls("0-9a-fA-F"), opt(cls("0-9a-fA-F"))),
-            seq(lit("\\u"),
-                cho(seq(cho(seq(chr('0'), cls("0-9a-fA-F")), lit("10")),
-                        rep(cls("0-9a-fA-F"), 4, 4)),
-                    rep(cls("0-9a-fA-F"), 4, 5))),
-            seq(npd(chr('\\')), dot()));
-
-    G("Repetition") <=
-        seq(g["BeginBracket"], g["RepetitionRange"], g["EndBracket"]);
-    G("RepetitionRange") <= cho(seq(g["Number"], g["COMMA"], g["Number"]),
-                                seq(g["Number"], g["COMMA"]), g["Number"],
-                                seq(g["COMMA"], g["Number"]));
-    G("Number") <= seq(oom(cls("0-9")), g["Spacing"]);
-
+    G("DictionaryI") <= seq(g["LiteralID"], oom(seq(g["PIPE"], g["LiteralID"])));
+    G("lit_ope_base") <= cho(seq(cls("'"), tok(zom(seq(npd(cls("'")), g["Char"]))), cls("'")), seq(cls("\""), tok(zom(seq(npd(cls("\"")), g["Char"]))), cls("\"")));
+    G("lit_ope") <= seq(g["lit_ope_base"], g["Spacing"]);
+    G("Literal") <= g["lit_ope"];
+    G("LiteralD") <= g["lit_ope"];
+    G("lit_case_ignore_ope") <= seq(g["lit_ope_base"], lit("i"), g["Spacing"]);
+    G("LiteralI") <= g["lit_case_ignore_ope"];
+    G("LiteralID") <= g["lit_case_ignore_ope"];
+    G("ClassInner") <= tok(oom(seq(npd(lit("]")), g["Range"])));
+    G("Class_base") <= seq(lit("["), npd(lit("^")), g["ClassInner"], lit("]"));
+    G("Class") <= seq(g["Class_base"], g["Spacing"]);
+    G("ClassI") <= seq(g["Class_base"], lit("i"), g["Spacing"]);
+    G("NegatedClass_bse") <= seq(lit("[^"), g["ClassInner"], lit("]"));
+    G("NegatedClass") <= seq(g["NegatedClass_bse"], g["Spacing"]);
+    G("NegatedClassI") <= seq(g["NegatedClass_bse"], lit("i"), g["Spacing"]);
+    G("Range") <= cho(seq(g["Char"], lit("-"), npd(lit("]")), g["Char"]), g["Char"]);
+    G("Char") <= cho(seq(lit("\\"), cho(cls("fnrtv'\"[]\\^-"), seq(cls("0-3"), cls("0-7"), cls("0-7")), seq(cls("0-7"), opt(cls("0-7"))), seq(lit("x"), cls("0-9a-fA-F"), opt(cls("0-9a-fA-F"))), seq(lit("u"), cho(seq(cho(seq(lit("0"), cls("0-9a-fA-F")), lit("10")), rep(cls("0-9a-fA-F"), 4, 4)), rep(cls("0-9a-fA-F"), 4, 5))))), seq(npd(lit("\\")), dot()));
+    G("Repetition") <= seq(g["BeginBracket"], g["RepetitionRange"], g["EndBracket"]);
+    G("RepetitionRange") <= cho(seq(g["Number"], g["COMMA"], g["Number"]), seq(g["Number"], g["COMMA"]), g["Number"], seq(g["COMMA"], g["Number"]));
+    G("Number") <= seq(tok(oom(cls("0-9"))), g["Spacing"]);
     G("CapScope") <= seq(g["BeginCapScope"], g["Expression"], g["EndCapScope"]);
-
-    G("LEFTARROW") <= seq(cho(lit("<-"), lit(u8(u8"←"))), g["Spacing"]);
-    ~G("SLASH") <= seq(chr('/'), g["Spacing"]);
-    ~G("PIPE") <= seq(chr('|'), g["Spacing"]);
-    G("AND") <= seq(chr('&'), g["Spacing"]);
-    G("NOT") <= seq(chr('!'), g["Spacing"]);
-    G("QUESTION") <= seq(chr('?'), g["Spacing"]);
-    G("STAR") <= seq(chr('*'), g["Spacing"]);
-    G("PLUS") <= seq(chr('+'), g["Spacing"]);
-    ~G("OPEN") <= seq(chr('('), g["Spacing"]);
-    ~G("CLOSE") <= seq(chr(')'), g["Spacing"]);
-    G("DOT") <= seq(chr('.'), g["Spacing"]);
-
-    G("CUT") <= seq(lit(u8(u8"↑")), g["Spacing"]);
-    ~G("LABEL") <= seq(cho(chr('^'), lit(u8(u8"⇑"))), g["Spacing"]);
-
+    G("LEFTARROW") <= seq(cho(lit("<-"), lit("\u2190")), g["Spacing"]);
+    ~G("SLASH") <= seq(lit("/"), g["Spacing"]);
+    ~G("PIPE") <= seq(lit("|"), g["Spacing"]);
+    G("AND") <= seq(lit("&"), g["Spacing"]);
+    G("NOT") <= seq(lit("!"), g["Spacing"]);
+    G("QUESTION") <= seq(lit("?"), g["Spacing"]);
+    G("STAR") <= seq(lit("*"), g["Spacing"]);
+    G("PLUS") <= seq(lit("+"), g["Spacing"]);
+    ~G("OPEN") <= seq(lit("("), g["Spacing"]);
+    ~G("CLOSE") <= seq(lit(")"), g["Spacing"]);
+    G("DOT") <= seq(lit("."), g["Spacing"]);
+    G("CUT") <= seq(lit("\u2191"), g["Spacing"]);
+    ~G("LABEL") <= seq(cho(lit("^"), lit("\u21D1")), g["Spacing"]);
     ~G("Spacing") <= zom(cho(g["Space"], g["Comment"]));
-    G("Comment") <= seq(chr('#'), zom(seq(npd(g["EndOfLine"]), dot())),
-                        opt(g["EndOfLine"]));
-    G("Space") <= cho(chr(' '), chr('\t'), g["EndOfLine"]);
-    G("EndOfLine") <= cho(lit("\r\n"), chr('\n'), chr('\r'));
+    G("Comment") <= seq(lit("#"), zom(seq(npd(g["EndOfLine"]), dot())), opt(g["EndOfLine"]));
+    G("Space") <= cho(lit(" "), lit("\t"), g["EndOfLine"]);
+    G("EndOfLine") <= cho(lit("\r\n"), lit("\n"), lit("\r"));
     G("EndOfFile") <= npd(dot());
-
-    ~G("BeginTok") <= seq(chr('<'), g["Spacing"]);
-    ~G("EndTok") <= seq(chr('>'), g["Spacing"]);
-
-    ~G("BeginCapScope") <= seq(chr('$'), chr('('), g["Spacing"]);
-    ~G("EndCapScope") <= seq(chr(')'), g["Spacing"]);
-
-    G("BeginCap") <= seq(chr('$'), tok(g["IdentCont"]), chr('<'), g["Spacing"]);
-    ~G("EndCap") <= seq(chr('>'), g["Spacing"]);
-
-    G("BackRef") <= seq(chr('$'), tok(g["IdentCont"]), g["Spacing"]);
-
-    G("IGNORE") <= chr('~');
-
+    ~G("BeginTok") <= seq(lit("<"), g["Spacing"]);
+    ~G("EndTok") <= seq(lit(">"), g["Spacing"]);
+    ~G("BeginCapScope") <= seq(lit("$"), lit("("), g["Spacing"]);
+    ~G("EndCapScope") <= seq(lit(")"), g["Spacing"]);
+    G("BeginCap") <= seq(lit("$"), tok(g["IdentCont"]), lit("<"), g["Spacing"]);
+    ~G("EndCap") <= seq(lit(">"), g["Spacing"]);
+    G("BackRef") <= seq(lit("$"), tok(g["IdentCont"]), g["Spacing"]);
+    G("IGNORE") <= lit("~");
     G("Ignore") <= opt(g["IGNORE"]);
-    G("Parameters") <= seq(g["OPEN"], g["Identifier"],
-                           zom(seq(g["COMMA"], g["Identifier"])), g["CLOSE"]);
-    G("Arguments") <= seq(g["OPEN"], g["Expression"],
-                          zom(seq(g["COMMA"], g["Expression"])), g["CLOSE"]);
-    ~G("COMMA") <= seq(chr(','), g["Spacing"]);
-
-    // Instruction grammars
-    G("Instruction") <=
-        seq(g["BeginBracket"],
-            opt(seq(g["InstructionItem"], zom(seq(g["InstructionItemSeparator"],
-                                                  g["InstructionItem"])))),
-            g["EndBracket"]);
-    G("InstructionItem") <=
-        cho(g["PrecedenceClimbing"], g["ErrorMessage"], g["NoAstOpt"]);
-    ~G("InstructionItemSeparator") <= seq(chr(';'), g["Spacing"]);
-
+    G("Parameters") <= seq(g["OPEN"], g["Identifier"], zom(seq(g["COMMA"], g["Identifier"])), g["CLOSE"]);
+    G("Arguments") <= seq(g["OPEN"], g["Expression"], zom(seq(g["COMMA"], g["Expression"])), g["CLOSE"]);
+    ~G("COMMA") <= seq(lit(","), g["Spacing"]);
+    G("Instruction") <= seq(g["BeginBracket"], opt(seq(g["InstructionItem"], zom(seq(g["InstructionItemSeparator"], g["InstructionItem"])))), g["EndBracket"]);
+    G("InstructionItem") <= cho(g["PrecedenceClimbing"], g["ErrorMessage"], g["NoAstOpt"]);
+    ~G("InstructionItemSeparator") <= seq(lit(";"), g["Spacing"]);
     ~G("SpacesZom") <= zom(g["Space"]);
     ~G("SpacesOom") <= oom(g["Space"]);
-    ~G("BeginBracket") <= seq(chr('{'), g["Spacing"]);
-    ~G("EndBracket") <= seq(chr('}'), g["Spacing"]);
-
-    // PrecedenceClimbing instruction
-    G("PrecedenceClimbing") <=
-        seq(lit("precedence"), g["SpacesOom"], g["PrecedenceInfo"],
-            zom(seq(g["SpacesOom"], g["PrecedenceInfo"])), g["SpacesZom"]);
-    G("PrecedenceInfo") <=
-        seq(g["PrecedenceAssoc"],
-            oom(seq(ign(g["SpacesOom"]), g["PrecedenceOpe"])));
-    G("PrecedenceOpe") <=
-        cho(seq(cls("'"),
-                tok(zom(seq(npd(cho(g["Space"], cls("'"))), g["Char"]))),
-                cls("'")),
-            seq(cls("\""),
-                tok(zom(seq(npd(cho(g["Space"], cls("\""))), g["Char"]))),
-                cls("\"")),
-            tok(oom(seq(npd(cho(g["PrecedenceAssoc"], g["Space"], chr('}'))),
-                        dot()))));
+    ~G("BeginBracket") <= seq(lit("{"), g["Spacing"]);
+    ~G("EndBracket") <= seq(lit("}"), g["Spacing"]);
+    G("PrecedenceClimbing") <= seq(lit("precedence"), g["SpacesOom"], g["PrecedenceInfo"], zom(seq(g["SpacesOom"], g["PrecedenceInfo"])), g["SpacesZom"]);
+    G("PrecedenceInfo") <= seq(g["PrecedenceAssoc"], oom(seq(ign(g["SpacesOom"]), g["PrecedenceOpe"])));
+    G("PrecedenceOpe") <= cho(seq(cls("'"), tok(zom(seq(npd(cho(g["Space"], cls("'"))), g["Char"]))), cls("'")), seq(cls("\""), tok(zom(seq(npd(cho(g["Space"], cls("\""))), g["Char"]))), cls("\"")), tok(oom(seq(npd(cho(g["PrecedenceAssoc"], g["Space"], lit("}"))), dot()))));
     G("PrecedenceAssoc") <= cls("LR");
-
-    // Error message instruction
-    G("ErrorMessage") <= seq(lit("error_message"), g["SpacesOom"],
-                             g["LiteralD"], g["SpacesZom"]);
-
-    // No Ast node optimization instruction
+    G("ErrorMessage") <= seq(lit("error_message"), g["SpacesOom"], g["LiteralD"], g["SpacesZom"]);
     G("NoAstOpt") <= seq(lit("no_ast_opt"), g["SpacesZom"]);
 #undef G
     // Set definition names
@@ -3746,8 +3650,7 @@ private:
   void setup_actions() {
     g["Definition"] = [&](const SemanticValues &vs, std::any &dt) {
       auto &data = *std::any_cast<Data *>(dt);
-
-      auto is_macro = vs.choice() == 0;
+      auto is_macro = vs[2].type() == _AnyVecStrType;
       auto ignore = std::any_cast<bool>(vs[0]);
       auto name = std::any_cast<std::string>(vs[1]);
 
@@ -3901,10 +3804,10 @@ private:
 
     g["Loop"] = [&](const SemanticValues &vs) {
       switch (vs.choice()) {
-      case 0: // Option
-        return Loop{Loop::Type::opt, std::pair<size_t, size_t>()};
-      case 1: // Zero or More
+      case 0: // Zero or More
         return Loop{Loop::Type::zom, std::pair<size_t, size_t>()};
+      case 1: // Option
+        return Loop{Loop::Type::opt, std::pair<size_t, size_t>()};
       case 2: // One or More
         return Loop{Loop::Type::oom, std::pair<size_t, size_t>()};
       default: // Regex-like repetition
@@ -3917,9 +3820,8 @@ private:
       auto &data = *std::any_cast<Data *>(dt);
 
       switch (vs.choice()) {
-      case 0:   // Macro Reference
-      case 1: { // Reference
-        auto is_macro = vs.choice() == 0;
+      case 6: { // Reference / Macro Reference
+        auto is_macro = vs.size() > 2;
         auto ignore = std::any_cast<bool>(vs[0]);
         const auto &ident = std::any_cast<std::string>(vs[1]);
 
@@ -3937,16 +3839,25 @@ private:
           return ope;
         }
       }
-      case 2: { // (Expression)
+      case 0: { // (Expression)
         return std::any_cast<std::shared_ptr<Ope>>(vs[0]);
       }
-      case 3: { // TokenBoundary
+      case 1: { // TokenBoundary
         return tok(std::any_cast<std::shared_ptr<Ope>>(vs[0]));
       }
-      case 4: { // CaptureScope
+      default: {
+        return std::any_cast<std::shared_ptr<Ope>>(vs[0]);
+      }
+      }
+    };
+
+    g["Captures"] = [&](const SemanticValues &vs, std::any &dt) {
+      auto &data = *std::any_cast<Data *>(dt);
+      switch (vs.choice()) {
+      case 0: { // CaptureScope
         return csc(std::any_cast<std::shared_ptr<Ope>>(vs[0]));
       }
-      case 5: { // Capture
+      case 1: { // Capture
         const auto &name = std::any_cast<std::string_view>(vs[0]);
         auto ope = std::any_cast<std::shared_ptr<Ope>>(vs[1]);
 
@@ -3981,15 +3892,17 @@ private:
       return dic(items, true);
     };
 
-    g["Literal"] = [](const SemanticValues &vs) {
+    g["lit_ope_base"] = [](const SemanticValues &vs) {
       const auto &tok = vs.tokens.front();
-      return lit(resolve_escape_sequence(tok.data(), tok.size()));
+      return resolve_escape_sequence(tok.data(), tok.size());
+    };
+    g["Literal"] = [](const SemanticValues &vs) {
+      return lit(std::any_cast<std::string>(vs[0]));
     };
     g["LiteralI"] = [](const SemanticValues &vs) {
-      const auto &tok = vs.tokens.front();
-      return liti(resolve_escape_sequence(tok.data(), tok.size()));
+      return liti(std::any_cast<std::string>(vs[0]));
     };
-    g["LiteralD"] = [](const SemanticValues &vs) {
+/*    g["LiteralD"] = [](const SemanticValues &vs) {
       auto &tok = vs.tokens.front();
       return resolve_escape_sequence(tok.data(), tok.size());
     };
@@ -3997,21 +3910,25 @@ private:
       auto &tok = vs.tokens.front();
       return resolve_escape_sequence(tok.data(), tok.size());
     };
-
-    g["Class"] = [](const SemanticValues &vs) {
+*/
+    g["ClassInner"] = [](const SemanticValues &vs) {
       auto ranges = vs.transform<std::pair<char32_t, char32_t>>();
+      return ranges;
+    };
+    g["Class"] = [](const SemanticValues &vs) {
+      auto ranges =  std::any_cast<std::vector<std::pair<char32_t, char32_t>>>(vs[0]);
       return cls(ranges);
     };
     g["ClassI"] = [](const SemanticValues &vs) {
-      auto ranges = vs.transform<std::pair<char32_t, char32_t>>();
+      auto ranges =  std::any_cast<std::vector<std::pair<char32_t, char32_t>>>(vs[0]);
       return cls(ranges, true);
     };
     g["NegatedClass"] = [](const SemanticValues &vs) {
-      auto ranges = vs.transform<std::pair<char32_t, char32_t>>();
+      auto ranges =  std::any_cast<std::vector<std::pair<char32_t, char32_t>>>(vs[0]);
       return ncls(ranges);
     };
     g["NegatedClassI"] = [](const SemanticValues &vs) {
-      auto ranges = vs.transform<std::pair<char32_t, char32_t>>();
+      auto ranges =  std::any_cast<std::vector<std::pair<char32_t, char32_t>>>(vs[0]);
       return ncls(ranges, true);
     };
     g["Range"] = [](const SemanticValues &vs) {
