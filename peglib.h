@@ -210,24 +210,46 @@ template <typename T> const char *u8(const T *s) {
  *  escape_characters
  *---------------------------------------------------------------------------*/
 
-inline std::string escape_characters(const char *s, size_t n) {
+inline const char* escape_one_char(const char c, bool sQuote=true) {
+  switch (c) {
+    case '\f': return "\\f";
+    case '\n': return "\\n";
+    case '\r': return "\\r";
+    case '\t': return "\\t";
+    case '\v': return "\\v";
+    case '\'': return sQuote ? "\\'" : "'";
+    case '"': return sQuote ? "\"" : "\\\"";
+    case '\\': return "\\\\";
+    default: return NULL;
+  }
+  return NULL;
+}
+
+inline std::string escape_characters(const char *s, size_t n,
+        bool escapeUtf8=false, bool sQuote=true) {
   std::string str;
   for (size_t i = 0; i < n; i++) {
     auto c = s[i];
-    switch (c) {
-    case '\f': str += "\\f"; break;
-    case '\n': str += "\\n"; break;
-    case '\r': str += "\\r"; break;
-    case '\t': str += "\\t"; break;
-    case '\v': str += "\\v"; break;
-    default: str += c; break;
+    if(escapeUtf8 && c < 0) {
+        char32_t uc = 0;
+        size_t bytes = decode_codepoint(s+i, n-i, uc);
+        str += "\\u";
+        char buf[16];
+        snprintf(buf, sizeof(buf),"%.04X", uc);
+        str += buf;
+        i += bytes;
+    } else {
+      const char *ec = escape_one_char(c, sQuote);
+      if(ec) str += ec;
+      else str += c;
     }
   }
   return str;
 }
 
-inline std::string escape_characters(std::string_view sv) {
-  return escape_characters(sv.data(), sv.size());
+inline std::string escape_characters(std::string_view sv, bool escapeUtf8=false,
+        bool sQuote=true) {
+  return escape_characters(sv.data(), sv.size(), escapeUtf8, sQuote);
 }
 
 /*-----------------------------------------------------------------------------
@@ -382,6 +404,9 @@ public:
       : ignore_case_(ignore_case) {
     size_t id = 0;
     for (const auto &item : items) {
+#ifdef WITH_GRAMMAR_DUMP
+      items_.push_back(item);
+#endif
       const auto &s = ignore_case ? to_lower(item) : item;
       for (size_t len = 1; len <= item.size(); len++) {
         auto last = len == item.size();
@@ -427,7 +452,10 @@ public:
   }
 
   size_t size() const { return dic_.size(); }
-
+#ifdef WITH_GRAMMAR_DUMP
+  bool ignoreCase() { return ignore_case_; }
+  const std::vector<std::string> &data() { return items_; }
+#endif
 private:
   std::string to_lower(std::string s) const {
     for (char &c : s) {
@@ -445,7 +473,9 @@ private:
   // TODO: Use unordered_map when heterogeneous lookup is supported in C++20
   // std::unordered_map<std::string, Info> dic_;
   std::map<std::string, Info, std::less<>> dic_;
-
+#ifdef WITH_GRAMMAR_DUMP
+  std::vector<std::string> items_;
+#endif
   bool ignore_case_;
 };
 
@@ -975,7 +1005,41 @@ public:
  */
 class Ope {
 public:
+  struct Instruction {
+    std::string type;
+    std::any data;
+    std::string_view sv;
+  };
+  using GrammarInstructions = std::map<std::string, std::vector<Ope::Instruction>>;
   struct Visitor;
+//#ifdef WITH_GRAMMAR_DUMP
+  enum class OpeVariants {
+    None,
+    Sequence,
+    PrioritizedChoice,
+    Repetition,
+    AndPredicate,
+    NotPredicate,
+    Dictionary,
+    LiteralString,
+    CharacterClass,
+    Character,
+    AnyCharacter,
+    CaptureScope,
+    Capture,
+    TokenBoundary,
+    Ignore,
+    User,
+    WeakHolder,
+    Holder,
+    Reference,
+    Whitespace,
+    BackReference,
+    PrecedenceClimbing,
+    Recovery,
+    Cut,
+  };
+//#endif
 
   virtual ~Ope() = default;
   size_t parse(const char *s, size_t n, SemanticValues &vs, Context &c,
@@ -1116,7 +1180,15 @@ public:
   bool is_zom() const {
     return min_ == 0 && max_ == std::numeric_limits<size_t>::max();
   }
+#ifdef WITH_GRAMMAR_DUMP
+  bool is_oom() const {
+    return min_ == 1 && max_ == std::numeric_limits<size_t>::max();
+  }
 
+  bool is_opt() const {
+    return min_ == 0 && max_ == 1;
+  }
+#endif
   static std::shared_ptr<Repetition> zom(const std::shared_ptr<Ope> &ope) {
     return std::make_shared<Repetition>(ope, 0,
                                         std::numeric_limits<size_t>::max());
@@ -1272,8 +1344,9 @@ public:
   }
 
   void accept(Visitor &v) override;
-
+#ifndef WITH_GRAMMAR_DUMP
 private:
+#endif
   bool in_range(const std::pair<char32_t, char32_t> &range, char32_t cp) const {
     if (ignore_case_) {
       auto cpl = std::tolower(cp);
@@ -1353,7 +1426,10 @@ public:
 
   Capture(const std::shared_ptr<Ope> &ope, MatchAction ma)
       : ope_(ope), match_action_(ma) {}
-
+#ifdef WITH_GRAMMAR_DUMP
+  Capture(const std::shared_ptr<Ope> &ope, MatchAction ma, const std::string_view &name)
+      : ope_(ope), match_action_(ma), name_(name) {}
+#endif
   size_t parse_core(const char *s, size_t n, SemanticValues &vs, Context &c,
                     std::any &dt) const override {
     auto len = ope_->parse(s, n, vs, c, dt);
@@ -1365,6 +1441,9 @@ public:
 
   std::shared_ptr<Ope> ope_;
   MatchAction match_action_;
+#ifdef WITH_GRAMMAR_DUMP
+  std::string name_;
+#endif
 };
 
 class TokenBoundary : public Ope {
@@ -1451,6 +1530,15 @@ public:
 };
 
 using Grammar = std::unordered_map<std::string, Definition>;
+
+#ifdef WITH_GRAMMAR_DUMP
+using GrammarLHS = std::vector<std::string>;
+
+enum GrammarDumpType {GDumpPeglib, GDumpEbnf, GDumpCpp};
+
+void grammarDump(Grammar &pg, GrammarLHS &pg_lhs,
+        Ope::GrammarInstructions &pg_instruct, GrammarDumpType gdType=GDumpPeglib);
+#endif
 
 class Reference : public Ope, public std::enable_shared_from_this<Reference> {
 public:
@@ -1648,7 +1736,13 @@ inline std::shared_ptr<Ope> cap(const std::shared_ptr<Ope> &ope,
                                 Capture::MatchAction ma) {
   return std::make_shared<Capture>(ope, ma);
 }
-
+#ifdef WITH_GRAMMAR_DUMP
+inline std::shared_ptr<Ope> cap(const std::shared_ptr<Ope> &ope,
+                                Capture::MatchAction ma,
+                                const std::string_view &name) {
+  return std::make_shared<Capture>(ope, ma, name);
+}
+#endif
 inline std::shared_ptr<Ope> tok(const std::shared_ptr<Ope> &ope) {
   return std::make_shared<TokenBoundary>(ope);
 }
@@ -1757,6 +1851,45 @@ struct TraceOpeName : public Ope::Visitor {
 private:
   const char *name_ = nullptr;
 };
+
+//#ifdef WITH_GRAMMAR_DUMP
+struct TraceOpeVariant : public Ope::Visitor {
+  using Ope::Visitor::visit;
+
+  void visit(Sequence &) override { kind = Ope::OpeVariants::Sequence; }
+  void visit(PrioritizedChoice &) override { kind = Ope::OpeVariants::PrioritizedChoice; }
+  void visit(Repetition &) override { kind = Ope::OpeVariants::Repetition; }
+  void visit(AndPredicate &) override { kind = Ope::OpeVariants::AndPredicate; }
+  void visit(NotPredicate &) override { kind = Ope::OpeVariants::NotPredicate; }
+  void visit(Dictionary &) override { kind = Ope::OpeVariants::Dictionary; }
+  void visit(LiteralString &) override { kind = Ope::OpeVariants::LiteralString; }
+  void visit(CharacterClass &) override { kind = Ope::OpeVariants::CharacterClass; }
+  void visit(Character &) override { kind = Ope::OpeVariants::Character; }
+  void visit(AnyCharacter &) override { kind = Ope::OpeVariants::AnyCharacter; }
+  void visit(CaptureScope &) override { kind = Ope::OpeVariants::CaptureScope; }
+  void visit(Capture &) override { kind = Ope::OpeVariants::Capture; }
+  void visit(TokenBoundary &) override { kind = Ope::OpeVariants::TokenBoundary; }
+  void visit(Ignore &) override { kind = Ope::OpeVariants::Ignore; }
+  void visit(User &) override { kind = Ope::OpeVariants::User; }
+  void visit(WeakHolder &) override { kind = Ope::OpeVariants::WeakHolder; }
+  void visit(Holder &ope) override { kind = Ope::OpeVariants::Holder; }
+  void visit(Reference &) override { kind = Ope::OpeVariants::Reference; }
+  void visit(Whitespace &) override { kind = Ope::OpeVariants::Whitespace; }
+  void visit(BackReference &) override { kind = Ope::OpeVariants::BackReference; }
+  void visit(PrecedenceClimbing &) override { kind = Ope::OpeVariants::PrecedenceClimbing; }
+  void visit(Recovery &) override { kind = Ope::OpeVariants::Recovery; }
+  void visit(Cut &) override { kind = Ope::OpeVariants::Cut; }
+
+  static Ope::OpeVariants get(Ope &ope) {
+    TraceOpeVariant vis;
+    ope.accept(vis);
+    return vis.kind;
+  }
+
+private:
+  Ope::OpeVariants kind = Ope::OpeVariants::None;
+};
+//#endif
 
 struct AssignIDToDefinition : public Ope::Visitor {
   using Ope::Visitor::visit;
@@ -2375,7 +2508,9 @@ public:
   void accept(Ope::Visitor &v) { holder_->accept(v); }
 
   std::shared_ptr<Ope> get_core_operator() const { return holder_->ope_; }
-
+#ifdef WITH_GRAMMAR_DUMP
+  const std::shared_ptr<Holder> get_holder() const { return holder_; }
+#endif
   bool is_token() const {
     std::call_once(is_token_init_, [this]() {
       is_token_ = TokenChecker::is_token(*get_core_operator());
@@ -3309,6 +3444,10 @@ class ParserGenerator {
 public:
   struct ParserContext {
     std::shared_ptr<Grammar> grammar;
+#ifdef WITH_GRAMMAR_DUMP
+    std::shared_ptr<GrammarLHS> grammarLHS;
+    Ope::GrammarInstructions instructions;
+#endif
     std::string start;
     bool enablePackratParsing = false;
   };
@@ -3318,6 +3457,20 @@ public:
     return get_instance().perform_core(s, n, rules, log, std::string(start));
   }
 
+#ifdef WITH_GRAMMAR_DUMP
+  static void dumpGrammar(bool asCpp) {
+    ParserGenerator &pg = get_instance();
+    if(asCpp) pg.grammarDump(pg.g, pg.gv_lhs, pg.gv_instruct, GrammarDumpType::GDumpCpp);
+    else pg.grammarDump(pg.g, pg.gv_lhs, pg.gv_instruct);
+  }
+
+  static void dumpGrammar(Grammar &gg, GrammarLHS &ggv_lhs,
+                Ope::GrammarInstructions &ggv_instruct, bool asCpp) {
+    ParserGenerator &pg = get_instance();
+    if(asCpp) pg.grammarDump(gg, ggv_lhs, ggv_instruct, GrammarDumpType::GDumpCpp);
+    else pg.grammarDump(gg, ggv_lhs, ggv_instruct);
+  }
+#endif
   // For debugging purpose
   static bool parse_test(const char *d, const char *s) {
     Data data;
@@ -3345,21 +3498,18 @@ private:
     setup_actions();
   }
 
-  struct Instruction {
-    std::string type;
-    std::any data;
-    std::string_view sv;
-  };
-
   struct Data {
     std::shared_ptr<Grammar> grammar;
+#ifdef WITH_GRAMMAR_DUMP
+    std::shared_ptr<GrammarLHS> grammarLHS;
+#endif
     std::string start;
     const char *start_pos = nullptr;
 
     std::vector<std::pair<std::string, const char *>> duplicates_of_definition;
 
     std::vector<std::pair<std::string, const char *>> duplicates_of_instruction;
-    std::map<std::string, std::vector<Instruction>> instructions;
+    Ope::GrammarInstructions instructions;
 
     std::vector<std::pair<std::string, const char *>> undefined_back_references;
     std::vector<std::set<std::string_view>> captures_stack{{}};
@@ -3367,7 +3517,11 @@ private:
     std::set<std::string_view> captures_in_current_definition;
     bool enablePackratParsing = true;
 
-    Data() : grammar(std::make_shared<Grammar>()) {}
+    Data() : grammar(std::make_shared<Grammar>())
+#ifdef WITH_GRAMMAR_DUMP
+        ,grammarLHS(std::make_shared<GrammarLHS>())
+#endif
+	{}
   };
 
   class SyntaxErrorException : public std::runtime_error {
@@ -3382,21 +3536,26 @@ private:
   };
 
   void make_grammar() {
+#ifdef WITH_GRAMMAR_DUMP
+#define G(s) g[gv_lhs.emplace_back(s)]
+#else
+#define G(s) g[s]
+#endif
     // Setup PEG syntax parser
-    g["Grammar"] <= seq(g["Spacing"], oom(g["Definition"]), g["EndOfFile"]);
-    g["Definition"] <=
+    G("Grammar") <= seq(g["Spacing"], oom(g["Definition"]), g["EndOfFile"]);
+    G("Definition") <=
         cho(seq(g["Ignore"], g["IdentCont"], g["Parameters"], g["LEFTARROW"],
                 g["Expression"], opt(g["Instruction"])),
             seq(g["Ignore"], g["Identifier"], g["LEFTARROW"], g["Expression"],
                 opt(g["Instruction"])));
-    g["Expression"] <= seq(g["Sequence"], zom(seq(g["SLASH"], g["Sequence"])));
-    g["Sequence"] <= zom(cho(g["CUT"], g["Prefix"]));
-    g["Prefix"] <= seq(opt(cho(g["AND"], g["NOT"])), g["SuffixWithLabel"]);
-    g["SuffixWithLabel"] <=
+    G("Expression") <= seq(g["Sequence"], zom(seq(g["SLASH"], g["Sequence"])));
+    G("Sequence") <= zom(cho(g["CUT"], g["Prefix"]));
+    G("Prefix") <= seq(opt(cho(g["AND"], g["NOT"])), g["SuffixWithLabel"]);
+    G("SuffixWithLabel") <=
         seq(g["Suffix"], opt(seq(g["LABEL"], g["Identifier"])));
-    g["Suffix"] <= seq(g["Primary"], opt(g["Loop"]));
-    g["Loop"] <= cho(g["QUESTION"], g["STAR"], g["PLUS"], g["Repetition"]);
-    g["Primary"] <= cho(seq(g["Ignore"], g["IdentCont"], g["Arguments"],
+    G("Suffix") <= seq(g["Primary"], opt(g["Loop"]));
+    G("Loop") <= cho(g["QUESTION"], g["STAR"], g["PLUS"], g["Repetition"]);
+    G("Primary") <= cho(seq(g["Ignore"], g["IdentCont"], g["Arguments"],
                             npd(g["LEFTARROW"])),
                         seq(g["Ignore"], g["Identifier"],
                             npd(seq(opt(g["Parameters"]), g["LEFTARROW"]))),
@@ -3408,57 +3567,57 @@ private:
                         g["Dictionary"], g["Literal"], g["NegatedClassI"],
                         g["NegatedClass"], g["ClassI"], g["Class"], g["DOT"]);
 
-    g["Identifier"] <= seq(g["IdentCont"], g["Spacing"]);
-    g["IdentCont"] <= tok(seq(g["IdentStart"], zom(g["IdentRest"])));
+    G("Identifier") <= seq(g["IdentCont"], g["Spacing"]);
+    G("IdentCont") <= tok(seq(g["IdentStart"], zom(g["IdentRest"])));
 
     const static std::vector<std::pair<char32_t, char32_t>> range = {
         {0x0080, 0xFFFF}};
-    g["IdentStart"] <= seq(npd(lit(u8(u8"↑"))), npd(lit(u8(u8"⇑"))),
+    G("IdentStart") <= seq(npd(lit(u8(u8"↑"))), npd(lit(u8(u8"⇑"))),
                            cho(cls("a-zA-Z_%"), cls(range)));
 
-    g["IdentRest"] <= cho(g["IdentStart"], cls("0-9"));
+    G("IdentRest") <= cho(g["IdentStart"], cls("0-9"));
 
-    g["Dictionary"] <= seq(g["LiteralD"], oom(seq(g["PIPE"], g["LiteralD"])));
+    G("Dictionary") <= seq(g["LiteralD"], oom(seq(g["PIPE"], g["LiteralD"])));
 
-    g["DictionaryI"] <=
+    G("DictionaryI") <=
         seq(g["LiteralID"], oom(seq(g["PIPE"], g["LiteralID"])));
 
     auto lit_ope = cho(seq(cls("'"), tok(zom(seq(npd(cls("'")), g["Char"]))),
                            cls("'"), g["Spacing"]),
                        seq(cls("\""), tok(zom(seq(npd(cls("\"")), g["Char"]))),
                            cls("\""), g["Spacing"]));
-    g["Literal"] <= lit_ope;
-    g["LiteralD"] <= lit_ope;
+    G("Literal") <= lit_ope;
+    G("LiteralD") <= lit_ope;
 
     auto lit_case_ignore_ope =
         cho(seq(cls("'"), tok(zom(seq(npd(cls("'")), g["Char"]))), lit("'i"),
                 g["Spacing"]),
             seq(cls("\""), tok(zom(seq(npd(cls("\"")), g["Char"]))), lit("\"i"),
                 g["Spacing"]));
-    g["LiteralI"] <= lit_case_ignore_ope;
-    g["LiteralID"] <= lit_case_ignore_ope;
+    G("LiteralI") <= lit_case_ignore_ope;
+    G("LiteralID") <= lit_case_ignore_ope;
 
     // NOTE: The original Brian Ford's paper uses 'zom' instead of 'oom'.
-    g["Class"] <= seq(chr('['), npd(chr('^')),
+    G("Class") <= seq(chr('['), npd(chr('^')),
                       tok(oom(seq(npd(chr(']')), g["Range"]))), chr(']'),
                       g["Spacing"]);
-    g["ClassI"] <= seq(chr('['), npd(chr('^')),
+    G("ClassI") <= seq(chr('['), npd(chr('^')),
                        tok(oom(seq(npd(chr(']')), g["Range"]))), lit("]i"),
                        g["Spacing"]);
 
-    g["NegatedClass"] <= seq(lit("[^"),
+    G("NegatedClass") <= seq(lit("[^"),
                              tok(oom(seq(npd(chr(']')), g["Range"]))), chr(']'),
                              g["Spacing"]);
-    g["NegatedClassI"] <= seq(lit("[^"),
+    G("NegatedClassI") <= seq(lit("[^"),
                               tok(oom(seq(npd(chr(']')), g["Range"]))),
                               lit("]i"), g["Spacing"]);
 
     // NOTE: This is different from The original Brian Ford's paper, and this
     // modification allows us to specify `[+-]` as a valid char class.
-    g["Range"] <=
+    G("Range") <=
         cho(seq(g["Char"], chr('-'), npd(chr(']')), g["Char"]), g["Char"]);
 
-    g["Char"] <=
+    G("Char") <=
         cho(seq(chr('\\'), cls("fnrtv'\"[]\\^-")),
             seq(chr('\\'), cls("0-3"), cls("0-7"), cls("0-7")),
             seq(chr('\\'), cls("0-7"), opt(cls("0-7"))),
@@ -3469,80 +3628,80 @@ private:
                     rep(cls("0-9a-fA-F"), 4, 5))),
             seq(npd(chr('\\')), dot()));
 
-    g["Repetition"] <=
+    G("Repetition") <=
         seq(g["BeginBracket"], g["RepetitionRange"], g["EndBracket"]);
-    g["RepetitionRange"] <= cho(seq(g["Number"], g["COMMA"], g["Number"]),
+    G("RepetitionRange") <= cho(seq(g["Number"], g["COMMA"], g["Number"]),
                                 seq(g["Number"], g["COMMA"]), g["Number"],
                                 seq(g["COMMA"], g["Number"]));
-    g["Number"] <= seq(oom(cls("0-9")), g["Spacing"]);
+    G("Number") <= seq(oom(cls("0-9")), g["Spacing"]);
 
-    g["CapScope"] <= seq(g["BeginCapScope"], g["Expression"], g["EndCapScope"]);
+    G("CapScope") <= seq(g["BeginCapScope"], g["Expression"], g["EndCapScope"]);
 
-    g["LEFTARROW"] <= seq(cho(lit("<-"), lit(u8(u8"←"))), g["Spacing"]);
-    ~g["SLASH"] <= seq(chr('/'), g["Spacing"]);
-    ~g["PIPE"] <= seq(chr('|'), g["Spacing"]);
-    g["AND"] <= seq(chr('&'), g["Spacing"]);
-    g["NOT"] <= seq(chr('!'), g["Spacing"]);
-    g["QUESTION"] <= seq(chr('?'), g["Spacing"]);
-    g["STAR"] <= seq(chr('*'), g["Spacing"]);
-    g["PLUS"] <= seq(chr('+'), g["Spacing"]);
-    ~g["OPEN"] <= seq(chr('('), g["Spacing"]);
-    ~g["CLOSE"] <= seq(chr(')'), g["Spacing"]);
-    g["DOT"] <= seq(chr('.'), g["Spacing"]);
+    G("LEFTARROW") <= seq(cho(lit("<-"), lit(u8(u8"←"))), g["Spacing"]);
+    ~G("SLASH") <= seq(chr('/'), g["Spacing"]);
+    ~G("PIPE") <= seq(chr('|'), g["Spacing"]);
+    G("AND") <= seq(chr('&'), g["Spacing"]);
+    G("NOT") <= seq(chr('!'), g["Spacing"]);
+    G("QUESTION") <= seq(chr('?'), g["Spacing"]);
+    G("STAR") <= seq(chr('*'), g["Spacing"]);
+    G("PLUS") <= seq(chr('+'), g["Spacing"]);
+    ~G("OPEN") <= seq(chr('('), g["Spacing"]);
+    ~G("CLOSE") <= seq(chr(')'), g["Spacing"]);
+    G("DOT") <= seq(chr('.'), g["Spacing"]);
 
-    g["CUT"] <= seq(lit(u8(u8"↑")), g["Spacing"]);
-    ~g["LABEL"] <= seq(cho(chr('^'), lit(u8(u8"⇑"))), g["Spacing"]);
+    G("CUT") <= seq(lit(u8(u8"↑")), g["Spacing"]);
+    ~G("LABEL") <= seq(cho(chr('^'), lit(u8(u8"⇑"))), g["Spacing"]);
 
-    ~g["Spacing"] <= zom(cho(g["Space"], g["Comment"]));
-    g["Comment"] <= seq(chr('#'), zom(seq(npd(g["EndOfLine"]), dot())),
+    ~G("Spacing") <= zom(cho(g["Space"], g["Comment"]));
+    G("Comment") <= seq(chr('#'), zom(seq(npd(g["EndOfLine"]), dot())),
                         opt(g["EndOfLine"]));
-    g["Space"] <= cho(chr(' '), chr('\t'), g["EndOfLine"]);
-    g["EndOfLine"] <= cho(lit("\r\n"), chr('\n'), chr('\r'));
-    g["EndOfFile"] <= npd(dot());
+    G("Space") <= cho(chr(' '), chr('\t'), g["EndOfLine"]);
+    G("EndOfLine") <= cho(lit("\r\n"), chr('\n'), chr('\r'));
+    G("EndOfFile") <= npd(dot());
 
-    ~g["BeginTok"] <= seq(chr('<'), g["Spacing"]);
-    ~g["EndTok"] <= seq(chr('>'), g["Spacing"]);
+    ~G("BeginTok") <= seq(chr('<'), g["Spacing"]);
+    ~G("EndTok") <= seq(chr('>'), g["Spacing"]);
 
-    ~g["BeginCapScope"] <= seq(chr('$'), chr('('), g["Spacing"]);
-    ~g["EndCapScope"] <= seq(chr(')'), g["Spacing"]);
+    ~G("BeginCapScope") <= seq(chr('$'), chr('('), g["Spacing"]);
+    ~G("EndCapScope") <= seq(chr(')'), g["Spacing"]);
 
-    g["BeginCap"] <= seq(chr('$'), tok(g["IdentCont"]), chr('<'), g["Spacing"]);
-    ~g["EndCap"] <= seq(chr('>'), g["Spacing"]);
+    G("BeginCap") <= seq(chr('$'), tok(g["IdentCont"]), chr('<'), g["Spacing"]);
+    ~G("EndCap") <= seq(chr('>'), g["Spacing"]);
 
-    g["BackRef"] <= seq(chr('$'), tok(g["IdentCont"]), g["Spacing"]);
+    G("BackRef") <= seq(chr('$'), tok(g["IdentCont"]), g["Spacing"]);
 
-    g["IGNORE"] <= chr('~');
+    G("IGNORE") <= chr('~');
 
-    g["Ignore"] <= opt(g["IGNORE"]);
-    g["Parameters"] <= seq(g["OPEN"], g["Identifier"],
+    G("Ignore") <= opt(g["IGNORE"]);
+    G("Parameters") <= seq(g["OPEN"], g["Identifier"],
                            zom(seq(g["COMMA"], g["Identifier"])), g["CLOSE"]);
-    g["Arguments"] <= seq(g["OPEN"], g["Expression"],
+    G("Arguments") <= seq(g["OPEN"], g["Expression"],
                           zom(seq(g["COMMA"], g["Expression"])), g["CLOSE"]);
-    ~g["COMMA"] <= seq(chr(','), g["Spacing"]);
+    ~G("COMMA") <= seq(chr(','), g["Spacing"]);
 
     // Instruction grammars
-    g["Instruction"] <=
+    G("Instruction") <=
         seq(g["BeginBracket"],
             opt(seq(g["InstructionItem"], zom(seq(g["InstructionItemSeparator"],
                                                   g["InstructionItem"])))),
             g["EndBracket"]);
-    g["InstructionItem"] <=
+    G("InstructionItem") <=
         cho(g["PrecedenceClimbing"], g["ErrorMessage"], g["NoAstOpt"]);
-    ~g["InstructionItemSeparator"] <= seq(chr(';'), g["Spacing"]);
+    ~G("InstructionItemSeparator") <= seq(chr(';'), g["Spacing"]);
 
-    ~g["SpacesZom"] <= zom(g["Space"]);
-    ~g["SpacesOom"] <= oom(g["Space"]);
-    ~g["BeginBracket"] <= seq(chr('{'), g["Spacing"]);
-    ~g["EndBracket"] <= seq(chr('}'), g["Spacing"]);
+    ~G("SpacesZom") <= zom(g["Space"]);
+    ~G("SpacesOom") <= oom(g["Space"]);
+    ~G("BeginBracket") <= seq(chr('{'), g["Spacing"]);
+    ~G("EndBracket") <= seq(chr('}'), g["Spacing"]);
 
     // PrecedenceClimbing instruction
-    g["PrecedenceClimbing"] <=
+    G("PrecedenceClimbing") <=
         seq(lit("precedence"), g["SpacesOom"], g["PrecedenceInfo"],
             zom(seq(g["SpacesOom"], g["PrecedenceInfo"])), g["SpacesZom"]);
-    g["PrecedenceInfo"] <=
+    G("PrecedenceInfo") <=
         seq(g["PrecedenceAssoc"],
             oom(seq(ign(g["SpacesOom"]), g["PrecedenceOpe"])));
-    g["PrecedenceOpe"] <=
+    G("PrecedenceOpe") <=
         cho(seq(cls("'"),
                 tok(zom(seq(npd(cho(g["Space"], cls("'"))), g["Char"]))),
                 cls("'")),
@@ -3551,20 +3710,38 @@ private:
                 cls("\"")),
             tok(oom(seq(npd(cho(g["PrecedenceAssoc"], g["Space"], chr('}'))),
                         dot()))));
-    g["PrecedenceAssoc"] <= cls("LR");
+    G("PrecedenceAssoc") <= cls("LR");
 
     // Error message instruction
-    g["ErrorMessage"] <= seq(lit("error_message"), g["SpacesOom"],
+    G("ErrorMessage") <= seq(lit("error_message"), g["SpacesOom"],
                              g["LiteralD"], g["SpacesZom"]);
 
     // No Ast node optimization instruction
-    g["NoAstOpt"] <= seq(lit("no_ast_opt"), g["SpacesZom"]);
-
+    G("NoAstOpt") <= seq(lit("no_ast_opt"), g["SpacesZom"]);
+#undef G
     // Set definition names
     for (auto &x : g) {
       x.second.name = x.first;
     }
   }
+
+  constexpr static const std::type_info& _AnyVecStrType = typeid(std::vector<std::string>);
+#ifdef WITH_GRAMMAR_DUMP
+  constexpr static const std::type_info& _AnyStrType = typeid(std::string);
+  void dumpSematicValuesType(const SemanticValues &vs) {
+        printf("==%s\n", vs.name().c_str());
+        for (auto i = 0u; i < vs.size(); i++) {
+          const std::any &v = vs[i];
+          printf("\t%u:%zd:%s:%d:%d\n", i, v.type().hash_code(), v.type().name(),
+                  v.type() == _AnyStrType, v.type().hash_code() == _AnyStrType.hash_code());
+          if(v.type().hash_code() == _AnyStrType.hash_code()) {
+              const std::string &str = std::any_cast<std::string>(v);
+              printf("\t\tstr:%zd:%s\n", str.size(), str.c_str());
+          }
+        }
+        //fflush(stdout);
+  }
+#endif
 
   void setup_actions() {
     g["Definition"] = [&](const SemanticValues &vs, std::any &dt) {
@@ -3591,7 +3768,7 @@ private:
         auto index = is_macro ? 5 : 4;
         std::unordered_set<std::string> types;
         for (const auto &instruction :
-             std::any_cast<std::vector<Instruction>>(vs[index])) {
+             std::any_cast<std::vector<Ope::Instruction>>(vs[index])) {
           const auto &type = instruction.type;
           if (types.find(type) == types.end()) {
             data.instructions[name].push_back(instruction);
@@ -3607,10 +3784,16 @@ private:
       }
 
       auto &grammar = *data.grammar;
+#ifdef WITH_GRAMMAR_DUMP
+      auto &grammarLHS = *data.grammarLHS;
+#endif
       if (!grammar.count(name)) {
         auto &rule = grammar[name];
         rule <= ope;
         rule.name = name;
+#ifdef WITH_GRAMMAR_DUMP
+        grammarLHS.push_back(name);
+#endif
         rule.s_ = vs.sv().data();
         rule.line_ = line_info(vs.ss, rule.s_);
         rule.ignoreSemanticValue = ignore;
@@ -3773,7 +3956,11 @@ private:
         return cap(ope, [name](const char *a_s, size_t a_n, Context &c) {
           auto &cs = c.capture_scope_stack[c.capture_scope_stack_size - 1];
           cs[name] = std::string(a_s, a_n);
-        });
+        }
+#ifdef WITH_GRAMMAR_DUMP
+, name
+#endif
+	);
       }
       default: {
         return std::any_cast<std::shared_ptr<Ope>>(vs[0]);
@@ -3950,7 +4137,7 @@ private:
         }
         level++;
       }
-      Instruction instruction;
+      Ope::Instruction instruction;
       instruction.type = "precedence";
       instruction.data = binOpeInfo;
       instruction.sv = vs.sv();
@@ -3963,7 +4150,7 @@ private:
     g["PrecedenceAssoc"] = [](const SemanticValues &vs) { return vs.token(); };
 
     g["ErrorMessage"] = [](const SemanticValues &vs) {
-      Instruction instruction;
+      Ope::Instruction instruction;
       instruction.type = "error_message";
       instruction.data = std::any_cast<std::string>(vs[0]);
       instruction.sv = vs.sv();
@@ -3971,14 +4158,14 @@ private:
     };
 
     g["NoAstOpt"] = [](const SemanticValues &vs) {
-      Instruction instruction;
+      Ope::Instruction instruction;
       instruction.type = "no_ast_opt";
       instruction.sv = vs.sv();
       return instruction;
     };
 
     g["Instruction"] = [](const SemanticValues &vs) {
-      return vs.transform<Instruction>();
+      return vs.transform<Ope::Instruction>();
     };
   }
 
@@ -4027,6 +4214,10 @@ private:
                              Log log, std::string requested_start) {
     Data data;
     auto &grammar = *data.grammar;
+#ifdef WITH_GRAMMAR_DUMP
+    auto &grammarLHS = *data.grammarLHS;
+    auto &instructions = data.instructions;
+#endif
 
     // Built-in macros
     {
@@ -4258,7 +4449,11 @@ private:
       }
     }
 
-    return {data.grammar, start, data.enablePackratParsing};
+    return {data.grammar,
+#ifdef WITH_GRAMMAR_DUMP
+data.grammarLHS, data.instructions,
+#endif
+	start, data.enablePackratParsing};
   }
 
   bool detect_infiniteLoop(const Data &data, Definition &rule, const Log &log,
@@ -4278,7 +4473,380 @@ private:
     return false;
   }
 
+#ifdef WITH_GRAMMAR_DUMP
+  void dumpOneCharacterClass(char32_t c, bool isFristOrLast) {
+    switch(c){
+        //case '[': printf("\\["); break;
+        //case ']': printf("\\]"); break;
+        case '-': printf("%s", isFristOrLast ? "-" : "\\-"); break;
+        case '\'': printf("'"); break;
+        case '"': printf("\\\""); break;
+        case '\t': printf("\\t"); break;
+        case '\n': printf("\\n"); break;
+        case '\r': printf("\\r"); break;
+        case '\v': printf("\\v"); break;
+        case '\f': printf("\\f"); break;
+        default: {
+            if(c <= 127 && isprint(c)) {
+                const char *ec = escape_one_char(c);
+                if(ec) printf("%s", ec);
+                else printf("%c", c);
+            }
+            else printf("\\u%.04X", c);
+        }
+    }
+  }
+
+  void opeGrammarDump(Ope &ope, int level, Grammar &pg,
+                    GrammarDumpType gdType=GDumpPeglib) {
+    bool asEBNF = gdType == GDumpEbnf;
+    bool asCpp = gdType == GDumpCpp;
+    Ope::OpeVariants ov = TraceOpeVariant::get(ope);
+    switch(ov) {
+        case Ope::OpeVariants::Sequence: {
+          //printf(":Sequence:");
+          Sequence &to = dynamic_cast<peg::Sequence&>(ope);
+          if(asCpp) printf("seq(");
+          else if(level > 0) printf("( ");
+          const char *sep0 = "";
+          const char *sep = sep0;
+          for(const auto &v : to.opes_) {
+            //std::string vname = peg::TraceOpeName::get(*v);
+            //printf(" %s", vname.c_str());
+            printf("%s", sep);
+            if(sep == sep0) {
+                sep = asCpp ? ", " : " ";
+            }
+            opeGrammarDump(*v, level+1, pg, gdType);
+          }
+          if(asCpp) printf(")");
+          else if(level > 0) printf(" )");
+        }
+        break;
+        case Ope::OpeVariants::PrioritizedChoice: {
+          //printf(":PrioritizedChoice:");
+          PrioritizedChoice &to = dynamic_cast<peg::PrioritizedChoice&>(ope);
+          if(asCpp) printf("cho(");
+          else if(level > 0) printf("( ");
+          const char *sep0 = "";
+          const char *sep = sep0;
+          for(const auto &v : to.opes_) {
+            //std::string vname = peg::TraceOpeName::get(*v);
+            //printf(" %s", vname.c_str());
+            printf("%s", sep);
+            //at level0 keep it to prevent extra parenthesis
+            opeGrammarDump(*v, level, pg, gdType);
+            if(sep == sep0) {
+                if(asCpp) sep = ", ";
+                else if(level > 0) sep = asEBNF ? " | " : " / ";
+                else sep = asEBNF ? "\n\t| " : "\n\t/ ";
+            }
+          }
+          if(asCpp) printf(")");
+          else if(level > 0) printf(" )");
+        }
+        break;
+        case Ope::OpeVariants::Repetition: {
+          //printf(":Repetition:");
+          Repetition &to = dynamic_cast<peg::Repetition&>(ope);
+          if(asCpp) {
+            if(to.is_opt()) printf("opt(");
+            else if(to.is_oom()) printf("oom(");
+            else if(to.is_zom()) printf("zom(");
+            else printf("rep(");
+          }
+          opeGrammarDump(*to.ope_, level+1, pg, gdType);
+          if(asCpp) {
+              if(!(to.is_opt() || to.is_oom() || to.is_zom())) {
+                  printf(", %zu, %zu)", to.min_, to.max_);
+              }
+              else printf(")");
+          }
+          else if(to.is_opt()) printf("?");
+          else if(to.is_oom()) printf("+");
+          else if(to.is_zom()) printf("*");
+          else printf("{%zu,%zu}", to.min_, to.max_);
+        }
+        break;
+        case Ope::OpeVariants::AndPredicate: {
+            //printf(":AndPredicate:");
+            AndPredicate &to = dynamic_cast<peg::AndPredicate&>(ope);
+            if(asCpp) printf("apd(");
+            else printf("&");
+            opeGrammarDump(*to.ope_, level+1, pg, gdType);
+            if(asCpp) printf(")");
+        }
+        break;
+        case Ope::OpeVariants::NotPredicate: {
+            //printf(":NotPredicate:");
+            NotPredicate &to = dynamic_cast<peg::NotPredicate&>(ope);
+            if(asCpp) printf("npd(");
+            else printf("!");
+            opeGrammarDump(*to.ope_, level+1, pg, gdType);
+            if(asCpp) printf(")");
+        }
+        break;
+        case Ope::OpeVariants::Dictionary: {
+            //printf(":Dictionary:");
+            Dictionary &to = dynamic_cast<peg::Dictionary&>(ope);
+            const char *sep0 = "";
+            const char *sep = sep0;
+            for(const auto& value : to.trie_.data()) {
+                printf("%s", sep);
+                printf("'%s'", peg::escape_characters(value, false, asCpp).c_str());
+                if(!asEBNF && to.trie_.ignoreCase()) printf("i");
+                if(sep == sep0) {
+                    sep = "\n\t| ";
+                }
+            }
+        }
+        break;
+        case Ope::OpeVariants::LiteralString: {
+            //printf(":LiteralString:");
+            LiteralString &to = dynamic_cast<peg::LiteralString&>(ope);
+            if(asCpp) {
+                printf("lit%s(\"%s\")", to.ignore_case_ ? "i" : "",
+                        peg::escape_characters(to.lit_, true, !asCpp).c_str());
+            } else {
+                //printf("((%s)%d)", to.lit_.c_str(), (int)to.lit_.size());
+                printf("'%s'%s", peg::escape_characters(to.lit_, true, !asCpp).c_str(),
+                    !asEBNF && to.ignore_case_ ? "i" : "");
+            }
+        }
+        break;
+        case Ope::OpeVariants::CharacterClass: {
+            //printf(":CharacterClass:");
+            CharacterClass &to = dynamic_cast<peg::CharacterClass&>(ope);
+            if(asCpp) printf("%scls(\"", to.negated_ ? "n" : "");
+            else if(to.negated_) printf("[^");
+            else printf("[");
+            size_t count = 0;
+            for (const auto &range : to.ranges_) {
+                bool isFristOrLast = count == 0 || count == to.ranges_.size()-1;
+                if(range.first == range.second) dumpOneCharacterClass(range.first, isFristOrLast);
+                else {
+                    dumpOneCharacterClass(range.first, isFristOrLast);
+                    printf("-");
+                    dumpOneCharacterClass(range.second, isFristOrLast);
+                }
+                ++count;
+            }
+            if(asCpp) printf("\")");
+            else printf("]");
+            if(!asEBNF && to.ignore_case_) printf("i");
+        }
+        break;
+        case Ope::OpeVariants::Character: {
+            //printf(":Character:");
+            Character &to = dynamic_cast<peg::Character&>(ope);
+            //printf("((%d))", to.ch_);
+            if(asCpp) printf("chr(");
+            if(to.ch_ <= 127 /*&& isprint(to.ch_)*/) {
+                const char *ec = escape_one_char(to.ch_);
+                if(ec) printf("'%s'", ec);
+                else printf("'%c'", to.ch_);
+            }
+            else printf("'\\u%.04X'", to.ch_);
+            if(asCpp) printf(")");
+        }
+        break;
+        case Ope::OpeVariants::AnyCharacter:
+            //printf(":AnyCharacter:");
+            if(asCpp) printf("dot()");
+            else if(asEBNF) printf("[.]");
+            else  printf(".");
+        break;
+        case Ope::OpeVariants::CaptureScope: {
+            //printf(":CaptureScope:");
+            CaptureScope &to = dynamic_cast<peg::CaptureScope&>(ope);
+            printf("$");
+            opeGrammarDump(*to.ope_, level+1, pg, gdType);
+        }
+        break;
+        case Ope::OpeVariants::Capture: {
+            //printf(":Capture:");
+            Capture &to = dynamic_cast<peg::Capture&>(ope);
+            printf("$%s< ", to.name_.c_str());
+            opeGrammarDump(*to.ope_, level+1, pg, gdType);
+            printf(" >");
+        }
+        break;
+        case Ope::OpeVariants::TokenBoundary: {
+            //printf(":TokenBoundary:");
+            TokenBoundary &to = dynamic_cast<peg::TokenBoundary&>(ope);
+            if(asCpp) printf("tok(");
+            else if(!asEBNF) printf("< ");
+            opeGrammarDump(*to.ope_, level+1, pg, gdType);
+            if(asCpp) printf(")");
+            else if(!asEBNF) printf(" >");
+        }
+        break;
+        case Ope::OpeVariants::Ignore: {
+            //printf(":Ignore:");
+            Ignore &to = dynamic_cast<peg::Ignore&>(ope);
+            if(asCpp) printf("ign(");
+            else if(!asEBNF) printf("~");
+            opeGrammarDump(*to.ope_, level+1, pg, gdType);
+            if(asCpp) printf(")");
+        }
+        break;
+        case Ope::OpeVariants::User:
+            printf(":User:");
+        break;
+        case Ope::OpeVariants::WeakHolder: {
+            //printf("WeakHolder:");
+            WeakHolder &to = dynamic_cast<peg::WeakHolder&>(ope);
+            auto const wo = to.weak_.lock().get();
+            //printf("--%p\n", wo);
+            for (auto &v : pg) {
+                auto const k = v.second.get_holder().get();
+                //printf("=%p : %p : %p\n", k, &v.second, v.second.outer_);
+                if(k == wo) {
+                    if(asCpp) printf("g[\"%s\"]", v.first.c_str());
+                    else printf("%s", v.first.c_str());
+                    break;
+                }
+            }
+        }
+        break;
+        case Ope::OpeVariants::Holder:
+            printf(":Holder:");
+        break;
+        case Ope::OpeVariants::Reference: {
+            //printf(":Reference:");
+            Reference &to = dynamic_cast<peg::Reference&>(ope);
+            if(asCpp) printf("g[\"%s\"]", to.name_.c_str());
+            else printf("%s", to.name_.c_str());
+            if(to.args_.size()) {
+                printf("(");
+                const char *sep0 = "";
+                const char *sep = sep0;
+                for (auto &p : to.args_) {
+                    printf("%s", sep);
+                    opeGrammarDump(*p, level, pg, gdType);
+                    if(sep == sep0) sep = ", ";
+                }
+                printf(")");
+            }
+        }
+        break;
+        case Ope::OpeVariants::Whitespace:
+            printf(":Whitespace:");
+        break;
+        case Ope::OpeVariants::BackReference: {
+            //printf(":BackReference:");
+            BackReference &to = dynamic_cast<peg::BackReference&>(ope);
+            printf("$%s", to.name_.c_str());
+        }
+        break;
+        case Ope::OpeVariants::PrecedenceClimbing:
+            printf(":PrecedenceClimbing:");
+        break;
+        case Ope::OpeVariants::Recovery: {
+            //printf(":Recovery:");
+            Recovery &to = dynamic_cast<peg::Recovery&>(ope);
+            opeGrammarDump(*to.ope_, level+1, pg, gdType);
+        }
+        break;
+        case Ope::OpeVariants::Cut: {
+            printf("↑");
+        }
+        break;
+        default:
+            throw std::runtime_error("Invalid OpeVariant");
+    }
+  }
+
+  void grammarDump(Grammar &pg, GrammarLHS &pg_lhs,
+                Ope::GrammarInstructions &pg_instruct,
+                GrammarDumpType gdType=GDumpPeglib) {
+    bool asEBNF = gdType == GDumpEbnf;
+    bool asCpp = gdType == GDumpCpp;
+    for (auto &k : pg_lhs) {
+          const auto &v = pg[k];
+          //printf("%s:%p <- ", k.c_str(), v.get_holder().get());
+          if(asCpp) {
+            printf("\n%sG(\"%s\")", !asEBNF && v.ignoreSemanticValue ? "~" : "", k.c_str());
+          } else {
+            printf("\n%s%s", !asEBNF && v.ignoreSemanticValue ? "~" : "", k.c_str());
+          }
+          auto &ope = *v.get_core_operator();
+          if(v.params.size()) {
+              printf("(");
+              const char *sep0 = "";
+              const char *sep = sep0;
+              for (auto &p : v.params) {
+                  printf("%s", sep);
+                  printf("%s", p.c_str());
+                  if(sep == sep0) sep = ", ";
+              }
+              printf(")");
+          }
+          if(asCpp) printf(" <= ");
+          else if(asEBNF) printf(" ::= ");
+          else printf(" <- ");
+          opeGrammarDump(ope, 0, pg, gdType);
+          //peg::DumpOpeEBNF::dump(*v.get_core_operator());
+          //auto vname = peg::TraceOpeName::get(*v.get_core_operator().get());
+          //printf("%s\n", vname.c_str());
+          if(asCpp) printf(";\n");
+          else printf("\n");
+          std::vector<Ope::Instruction> &instructions = pg_instruct[k];
+          if(!asEBNF && instructions.size()) {
+              //printf("\t{ #%zu\n", instructions.size());
+              printf("\t{\n");
+              size_t loop_count = 0, isz = instructions.size();
+              const char *sep = ";";
+              for(auto &instr : instructions) {
+                ++loop_count;
+                if(loop_count == isz) sep = NULL; //No separator on last instrucction
+                if (instr.type == "precedence") {
+                  printf("\t\t%s\n", instr.type.c_str());
+                  const auto &info =
+                        std::any_cast<PrecedenceClimbing::BinOpeInfo>(instr.data);
+                  size_t prec_count = 0;
+                  for(const auto& [key, value] : info) {
+                      if(prec_count < value.first) prec_count = value.first;
+                  }
+                  for(size_t i = 1; i <= prec_count; ++i) {
+                    bool assocDone = false;
+                    for(const auto& [key, value] : info) {
+                        if(value.first == i) {
+                            if(!assocDone) {
+                                assocDone = true;
+                                printf("\t\t%c ", value.second);
+                            }
+                            printf(" %.*s", (int)key.size(), key.data());
+                        }
+                    }
+                    printf(" #%ld\n", i);
+                  }
+                  if(sep) printf("\t\t%s\n", sep);
+                } else if (instr.type == "error_message") {
+                    printf("\t\terror_message '%s'%s\n",
+                            peg::escape_characters(std::any_cast<std::string>(instr.data)).c_str(),
+                            sep ? sep : "");
+                } else if (instr.type == "no_ast_opt") {
+                  printf("\t\t%s%s\n", instr.type.c_str(), sep ? sep : "");
+                }
+                /*
+                if(instr.sv.size()) {
+                  int sz = (int)instr.sv.size();
+                  const char *val = instr.sv.data();
+                  printf("\t\t%.*s\n", sz, val);
+                }
+                */
+              }
+              printf("\t}\n");
+          }
+    }
+  }
+#endif
   Grammar g;
+#ifdef WITH_GRAMMAR_DUMP
+  GrammarLHS gv_lhs;
+  Ope::GrammarInstructions gv_instruct;
+#endif
 };
 
 /*-----------------------------------------------------------------------------
@@ -4610,11 +5178,23 @@ public:
 
   operator bool() { return grammar_ != nullptr; }
 
+#ifdef WITH_GRAMMAR_DUMP
+  void dumpMaster(bool asCpp) { ParserGenerator::dumpGrammar(asCpp);}
+  void dumpGrammar(bool asCpp) {
+      auto &gg = *grammar_;
+      auto &ggLHS = *grammarLHS_;
+      ParserGenerator::dumpGrammar(gg, ggLHS, instructions_, asCpp);
+  }
+#endif
   bool load_grammar(const char *s, size_t n, const Rules &rules,
                     std::string_view start = {}) {
     auto cxt = ParserGenerator::parse(s, n, rules, log_, start);
     grammar_ = cxt.grammar;
     start_ = cxt.start;
+#ifdef WITH_GRAMMAR_DUMP
+    instructions_ = cxt.instructions;
+    grammarLHS_ = cxt.grammarLHS;
+#endif
     enablePackratParsing_ = cxt.enablePackratParsing;
     return grammar_ != nullptr;
   }
@@ -4803,6 +5383,10 @@ private:
 
   std::shared_ptr<Grammar> grammar_;
   std::string start_;
+#ifdef WITH_GRAMMAR_DUMP
+  Ope::GrammarInstructions instructions_;
+  std::shared_ptr<GrammarLHS> grammarLHS_;
+#endif
   bool enablePackratParsing_ = false;
   Log log_;
 };

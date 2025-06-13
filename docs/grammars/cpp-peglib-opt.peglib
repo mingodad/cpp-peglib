@@ -4,9 +4,9 @@ Grammar <- Spacing Definition+ EndOfFile
 
 Definition <-
 	Ignore IdentCont (
-	     &'(' Parameters LEFTARROW Expression (&[{] Instruction)?
-	    / Spacing LEFTARROW Expression (&[{] Instruction)?
-	    )
+	     &'(' Parameters
+	    / Spacing
+	    ) LEFTARROW Expression (&[{] Instruction)?
 
 Expression <- Sequence (SLASH Sequence)*
 
@@ -30,7 +30,7 @@ Primary <-
 	/ &[$] (
 	    CapScope
 	    / BeginCap Expression EndCap
-    	/ BackRef
+	    / BackRef
 	    )
 	/ &['"](
     	 DictionaryI
@@ -56,24 +56,30 @@ IdentStart <- !"↑" !"⇑" ([a-zA-Z_%] / [\u0080-\uFFFF])
 
 IdentRest <- IdentStart / [0-9]
 
-Dictionary <- Literal (PIPE Literal)+
+Dictionary <- LiteralD (PIPE LiteralD)+
 
-DictionaryI <- LiteralI (PIPE LiteralI)+
+DictionaryI <- LiteralID (PIPE LiteralID)+
 
 lit_ope_base <-
 	['] <(!['] Char)*> [']
 	/ ["] <(!["] Char)*> ["]
 
-Literal <-
+lit_ope <-
 	lit_ope_base Spacing
 
-LiteralI <-
+Literal <- lit_ope
+LiteralD <- lit_ope
+
+lit_case_ignore_ope <-
 	lit_ope_base "i" Spacing
+
+LiteralI <- lit_case_ignore_ope
+LiteralID <- lit_case_ignore_ope
 
 # NOTE: The original Brian Ford's paper uses 'zom' instead of 'oom'.
 Class_base <- '[' !'^' <(!']' Range)+> ']'
 Class <- Class_base Spacing
-ClassI <- Class_base "]i" Spacing
+ClassI <- Class_base "i" Spacing
 
 NegatedClass_bse <- "[^" <(!']' Range)+> ']'
 NegatedClass <- NegatedClass_bse Spacing
@@ -85,21 +91,21 @@ Range <- Char '-' !']' Char / Char
 
 Char <-
 	'\\' (
-	    [fnrtv'\"[\]\\^]
+	    [fnrtv'\"[\]\\^-]
 	    / [0-3] [0-7] [0-7]
 	    / [0-7] [0-7]?
 	    / "x" [0-9a-fA-F] [0-9a-fA-F]?
 	    / "u" (((('0' [0-9a-fA-F]) / "10") [0-9a-fA-F]{4,4}) / [0-9a-fA-F]{4,5})
 	    )
-	/ .
+	/ !'\\'.
 
 Repetition <- BeginBracket RepetitionRange EndBracket
 
 RepetitionRange <-
-	Number (COMMA Number?)?
-	/ COMMA Number
+	Number (COMMAV Number?)?
+	/ COMMAV Number
 
-Number <- [0-9]+ Spacing
+Number <- <[0-9]+> Spacing
 
 CapScope <- BeginCapScope Expression EndCapScope
 
@@ -119,7 +125,7 @@ CUT <- "↑" Spacing
 ~LABEL <- ('^' / "⇑") Spacing
 
 ~Spacing <- (Space / Comment)*
-Comment <- '#' (!EndOfLine . )* EndOfLine
+Comment <- '#' (!EndOfLine . )* EndOfLine?
 Space <- ' ' / '\t' / EndOfLine
 EndOfLine <- "\r\n" / '\n' / '\r'
 EndOfFile <- !.
@@ -142,6 +148,7 @@ Parameters <- OPEN Identifier (COMMA Identifier)* CLOSE
 Arguments <- OPEN Expression (COMMA Expression)* CLOSE
 
 ~COMMA <- ',' Spacing
+COMMAV <- ',' Spacing
 
 # Instruction grammars
 Instruction <-
@@ -172,7 +179,7 @@ PrecedenceOpe <-
 PrecedenceAssoc <- [LR]
 
 # Error message instruction
-ErrorMessage <- "error_message" SpacesOom Literal SpacesZom
+ErrorMessage <- "error_message" SpacesOom LiteralD SpacesZom
 
 # No Ast node optimization instruction
 NoAstOpt <- "no_ast_opt" SpacesZom

@@ -3,8 +3,8 @@
 Grammar <- Spacing Definition+ EndOfFile
 
 Definition <-
-	Ignore IdentCont Parameters LEFTARROW Expression Instruction?
-	/ Ignore Identifier LEFTARROW Expression Instruction?
+	Ignore IdentCont Parameters LEFTARROW Expression Instruction? SEMI
+	/ Ignore Identifier LEFTARROW Expression Instruction? SEMI
 
 Expression <- Sequence (SLASH Sequence)*
 
@@ -19,8 +19,8 @@ Suffix <- Primary Loop?
 Loop <- QUESTION / STAR / PLUS / Repetition
 
 Primary <-
-	Ignore IdentCont Arguments !LEFTARROW
-	/ Ignore Identifier !(Parameters? LEFTARROW)
+	Ignore IdentCont Arguments
+	/ Ignore Identifier !(Parameters)
 	/ OPEN Expression CLOSE
 	/ BeginTok Expression EndTok
 	/ CapScope
@@ -74,7 +74,7 @@ NegatedClassI <- "[^" <(!']' Range)+> "]i" Spacing
 Range <- Char '-' !']' Char / Char
 
 Char <-
-	'\\' [fnrtv'\"[\]\\^-]
+	'\\' [fnrtv'\"[\]\\^]
 	/ '\\' [0-3] [0-7] [0-7]
 	/ '\\' [0-7] [0-7]?
 	/ "\\x" [0-9a-fA-F] [0-9a-fA-F]?
@@ -109,7 +109,7 @@ CUT <- "↑" Spacing
 ~LABEL <- ('^' / "⇑") Spacing
 
 ~Spacing <- (Space / Comment)*
-Comment <- '#' (!EndOfLine . )* EndOfLine?
+Comment <- '#' (!EndOfLine . )* EndOfLine
 Space <- ' ' / '\t' / EndOfLine
 EndOfLine <- "\r\n" / '\n' / '\r'
 EndOfFile <- !.
@@ -134,15 +134,15 @@ Parameters <- OPEN Identifier (COMMA Identifier)* CLOSE
 Arguments <- OPEN Expression (COMMA Expression)* CLOSE
 
 ~COMMA <- ',' Spacing
+~SEMI <- ';' Spacing
 
 # Instruction grammars
 Instruction <-
 	BeginBracket
-		(InstructionItem (InstructionItemSeparator InstructionItem)*)?
+		(InstructionItem (SEMI InstructionItem)*)?
 	EndBracket
 
 InstructionItem <- PrecedenceClimbing / ErrorMessage / NoAstOpt
-~InstructionItemSeparator <- ';' Spacing
 
 ~SpacesZom <- Space*
 ~SpacesOom <- Space+

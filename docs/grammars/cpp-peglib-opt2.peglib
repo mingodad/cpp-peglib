@@ -3,38 +3,52 @@
 Grammar <- Spacing Definition+ EndOfFile
 
 Definition <-
-	Ignore IdentCont Parameters LEFTARROW Expression Instruction?
-	/ Ignore Identifier LEFTARROW Expression Instruction?
+	Ignore IdentCont (
+	     &'(' Parameters
+	    / Spacing
+	    ) LEFTARROW Expression (&[{] Instruction)?
 
 Expression <- Sequence (SLASH Sequence)*
 
-Sequence <- (CUT / Prefix)*
+Sequence <- (&'↑' CUT / Prefix)*
 
-Prefix <- (AND / NOT)? SuffixWithLabel
+Prefix <- (&[&!](AND / NOT))? SuffixWithLabel
 
 SuffixWithLabel <- Suffix (LABEL Identifier)?
 
-Suffix <- Primary Loop?
+Suffix <- Primary (&[?*+{] Loop)?
 
-Loop <- QUESTION / STAR / PLUS / Repetition
+Loop <- STAR / QUESTION / PLUS / Repetition
 
 Primary <-
-	Ignore IdentCont Arguments !LEFTARROW
-	/ Ignore Identifier !(Parameters? LEFTARROW)
-	/ OPEN Expression CLOSE
+	  OPEN Expression CLOSE
 	/ BeginTok Expression EndTok
-	/ CapScope
+	/ &[$] Captures
+	/ &['"](
+    	 DictionaryI
+	    / Dictionary
+	    / LiteralI
+	    / Literal
+	    )
+	/ &[[](
+	    &'[^' (
+	        NegatedClassI
+	        / NegatedClass
+	        )
+	    / ClassI
+	    / Class
+	    )
+	/ &[.] DOT
+	/ Ignore IdentCont (
+	    &'(' Arguments !LEFTARROW
+	    / Spacing !((&'(' Parameters)? LEFTARROW)
+	    )
+
+Captures <-
+	CapScope
 	/ BeginCap Expression EndCap
 	/ BackRef
-	/ DictionaryI
-	/ LiteralI
-	/ Dictionary
-	/ Literal
-	/ NegatedClassI
-	/ NegatedClass
-	/ ClassI
-	/ Class
-	/ DOT
+
 
 Identifier <- IdentCont Spacing
 
@@ -48,38 +62,45 @@ Dictionary <- LiteralD (PIPE LiteralD)+
 
 DictionaryI <- LiteralID (PIPE LiteralID)+
 
+lit_ope_base <-
+	['] <(!['] Char)*> [']
+	/ ["] <(!["] Char)*> ["]
+
 lit_ope <-
-	['] <(!['] Char)*> ['] Spacing
-	/ ["] <(!["] Char)*> ["] Spacing
+	lit_ope_base Spacing
 
 Literal <- lit_ope
 LiteralD <- lit_ope
 
 lit_case_ignore_ope <-
-	['] <(!['] Char)*> "'i" Spacing
-	/ ["] <(!["] Char)*> '"i' Spacing
+	lit_ope_base "i" Spacing
 
 LiteralI <- lit_case_ignore_ope
 LiteralID <- lit_case_ignore_ope
 
 # NOTE: The original Brian Ford's paper uses 'zom' instead of 'oom'.
-Class <- '[' !'^' <(!']' Range)+> ']' Spacing
-ClassI <- '[' !'^' <(!']' Range)+> "]i" Spacing
+ClassInner <- <(!']' Range)+>
+Class_base <- '[' !'^' ClassInner ']'
+Class <- Class_base Spacing
+ClassI <- Class_base "i" Spacing
 
-NegatedClass <- "[^" <(!']' Range)+> ']' Spacing
-NegatedClassI <- "[^" <(!']' Range)+> "]i" Spacing
+NegatedClass_bse <- "[^" ClassInner ']'
+NegatedClass <- NegatedClass_bse Spacing
+NegatedClassI <- NegatedClass_bse "i" Spacing
 
 # NOTE: This is different from The original Brian Ford's paper and this
 # modification allows us to specify `[+-]` as a valid char class.
 Range <- Char '-' !']' Char / Char
 
 Char <-
-	'\\' [fnrtv'\"[\]\\^-]
-	/ '\\' [0-3] [0-7] [0-7]
-	/ '\\' [0-7] [0-7]?
-	/ "\\x" [0-9a-fA-F] [0-9a-fA-F]?
-	/ "\\u" (((('0' [0-9a-fA-F]) / "10") [0-9a-fA-F]{4,4}) / [0-9a-fA-F]{4,5})
-	/ !'\\' .
+	'\\' (
+	    [fnrtv'\"[\]\\^-]
+	    / [0-3] [0-7] [0-7]
+	    / [0-7] [0-7]?
+	    / "x" [0-9a-fA-F] [0-9a-fA-F]?
+	    / "u" (((('0' [0-9a-fA-F]) / "10") [0-9a-fA-F]{4,4}) / [0-9a-fA-F]{4,5})
+	    )
+	/ !'\\'.
 
 Repetition <- BeginBracket RepetitionRange EndBracket
 
@@ -89,7 +110,7 @@ RepetitionRange <-
 	/ Number
 	/ COMMA Number
 
-Number <- [0-9]+ Spacing
+Number <- <[0-9]+> Spacing
 
 CapScope <- BeginCapScope Expression EndCapScope
 
@@ -125,9 +146,7 @@ BeginCap <- '$' <IdentCont> '<' Spacing
 
 BackRef <- '$' <IdentCont> Spacing
 
-IGNORE <- '~'
-
-Ignore <- IGNORE?
+Ignore <- '~'?
 
 Parameters <- OPEN Identifier (COMMA Identifier)* CLOSE
 

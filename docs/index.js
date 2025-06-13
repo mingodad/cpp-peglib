@@ -134,7 +134,9 @@ const sampleList = [
 	["peg-chpeg parser", "chpeg-ext.peglib", "test.chpeg-ext", "ace/mode/yaml"],
 	["peg-cloudwebrtc parser", "peg-cloudwebrtc.peglib", "test.peg-cloudwebrtc", "ace/mode/text"],
 	["peg-cpp-peglib parser", "cpp-peglib.peglib", "cpp-peglib.peglib", "ace/mode/yaml"],
+	["peg-cpp-peglib-semi parser", "cpp-peglib-semi.peglib", "test.cpp-peglib-semi", "ace/mode/yaml"],
 	["peg-cpp-peglib-opt parser", "cpp-peglib-opt.peglib", "cpp-peglib.peglib", "ace/mode/yaml"],
+	["peg-cpp-peglib-opt2 parser", "cpp-peglib-opt2.peglib", "cpp-peglib.peglib", "ace/mode/yaml"],
 	["peg-glop parser", "glop-dpranke.peglib", "test.glop-dpranke", "ace/mode/text"],
 	["peg-gpeg parser", "gpeg.peglib", "test.gpeg", "ace/mode/text"],
 	["peg-gpeg-assembly parser", "gpeg-assembly.peglib", "test.gpeg-assembly", "ace/mode/text"],
@@ -268,6 +270,13 @@ function updateLocalStorage() {
 }
 
 var parse_start_time = 0;
+//enum EDumpOpt {
+const EDumpOpt_edNone = 0;
+const EDumpOpt_edMaster = 1;
+const EDumpOpt_edMasterCpp = 2;
+const EDumpOpt_edGrammar = 3;
+const EDumpOpt_edGrammarCpp = 4;
+//};
 
 function parse() {
   const $grammarValidation = $('#grammar-validation');
@@ -283,6 +292,7 @@ function parse() {
   const packrat = $('#packrat').prop('checked');
   const opt_profile = $('#show-profile').prop('checked');
   const opt_trace = $('#show-trace').prop('checked');
+  const dumpMode = $('#opt-dump').val();
 
   $grammarInfo.html('');
   $grammarValidation.hide();
@@ -298,13 +308,23 @@ function parse() {
 
   const mode = optimizationMode == 'all';
 
+  let opt_dump = 0;
+  switch(dumpMode) {
+     case 'grammar': opt_dump = EDumpOpt_edGrammar; break;
+     case 'grammar-cpp': opt_dump = EDumpOpt_edGrammarCpp; break;
+     case 'master': opt_dump = EDumpOpt_edMaster; break;
+     case 'master-cpp': opt_dump = EDumpOpt_edGrammarCpp; break;
+  }
+  myStdOutErr = "";
+
   $('#overlay').css({
     'z-index': '1',
     'display': 'block',
     'background-color': 'rgba(0, 0, 0, 0.1)'
   });
   window.setTimeout(() => {
-    const data = JSON.parse(Module.lint(grammarText, codeText, mode, packrat, opt_trace, startRule));
+    const data = JSON.parse(Module.lint(grammarText, codeText, mode, packrat, opt_trace,
+	  opt_dump, startRule));
       $('#overlay').css({
         'z-index': '-1',
         'display': 'none',
@@ -333,10 +353,14 @@ function parse() {
       $grammarValidation.addClass('validation-invalid').show();
     }
 
-    if (data.grammar.length > 0) {
+    if (data.dumpDone) {
+	codeAst.insert(myStdOutErr);
+    }
+    else if (data.grammar.length > 0) {
       const html = generateErrorListHTML(data.grammar);
       $grammarInfo.html(html);
     }
+
   }, 0);
 }
 
@@ -432,8 +456,19 @@ $('#main').css({
   'display': 'flex',
 });
 
+var myStdOutErr = "";
+
 // WebAssembly
 var Module = {
+  // intercept stdout (print) and stderr (printErr)
+  // note: text received is line based and missing final '\n'
+
+  'print': function(text) {
+    myStdOutErr += text + "\n";
+  },
+  'printErr': function(text) {
+    myStdOutErr += text + "\n";
+  },
   onRuntimeInitialized: function() {
     // Initial parse
     if ($('#auto-refresh').prop('checked')) {

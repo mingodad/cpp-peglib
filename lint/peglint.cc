@@ -44,6 +44,12 @@ int main(int argc, const char **argv) {
   auto opt_verbose = false;
   auto opt_profile = false;
   vector<const char *> path_list;
+#ifdef WITH_GRAMMAR_DUMP
+  auto opt_dump_master = false;
+  auto opt_dump_master_cpp = false;
+  auto opt_dump_grammar = false;
+  auto opt_dump_grammar_cpp = false;
+#endif
 
   auto argi = 1;
   while (argi < argc) {
@@ -72,6 +78,16 @@ int main(int argc, const char **argv) {
       opt_profile = true;
     } else if (string("--verbose") == arg) {
       opt_verbose = true;
+#ifdef WITH_GRAMMAR_DUMP
+    } else if (string("--dumpMaster") == arg) {
+      opt_dump_master = true;
+    } else if (string("--dumpMasterCpp") == arg) {
+      opt_dump_master_cpp = true;
+    } else if (string("--dumpGrammar") == arg) {
+      opt_dump_grammar = true;
+    } else if (string("--dumpGrammarCpp") == arg) {
+      opt_dump_grammar_cpp = true;
+#endif
     } else {
       path_list.push_back(arg);
     }
@@ -89,7 +105,16 @@ int main(int argc, const char **argv) {
     --trace: show concise trace messages
     --profile: show profile report
     --verbose: verbose output for trace and profile
-)";
+)"
+#ifdef WITH_GRAMMAR_DUMP
+R"(
+    --dumpMaster: dump master grammar
+    --dumpMasterCpp: dump master grammar as C++
+    --dumpGrammar: dump input grammar
+    --dumpGrammarCpp: dump input grammar as C++
+)"
+#endif
+    ;
 
     return 1;
   }
@@ -105,11 +130,35 @@ int main(int argc, const char **argv) {
 
   peg::parser parser;
 
+#ifdef WITH_GRAMMAR_DUMP
+  if(opt_dump_master) {
+      parser.dumpMaster(false);
+      return 0;
+  }
+
+  if(opt_dump_master_cpp) {
+      parser.dumpMaster(true);
+      return 0;
+  }
+#endif
+
   parser.set_logger([&](size_t ln, size_t col, const string &msg) {
     cerr << syntax_path << ":" << ln << ":" << col << ": " << msg << endl;
   });
 
   if (!parser.load_grammar(syntax.data(), syntax.size())) { return -1; }
+
+#ifdef WITH_GRAMMAR_DUMP
+  if(opt_dump_grammar) {
+      parser.dumpGrammar(false);
+      return 0;
+  }
+
+  if(opt_dump_grammar_cpp) {
+      parser.dumpGrammar(true);
+      return 0;
+  }
+#endif
 
   if (path_list.size() < 2 && !opt_source) { return 0; }
 
