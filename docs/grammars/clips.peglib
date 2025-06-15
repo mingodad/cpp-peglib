@@ -1,0 +1,608 @@
+#From: https://www.clipsrules.net/
+
+#Constructs
+CLIPS_program <- construct*
+
+construct <-
+	deffacts_construct
+	/ deftemplate_construct
+	/ defglobal_construct
+	/ defrule_construct
+	/ deffunction_construct
+	/ defgeneric_construct
+	/ defmethod_construct
+	/ defclass_construct
+	/ definstances_construct
+	/ defmessage_handler_construct
+	/ defmodule_construct
+
+#Deffacts Construct
+deffacts_construct <-
+	'(' "deffacts" deffacts_name comment? RHS_pattern* ')'
+
+#Deftemplate Construct
+deftemplate_construct <-
+	'(' "deftemplate" deftemplate_name comment? slot_definition* ')'
+
+slot_definition <-
+	single_slot_definition
+	/ multislot_definition
+
+single_slot_definition <-
+	'(' "slot" slot_name template_attribute* ')'
+
+multislot_definition <-
+	'(' "multislot" slot_name template_attribute* ')'
+
+template_attribute <-
+	default_attribute
+	/ constraint_attribute
+
+default_attribute <-
+	'(' "default" ("?DERIVE" / "?NONE" / expression*) ')'
+	/ '(' "default_dynamic" expression* ')'
+
+#Fact Specification
+RHS_pattern <-
+	ordered_RHS_pattern
+	/ template_RHS_pattern
+
+ordered_RHS_pattern <-
+	'(' symbol RHS_field+ ')'
+
+template_RHS_pattern <-
+	'(' deftemplate_name RHS_slot* ')'
+
+RHS_slot <-
+	single_field_RHS_slot
+	/ multifield_RHS_slot
+
+single_field_RHS_slot <-
+	'(' slot_name RHS_field ')'
+
+multifield_RHS_slot <-
+	'(' slot_name RHS_field* ')'
+
+RHS_field <-
+	variable
+	/ constant
+	/ function_call
+
+#Defrule Construct
+defrule_construct <-
+	'(' "defrule" rule_name comment? declaration? conditional_element* "=>" action* ')'
+
+declaration <-
+	'(' "declare" rule_property+ ')'
+
+rule_property <-
+	'(' "salience" integer_expression ')'
+	/ '(' "auto_focus" boolean_symbol ')'
+
+boolean_symbol <-
+	"TRUE"
+	/ "FALSE"
+
+conditional_element <-
+	pattern_CE
+	/ assigned_pattern_CE
+	/ not_CE
+	/ and_CE
+	/ or_CE
+	/ logical_CE
+	/ test_CE
+	/ exists_CE / forall_CE
+
+pattern_CE <-
+	ordered_pattern_CE
+	/ template_pattern_CE
+	/ object_pattern_CE
+
+assigned_pattern_CE <-
+	single_field_variable "-" pattern_CE
+
+not_CE <-
+	'(' "not" conditional_element ')'
+
+and_CE <-
+	'(' "and" conditional_element+ ')'
+
+or_CE <-
+	'(' "or" conditional_element+ ')'
+
+logical_CE <-
+	'(' "logical" conditional_element+ ')'
+
+test_CE <-
+	'(' "test" function_call ')'
+
+exists_CE <-
+	'(' "exists" conditional_element+ ')'
+
+forall_CE <-
+	'(' "forall" conditional_element conditional_element+ ')'
+
+ordered_pattern_CE <-
+	'(' symbol constraint* ')'
+
+template_pattern_CE <-
+	'(' deftemplate_name LHS_slot* ')'
+
+object_pattern_CE <-
+	'(' "object" attribute_constraint* ')'
+
+attribute_constraint <-
+	'(' "is_a" constraint ')'
+	/ '(' "name" constraint ')'
+	/ '(' slot_name constraint* ')'
+
+LHS_slot <-
+	single_field_LHS_slot
+	/ multifield_LHS_slot
+
+single_field_LHS_slot <-
+	'(' slot_name constraint ')'
+
+multifield_LHS_slot <-
+	'(' slot_name constraint* ')'
+
+constraint <-
+	'?'
+	/ "$?"
+	/ connected_constraint
+
+connected_constraint <-
+	single_constraint
+	/ single_constraint '&' connected_constraint
+	/ single_constraint '|' connected_constraint
+
+single_constraint <-
+	term
+	/ '~' term
+
+term <-
+	constant
+	/ single_field_variable
+	/ multifield_variable
+	/ ':' function_call
+	/ '=' function_call
+
+#Defglobal Construct
+defglobal_construct <-
+	'(' "defglobal" defmodule_name? global_assignment* ')'
+
+global_assignment <-
+	global_variable '=' expression
+
+global_variable <- "?*" symbol*
+
+#Deffunction Construct
+deffunction_construct <-
+	'(' "deffunction" name comment?
+                        '(' regular_parameter* wildcard_parameter? ')'
+              action* ')'
+
+regular_parameter <-
+	single_field_variable
+
+#Defgeneric Construct
+defgeneric_construct <-
+	'(' "defgeneric" name comment? ')'
+
+#Defmethod Construct
+defmethod_construct <-
+	'(' "defmethod" name index? comment?
+                   '(' parameter_restriction*
+                   wildcard_parameter_restriction? ')'
+         action* ')'
+
+parameter_restriction <-
+	single_field_variable
+	/ '(' single_field_variable type* query? ')'
+
+wildcard_parameter_restriction <-
+	multifield_variable
+	/ '(' multifield_variable type* query? ')'
+
+type <-
+	class_name
+
+query <-
+	global_variable
+	/ function_call
+
+#Defclass Construct
+
+defclass_construct <-
+	'(' "defclass" name comment?
+                                  '(' "is_a" superclass_name+ ')'
+                                   role?
+                                   pattern_match_role?
+                         slot*
+                         handler_documentation* ')'
+
+role <-
+	'(' "role" ("concrete" / "abstract") ')'
+
+pattern_match_role <-
+	'(' "pattern_match" ("reactive" / "non_reactive") ')'
+
+slot <-
+	'(' "slot" name facet* ')'
+	/ '(' "single_slot" name facet* ')'
+	/ '(' "multislot" name facet* ')'
+
+facet <-
+	default_facet
+	/ storage_facet
+	/ access_facet
+	/ propagation_facet
+	/ source_facet
+	/ pattern_match_facet
+	/ visibility_facet
+	/ create_accessor_facet
+	/ override_message_facet
+	/ constraint_attribute
+
+default_facet <-
+	'(' "default" ("?DERIVE" / "?NONE" / expression*) ')'
+	/ '(' "default_dynamic" expression* ')'
+
+storage_facet <-
+	'(' "storage" ("local" / "shared") ')'
+
+access_facet <-
+	'(' "access" ("read_write" / "read_only" / "initialize_only") ')'
+
+propagation_facet <-
+	'(' "propagation" ("inherit" / "no_inherit") ')'
+
+source_facet <-
+	'(' "source" ("exclusive" / "composite") ')'
+
+pattern_match_facet <-
+	'(' "pattern_match" ("reactive" / "non_reactive") ')'
+
+visibility_facet <-
+	'(' "visibility" ("private" / "public") ')'
+
+create_accessor_facet <-
+	'(' "create_accessor" ("?NONE" / "read" / "write" / "read_write") ')'
+
+override_message_facet <-
+	'(' "override_message" ("?DEFAULT" / message_name) ')'
+
+handler_documentation <-
+	'(' "message_handler" name handler_type? ')'
+
+handler_type <-
+	"primary"
+	/ "around"
+	/ "before"
+	/ "after"
+
+#Defmessage_handler Construct
+defmessage_handler_construct <-
+	'(' "defmessage_handler" class_name
+              message_name handler_type? comment?
+                            '(' parameter* wildcard_parameter? ')'
+                  action* ')'
+
+parameter <-
+	single_field_variable
+
+wildcard_parameter <-
+	multifield_variable
+
+#Definstances Construct
+definstances_construct <-
+	'(' "definstances" definstances_name
+                             "active"? comment?
+                   instance_template* ')'
+
+instance_template <-
+	'(' instance_definition ')'
+
+instance_definition <-
+	instance_name_expression? "of" class_name_expression slot_override*
+
+slot_override <-
+	'(' slot_name_expression expression* ')'
+
+#Defmodule Construct
+defmodule_construct <-
+	'(' "defmodule" module_name comment? port_specification* ')'
+
+port_specification <-
+	'(' "export" port_item ')'
+	/ '(' "import" module_name port_item ')'
+
+port_item <-
+	"?ALL"
+	/ "?NONE"
+	/ port_construct "?ALL"
+	/ port_construct "?NONE"
+	/ port_construct construct_name+
+
+port_construct <-
+	"deftemplate"
+	/ "defclass"
+	/ "defglobal"
+	/ "deffunction"
+	/ "defgeneric"
+
+#Constraint Attributes
+constraint_attribute <-
+	type_attribute
+	/ allowed_constant_attribute
+	/ range_attribute
+	/ cardinality_attribute
+
+type_attribute <-
+	'(' "type" type_specification ')'
+
+type_specification <-
+	allowed_type+
+	/ "?VARIABLE"
+
+allowed_type <-
+	"SYMBOL"
+	/ "STRING"
+	/ "LEXEME"
+	/ "INTEGER"
+	/ "FLOAT"
+	/ "NUMBER"
+	/ "INSTANCE_NAME"
+	/ "INSTANCE_ADDRESS"
+	/ "INSTANCE"
+	/ "EXTERNAL_ADDRESS"
+	/ "FACT_ADDRESS"
+
+allowed_constant_attribute <-
+	'(' "allowed_symbols" symbol_list ')'
+	/ '(' "allowed_strings" string_list ')'
+	/ '(' "allowed_lexemes" lexeme_list ')'
+	/ '(' "allowed_integers" integer_list ')'
+	/ '(' "allowed_floats" float_list ')'
+	/ '(' "allowed_numbers" number_list ')'
+	/ '(' "allowed_instance_names" instance_name_list ')'
+	/ '(' "allowed_classes" class_name_list ')'
+	/ '(' "allowed_values" value_list ')'
+
+symbol_list <-
+	symbol+
+	/ "?VARIABLE"
+
+string_list <-
+	string+
+	/ "?VARIABLE"
+
+lexeme_list <-
+	lexeme+
+	/ "?VARIABLE"
+
+integer_list <-
+	integer+
+	/ "?VARIABLE"
+
+float_list <-
+	float+
+	/ "?VARIABLE"
+
+number_list <-
+	number+
+	/ "?VARIABLE"
+
+instance_name_list <-
+	instance_name+
+	/ "?VARIABLE"
+
+class_name_list <-
+	class_name+
+	/ "?VARIABLE"
+
+value_list <-
+	constant+
+	/ "?VARIABLE"
+
+range_attribute <-
+	'(' "range" range_specification range_specification ')'
+
+range_specification <-
+	number
+	/ "?VARIABLE"
+
+cardinality_attribute <-
+	'(' "cardinality" cardinality_specification cardinality_specification ')'
+
+cardinality_specification <-
+	integer
+	/ "?VARIABLE"
+
+#Variables and Expressions
+single_field_variable <-
+	"?" variable_symbol
+
+multifield_variable <-
+	"$?" variable_symbol
+
+variable <-
+	single_field_variable
+	/ multifield_variable
+	/ global_variable
+
+function_call <-
+	'(' function_name expression* ')'
+
+expression <-
+	constant
+	/ variable
+	/ function_call
+
+action <-
+	expression
+
+#...-expression            ::= "An <expression> which returns the type indicated by the ellipsis. For example, <integer_expression> should return an integer."
+
+#Data Types
+symbol <-
+	!KW <[A-Za-z_][A-Za-z0-9_-]*>
+
+string <-
+	<'"' ('\\"' / !'"' .)* '"'>
+
+float <-
+	<
+	integer exponent
+	/ integer '.' exponent?
+	/ '.' unsigned_integer exponent?
+	/ integer '.' unsigned_integer exponent?
+	>
+
+integer <-
+	<[+-]? digit+>
+
+instance_name <-
+	<'[' (![\[\] \t\r\n] .)+ ']'>
+
+number <-
+	float
+	/ integer
+
+lexeme <-
+	symbol
+	/ string
+
+constant <-
+	symbol
+	/ string
+	/ integer
+	/ float
+	/ instance_name
+
+comment <-
+    string
+
+%whitespace <- ([ \t\r\n]+ / ';'[^\n]*)*
+
+name <-
+	!KW <[A-Za-z_=+-][A-Za-z0-9_$-]*>
+
+variable_symbol <-
+	name #"A symbol beginning with an alphabetic character"
+
+function_name <-
+	name #"Any symbol which corresponds to a system or user defined function, a deffunction name, or a defgeneric name"
+
+#file_name <-
+#	name #"A symbol or string which is a valid file name (including path information) for the operating system under which CLIPS is running"
+
+slot_name <-
+	name #"A valid deftemplate slot name"
+
+#<...-name>         ::= "A <symbol> where the ellipsis indicate what the symbol represents. For example, <rule_name> is a symbol which represents the name of a rule."
+
+digit <-
+	[0-9]
+
+unsigned_integer <-
+	digit+
+
+exponent <-
+	[eE] integer
+
+module_name <-
+	name
+
+definstances_name <-
+	name
+
+class_name <-
+	name
+
+superclass_name <-
+	name
+
+message_name <-
+	name
+
+rule_name <-
+	name
+
+deftemplate_name <-
+	name
+
+deffacts_name <-
+	name
+
+construct_name <-
+	name
+
+defmodule_name <-
+	name
+
+index <-
+	integer
+
+integer_expression <-
+	integer
+
+class_name_expression <-
+	name
+
+instance_name_expression <-
+	name
+
+slot_name_expression <-
+	name
+
+KW <- <(
+	"access"
+	| "?ALL"
+	| "allowed_classes"
+	| "allowed_lexemes"
+	| "allowed_symbols"
+	| "allowed_values"
+	| "composite"
+	| "create_accessor"
+	| "default"
+	| "?DEFAULT"
+	| "defclass"
+	| "defglobal"
+	| "defmodule"
+	| "defrule"
+	| "?DERIVE"
+	| "exclusive"
+	| "EXTERNAL_ADDRESS"
+	| "FACT_ADDRESS"
+	| "FALSE"
+	| "FLOAT"
+	| "initialize_only"
+	| "INSTANCE"
+	| "INSTANCE_ADDRESS"
+	| "INSTANCE_NAME"
+	| "INTEGER"
+	| "is_a"
+	| "LEXEME"
+	| "local"
+	| "logical"
+	| "?NONE"
+	| "NUMBER"
+	| "of"
+	| "override_message"
+	| "private"
+	| "public"
+	#| "read"
+	| "read_only"
+	| "read_write"
+	| "read_write"
+	| "shared"
+	| "source"
+	| "storage"
+	| "STRING"
+	| "SYMBOL"
+	| "TRUE"
+	| "?VARIABLE"
+	| "visibility"
+	| "write"
+	) ![A-Za-z_?$-]>
