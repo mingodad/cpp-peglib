@@ -3604,8 +3604,7 @@ private:
     G("BeginCap") <= seq(lit("$"), tok(g["IdentCont"]), lit("<"), g["Spacing"]);
     ~G("EndCap") <= seq(lit(">"), g["Spacing"]);
     G("BackRef") <= seq(lit("$"), tok(g["IdentCont"]), g["Spacing"]);
-    G("IGNORE") <= lit("~");
-    G("Ignore") <= opt(g["IGNORE"]);
+    G("Ignore") <= opt(lit("~"));
     G("Parameters") <= seq(g["OPEN"], g["Identifier"], zom(seq(g["COMMA"], g["Identifier"])), g["CLOSE"]);
     G("Arguments") <= seq(g["OPEN"], g["Expression"], zom(seq(g["COMMA"], g["Expression"])), g["CLOSE"]);
     ~G("COMMA") <= seq(lit(","), g["Spacing"]);
@@ -3633,7 +3632,8 @@ private:
 #ifdef WITH_GRAMMAR_DUMP
   constexpr static const std::type_info& _AnyStrType = typeid(std::string);
   void dumpSematicValuesType(const SemanticValues &vs) {
-        printf("==%s\n", vs.name().c_str());
+        auto line_info = vs.line_info();
+        printf("==%s:%zd:%zd\n", vs.name().c_str(), line_info.first, line_info.second);
         for (auto i = 0u; i < vs.size(); i++) {
           const std::any &v = vs[i];
           printf("\t%u:%zd:%s:%d:%d\n", i, v.type().hash_code(), v.type().name(),
@@ -4033,7 +4033,7 @@ private:
       return bkr(vs.token_to_string());
     };
 
-    g["Ignore"] = [](const SemanticValues &vs) { return vs.size() > 0; };
+    g["Ignore"] = [](const SemanticValues &vs) { return vs.sv().size() > 0; };
 
     g["Parameters"] = [](const SemanticValues &vs) {
       return vs.transform<std::string>();

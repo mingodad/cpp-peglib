@@ -146,9 +146,7 @@ BeginCap <- '$' <IdentCont> '<' Spacing
 
 BackRef <- '$' <IdentCont> Spacing
 
-IGNORE <- '~'
-
-Ignore <- IGNORE?
+Ignore <- '~'?
 
 Parameters <- OPEN Identifier (COMMA Identifier)* CLOSE
 
