@@ -1,0 +1,5 @@
+print("Hello !")
+print(45)
+a = 3 + 5
+b = a * 23.4
+c = "string"

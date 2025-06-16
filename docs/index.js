@@ -70,6 +70,7 @@ const sampleList = [
 	["cinamon parser", "cinamon.peglib", "test.cinamon", "ace/mode/text"],
 	["clips parser (partially working)", "clips.peglib", "test.clips", "ace/mode/lisp"],
 	["clunc parser", "clunc.peglib", "test.clunc", "ace/mode/c_cpp"],
+	["codon parser", "codon.peglib", "test.codon", "ace/mode/python"],
 	["com parser", "com-parser-grammar.peglib", "test.com-parser-grammar", "ace/mode/c_cpp"],
 	["corset-lisp parser", "corset.peglib", "test.corset", "ace/mode/lisp"],
 	["CSharp parser", "CSharp-nemerle.peglib", "test.cs", "ace/mode/csharp"],
