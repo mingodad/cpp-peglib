@@ -6,7 +6,7 @@ grammar <-
      meta* rules
 
 meta <-
-     "@" (NAME / STRING) #NEWLINE
+      "@" NAME (NAME / STRING)? #NEWLINE
 
 rules <-
      rule+
@@ -21,7 +21,8 @@ rulehead <-
     rulename memoflag? ":"
 
 rulename <-
-     NAME annotation?
+    NAME_ANNOT annotation
+    / NAME
 
 # In the future this may return something more complicated
 memoflag <-
@@ -34,13 +35,13 @@ alts <-
 #     ("|" alts NEWLINE)+
 
 alt <-
-     items ('$'? action)?
+     items '$'? action?
 
 items <-
      named_item+
 
 named_item <-
-     NAME annotation '=' ↑ item
+     NAME_ANNOT annotation '=' ↑ item
     / NAME '=' ↑ item
     / item
     / forced_atom
@@ -85,9 +86,15 @@ target_atom <-
     / ":"
     / !"}" !"]" OP
 
-STRING <- <'"' (!("\\". / '"') .)* '"' / "'" (!("\\". / "'") .)* "'">
+STRING <- <
+	  '"""' (!'"""' .)* '"""'
+	/ '"' (!("\\". / '"') .)* '"'
+	/ "'''" (!"'''" .)* "'''"
+	/ "'" (!("\\". / "'") .)* "'"
+	>
 NUMBER <- <[0-9]+>
 NAME <- <[A-Za-z_][A-Za-z0-9_]*>
+NAME_ANNOT <- <[A-Za-z_][A-Za-z0-9_]*&'['>
 ENDMARKER <- !.
 NEWLINE <- <'\n' '\r'? / '\r' '\n'?>
 #INDENT <- [ \t]+
