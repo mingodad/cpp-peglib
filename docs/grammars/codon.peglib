@@ -4,6 +4,10 @@
 
 # TODO: nice docstrs
 
+#
+# !!!!!! Enable packrat for better performance !!!!!!!
+#
+
 program <- (statements (_ EOL)* / (_ EOL)*) !.
 #fstring <- star_expressions _ (':' format_spec)? _ !.
 
