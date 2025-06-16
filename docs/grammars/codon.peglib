@@ -12,7 +12,7 @@ list(c, e)  <- e (_ c _ e)*
 tlist(c, e) <- e (_ c _ e)* (_ <c>)?
 
 statements <- ((_ EOL)* statement)+
-statement <- SAMEDENT (compound_stmt / simple_stmt)
+statement <- SAMEDENT compound_stmt / SAMEDENT simple_stmt
 simple_stmt <- tlist(';', small_stmt) _ EOL
 small_stmt <-
     assignment
@@ -172,11 +172,9 @@ inversion <-
   / comparison
 comparison <- bitwise_or compare_op_bitwise_or*
 compare_op_bitwise_or <-
-  SPACE (
-      'not' SPACE 'in' SPACE bitwise_or
-    / 'is' SPACE 'not' SPACE bitwise_or
-    / <'in' / 'is'> SPACE bitwise_or
-    )
+  SPACE 'not' SPACE 'in' SPACE bitwise_or
+  / SPACE 'is' SPACE 'not' SPACE bitwise_or
+  / SPACE <'in' / 'is'> SPACE bitwise_or
   / _ <'==' / '!=' / '<=' / '<' / '>=' / '>'> _ bitwise_or
 bitwise_or  <- bitwise_xor (_ <'|'> _ bitwise_xor)*
 bitwise_xor <- bitwise_and (_ <'^'> _ bitwise_and)*
@@ -190,7 +188,7 @@ factor <-
 power <-
   primary _ <'**'> _ factor
   / primary
-primary <- atom (_ &[([.] primary_tail)*
+primary <- atom (_ primary_tail)*
 primary_tail <-
   '.' _ NAME
   / genexp
@@ -202,16 +200,14 @@ slice <-
   / expression
 slice_part <- expression?
 atom <-
-  &["'_A-Za-z] (STRING (SPACE STRING)*
+  STRING (SPACE STRING)*
   / id
   / 'True'
   / 'False'
-  / 'None')
-  / &[0-9] (
-      INT _ '...' _ INT
-    / FLOAT NAME?
-    / INT NAME?
-    )
+  / 'None'
+  / INT _ '...' _ INT
+  / FLOAT NAME?
+  / INT NAME?
   / parentheses
   / '...'
 parentheses <- (
