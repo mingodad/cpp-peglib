@@ -17,14 +17,14 @@ Copyright  <- '# Copyright ' Comment EndLine
 Licensed   <- '# Licensed under ' Comment EndLine
 Uses       <- '# Uses ' Path EndLine
 Path       <- <(!ws unipoint)+>
-ComEndLine {I}  <- SP* ('# ' Comment)? EndLine
+~ComEndLine <- SP* ('# ' Comment)? EndLine
 Definition  <- StateDef / NodeDef / ScanDef / ClassDef / TokenDef
 
 Grammar     <- Name ('-' NameExt)?
 Version     <- 'v' MajorVer '.' MinorVer '.' PatchVer ('-' PreVer)?
 Home       <- <(!ws unipoint)+>
 
-Comment {I}   <- (!EndLine unipoint)+
+~Comment    <- (!EndLine unipoint)+
 
 StateDef   <- StateId SP+ '<-' SP+ '# ' Comment  # rhetorical
 ScanDef    <- CheckId SP+ '<-'  SP+ Expression   # convenient
@@ -58,7 +58,7 @@ ClassExpr  <- Simple (Spacing '/' SP+ Simple)*
 Simple      <- Unicode / Binary / Hexadec / Octal
              / ClassId / TokenId / Range / SQ <String> SQ
 
-Spacing {I}    <- ComEndLine? SP+
+~Spacing     <- ComEndLine? SP+
 
 Sequence   <- Rule (Spacing Rule)*
 Rule        <- PosLook / NegLook / Plain
@@ -95,7 +95,7 @@ Binary     <- <'b' bindig+>  # b1 == b00000001 (0 pad to closest byte)
 Hexadec    <- <'x' uphex+>
 Octal      <- <'o' octdig+>
 
-EndLine {I}   <- LF / CRLF / CR
+~EndLine   <- LF / CRLF / CR
 
 ResClassId <- 'alphanum' / 'alpha' / 'any' / 'bindig' / 'control'
              / 'digit' / 'hexdig' / 'lowerhex' / 'lower' / 'octdig'
@@ -124,9 +124,9 @@ TAB         <- '\x9'     # "\t"
 LF          <- '\xA'     # "\n" (line feed)
 CR          <- '\xD'     # "\r" (carriage return)
 CRLF        <- '\xD' '\xA'  # "\r\n"
-SP {I}          <- '\x20'    # " "
-VT {I}         <- '\xB'     # "\v" (vertical tab)
-FF {I}         <- '\xC'     # "\f" (form feed)
+~SP           <- '\x20'    # " "
+~VT          <- '\xB'     # "\v" (vertical tab)
+~FF          <- '\xC'     # "\f" (form feed)
 
 NOT         <- '\x21' # !
 BANG        <- '\x21' # !
@@ -166,10 +166,10 @@ PIPE        <- '\x7C' # |
 RCURLY      <- '\x7D' # }
 RBRACE      <- '\x7D' # }
 TILDE       <- '\x7E' # ~
-UNKNOWN     <- '\xFF' #'\uFFFD'
-REPLACE     <- '\xFF' # '\uFFFD'
-MAXRUNE     <- '\xFF' #'\u10FFFF'
-ENDOFDATA   <- '\xFF' #'\x7FFFFFF' # largest int32
+UNKNOWN     <- '\uFFFD'
+REPLACE     <- '\uFFFD'
+MAXRUNE     <- '\u10FFFF'
+ENDOFDATA   <- '\x7FFFFFF' # largest int32
 MAXASCII    <- '\x7F'
 MAXLATIN    <- '\xFF'
 
@@ -225,4 +225,4 @@ xdigit      <- hexdig                         # alias
 
 # support for unicode planes and classes
 # unicode not supported on chpeg
-unipoint <- alphanum / punct
+unipoint <- alphanum / punct / [ \t]

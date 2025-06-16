@@ -1,9 +1,10 @@
-# From https://github.com/rwxrob/pegn-spec/blob/main/grammar.pegn
 # PEGN (v1.1.1) pegn.dev/spec/nodes.pegn
 # Copyright 2021 Robert S Muhlestein (rob@rwx.gg)
 # Licensed under Apache-2
 # Uses pegn.dev/spec/classes.pegn
 # Uses pegn.dev/spec/tokens.pegn
+
+# From https://github.com/rwxrob/pegn-spec/blob/main/grammar.pegn
 
 # NOTE: assumes scanning by at least one byte at a time
 # (except for StateDef, which is rhetorical)
