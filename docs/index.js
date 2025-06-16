@@ -355,6 +355,14 @@ function parse() {
     }
 
     if (data.dumpDone) {
+	if(dumpMode.indexOf("-cpp") > 0) {
+	   myStdOutErr = `#ifdef WITH_GRAMMAR_DUMP
+#define G(s) g[gv_lhs.emplace_back(s)]
+#else
+#define G(s) g[s]
+#endif
+` + myStdOutErr;
+	}
 	codeAst.insert(myStdOutErr);
     }
     else if (data.grammar.length > 0) {
