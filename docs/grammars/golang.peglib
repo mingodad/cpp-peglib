@@ -11,7 +11,7 @@ Grammar <- SourceFile
 newline <- '\n'
 # unicode_char   = /* an arbitrary Unicode code point except newline */ .
 unicode_char <- _utf16/(![\n].)
-_utf16 <- [\0x0080-\0xff00]
+_utf16 <- [\u0080-\uff00]
 # unicode_letter = /* a Unicode code point classified as "Letter" */ .
 # XXX: wrong
 unicode_letter <- [a-zA-Z]/_utf16
