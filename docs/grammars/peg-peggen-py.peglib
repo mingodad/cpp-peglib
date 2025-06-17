@@ -18,7 +18,7 @@ rule <-
     rulehead alts
 
 rulehead <-
-    rulename memoflag? ":"
+    rulename (PERF('(') memoflag)? ":"
 
 rulename <-
     NAME_ANNOT annotation
@@ -41,11 +41,15 @@ items <-
      named_item+
 
 named_item <-
-     NAME_ANNOT annotation '=' ↑ item
-    / NAME '=' ↑ item
+     PERF(NAME_START) (
+         NAME_ANNOT annotation '=' ↑ item
+        / NAME '=' ↑ item
+        )
     / item
-    / forced_atom
-    / lookahead
+    / PERF([&!~]) (
+        forced_atom
+        / lookahead
+        )
 
 forced_atom <-
      '&''&' ↑ atom
@@ -57,16 +61,17 @@ lookahead <-
 
 item <-
      '[' ↑ alts ']'
-    /  atom '?'
-    /  atom '*'
-    /  atom '+'
-    /  atom '.' atom '+'
-    /  atom
+    /  atom (
+        '?'
+        / '*'
+        / '+'
+        / '.' atom '+'
+        )?
 
 atom <-
      '(' ↑ alts ')'
-    / !rulehead NAME
-    / STRING
+    / PERF(NAME_START) !rulehead NAME
+    / PERF(['"]) STRING
 
 # Mini-grammar for the actions and annotations
 
@@ -93,8 +98,10 @@ STRING <- <
 	/ "'" (!("\\". / "'") .)* "'"
 	>
 NUMBER <- <[0-9]+>
-NAME <- <[A-Za-z_][A-Za-z0-9_]*>
-NAME_ANNOT <- <[A-Za-z_][A-Za-z0-9_]*&'['>
+~NAME_START <- [A-Za-z_]
+NAME_BASE <- NAME_START [A-Za-z0-9_]*
+NAME <- <NAME_BASE>
+NAME_ANNOT <- <NAME_BASE &'['>
 ENDMARKER <- !.
 NEWLINE <- <'\n' '\r'? / '\r' '\n'?>
 #INDENT <- [ \t]+
@@ -102,3 +109,5 @@ NEWLINE <- <'\n' '\r'? / '\r' '\n'?>
 OP <- .
 
 %whitespace <- ([ \t\r\n\f\v]+ / '#'(!NEWLINE .)* )*
+
+~PERF(x) <- &x
