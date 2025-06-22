@@ -84,6 +84,7 @@ const sampleList = [
 	["dafny-lang parser", "dafny-lang.peglib", "test.dafny-lang", "ace/mode/text"],
 	["DAGOperator parser", "DAGOperator.peglib", "test.DAGOperator", "ace/mode/text"],
 	["dot parser", "dot-obermann.peglib", "test.dot-obermann", "ace/mode/text"],
+	["dparsergen parser", "dparsergen.peglib", "test.dparsergen", "ace/mode/text"],
 	["egg parser", "egg-bruceiv.peglib", "test.egg-bruceiv", "ace/mode/text"],
 	["enterprise parser", "enterprise.peglib", "test.enterprise", "ace/mode/text"],
 	["esdl parser", "esdl-thalo-rs.peglib", "test.esdl-thalo-rs", "ace/mode/text"],
