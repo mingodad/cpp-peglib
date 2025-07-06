@@ -64,7 +64,7 @@ StringLiteral <-
 	< '"' [^"]* '"' / "'" [^']* "'" >
 
 CharCode <-
-    "#x" [0-9a-zA-Z]+
+    "#x" [0-9a-fA-F]+
 
 CharClass <-
 	<'[' '^'? RULE_CharClass+ "]">
