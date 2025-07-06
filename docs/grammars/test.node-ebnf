@@ -58,4 +58,4 @@ RULE_WHITESPACE_CHAR ::= [#x09#x20]
 
 Comment ::= "/*" (!"*/" [#x00-#xFFFF])* "*/"
 
-RULE_EOL ::= [#x0D#x0A] | [#x0A#x0D]
+RULE_EOL ::= [#x0D][#x0A]? | [#x0A][#x0D]?
