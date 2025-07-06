@@ -155,6 +155,7 @@ const sampleList = [
 	["peg-narwhal parser", "peg_bs2.peglib", "test.peg_bs2", "ace/mode/text"],
 	["peg-nez parser", "nez-peg.peglib", "test.nez", "ace/mode/text"],
 	["peg-nim-std parser", "peg-nim-std.peglib", "test.peg-nim-std", "ace/mode/text"],
+	["peg-node-ebnf parser", "node-ebnf.peglib", "test.node-ebnf", "ace/mode/text"],
 	["peg-pacc parser", "peg-pacc.peglib", "test.peg-pacc", "ace/mode/text"],
 	["peg-pegn parser", "pegn.peglib", "test.pegn", "ace/mode/text"],
 	["peg-pegged parser", "pegged.peglib", "test.pegged", "ace/mode/text"],

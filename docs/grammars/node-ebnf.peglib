@@ -1,0 +1,105 @@
+#From: https://github.com/lys-lang/node-ebnf/blob/1406198f46f4267b4b0741f5be3261aa6437f5d5/src/Grammars/Custom.ts
+
+Grammar <-
+	RULE_S* Attributes? RULE_S* Atomic* EOF
+
+Atomic <-
+	Production RULE_S*
+
+Production <-
+	NCName RULE_S* "::=" RULE_WHITESPACE* Choice RULE_WHITESPACE* Attributes? RULE_EOL+ RULE_S*
+
+NCName <-
+	<[a-zA-Z][a-zA-Z_0-9]*>
+
+Attributes <-
+	"{" Attribute CommaAttributes* RULE_S* "}"
+
+CommaAttributes <-
+	RULE_S* "," Attribute
+
+Attribute <-
+	RULE_S* NCName RULE_WHITESPACE* "=" RULE_WHITESPACE* AttributeValue
+
+AttributeValue <-
+	NCName
+	/ <[1-9][0-9]*>
+
+Choice <-
+	SequenceOrDifference Alternative*
+
+Alternative <-
+	RULE_S* "|" RULE_S* SequenceOrDifference
+
+SequenceOrDifference <-
+	Item RULE_WHITESPACE* MoreItems?
+
+MoreItems <-
+	Minus Item
+	/ Item*
+
+Minus <-
+	"-"
+
+Item <-
+	RULE_WHITESPACE* PrimaryPreDecoration? Primary PrimaryDecoration?
+
+PrimaryDecoration <-
+	"?" / "*" / "+"
+
+PrimaryPreDecoration <-
+	"&" / "!" / "~"
+
+Primary <-
+	NCName
+	/ StringLiteral
+	/ CharCode
+	/ CharClass
+	/ SubItem
+
+SubItem <-
+	"(" RULE_S* Choice RULE_S* ")"
+
+StringLiteral <-
+	< '"' [^"]* '"' / "'" [^']* "'" >
+
+CharCode <-
+    "#x" [0-9a-zA-Z]+
+
+CharClass <-
+	<'[' '^'? RULE_CharClass+ "]">
+
+RULE_CharClass <-
+	CharCodeRange
+	/ CharRange
+	/ CharCode
+	/ RULE_Char
+
+RULE_Char <-
+	[\x09\x0A\x0D\x20-\x5c\x5e-\uD7FF\uE000-\uFFFD]
+
+CharRange <-
+	RULE_Char "-" RULE_Char
+
+CharCodeRange <-
+	CharCode "-" CharCode
+
+~RULE_WHITESPACE <-
+	RULE_WHITESPACE_CHAR+
+	/ Comment RULE_WHITESPACE*
+
+~RULE_S <-
+	RULE_WHITESPACE RULE_S*
+	/ RULE_EOL RULE_S*
+
+RULE_WHITESPACE_CHAR <-
+	[\x09\x20]
+
+Comment <-
+	"/*" (!"*/" .)* "*/"
+
+~RULE_EOL <-
+	[\x0D\x0A]
+	/ [\x0A\x0D]
+
+EOF <- !.
