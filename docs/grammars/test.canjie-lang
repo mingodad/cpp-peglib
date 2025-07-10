@@ -1,0 +1,48 @@
+open class A {
+    let x: Int = 11
+    var y: Int = 22
+
+    open func f(){
+        println("function f in A")
+    }
+
+    func g(){
+        println("function g in A")
+    }
+}
+
+
+interface I1 {
+    func h1()
+}
+
+interface I2 {
+    func h2()
+}
+
+class B <: A & I1 & I2 {
+    override func f(){
+        println("function f in B")
+    }
+
+    func h1(){
+        println("function h1 in B")
+    }
+
+    func h2(){
+        println("function h2 in B")
+    }
+}
+
+/*
+main() {
+    let o1: I1 = B()
+    let o2: A = A()
+    let o3: A = B()
+
+    o1.h1() // "function h1 in B"
+    o2.f()  // "function f in A"
+    o3.f () // Dynamic dispatch, "function f in B"
+    o3.g()  // "function g in A"
+}
+*/

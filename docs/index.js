@@ -67,6 +67,7 @@ const sampleList = [
 	["c17-WG14/N1256-prec parser", "std_c17-prec.peglib", "test.c", "ace/mode/c_cpp"],
 	["c++-23 parser", "c++23.peglib", "test.c", "ace/mode/c_cpp"],
 	["c99-mouse parser", "c99-mouse-dict.peglib", "test.c", "ace/mode/c_cpp"],
+	["canjie-lang parser", "canjie-lang.peglib", "test.canjie-lang", "ace/mode/text"],
 	["cinamon parser", "cinamon.peglib", "test.cinamon", "ace/mode/text"],
 	["clips parser (partially working)", "clips.peglib", "test.clips", "ace/mode/lisp"],
 	["clunc parser", "clunc.peglib", "test.clunc", "ace/mode/c_cpp"],
