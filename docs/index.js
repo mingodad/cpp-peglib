@@ -114,7 +114,7 @@ const sampleList = [
 	["Java8 parser", "java8-nez.peglib", "test.java", "ace/mode/java"],
 	["Java-mouse parser", "java-foxlabs-peg4.peglib", "test.java", "ace/mode/java"],
 	["Java-18-mouse parser", "Java.18-nlr.peglib", "test.java", "ace/mode/java"],
-	["Javascript peggy parser (be patient too slow)", "javascript-peggy.peglib", "test.js", "ace/mode/javascript"],
+	["Javascript peggy parser (be patient too slow)", "javascript-peggy.peglib", "test.javascript-peggy", "ace/mode/javascript"],
 	["Javascript tolmasky parser", "javascript-tolmasky.peglib", "test.js", "ace/mode/javascript"],
 	["Json parser", "json-peppapeg.peglib", "test.json.txt", "ace/mode/json"],
 	["Json5 parser", "json5-dpranke.peglib", "test.json5", "ace/mode/json"],

@@ -113,46 +113,58 @@ UnicodeConnectorPunctuation
 
 ReservedWord
   <- Keyword
-  / FutureReservedWord
-  / NullLiteral
-  / BooleanLiteral
+  #/ FutureReservedWord
+  #/ NullLiteral
+  #/ BooleanLiteral
 
-Keyword
-  <- BreakToken
-  / CaseToken
-  / CatchToken
-  / ContinueToken
-  / DebuggerToken
-  / DefaultToken
-  / DeleteToken
-  / DoToken
-  / ElseToken
-  / FinallyToken
-  / ForToken
-  / FunctionToken
-  / IfToken
-  / InstanceofToken
-  / InToken
-  / NewToken
-  / ReturnToken
-  / SwitchToken
-  / ThisToken
-  / ThrowToken
-  / TryToken
-  / TypeofToken
-  / VarToken
-  / VoidToken
-  / WhileToken
-  / WithToken
+Keyword <- <(
+      "break"
+    | "case"
+    | "catch"
+    | "class"
+    | "const"
+    | "continue"
+    | "debugger"
+    | "default"
+    | "delete"
+    | "do"
+    | "else"
+    | "enum"
+    | "export"
+    | "extends"
+    | "false"
+    | "finally"
+    | "for"
+    | "function"
+    | "get"
+    | "if"
+    | "import"
+    | "instanceof"
+    | "in"
+    | "new"
+    | "null"
+    | "return"
+    | "set"
+    | "super"
+    | "switch"
+    | "this"
+    | "throw"
+    | "true"
+    | "try"
+    | "typeof"
+    | "var"
+    | "void"
+    | "while"
+    | "with" ) !IdentifierPart >
 
-FutureReservedWord
-  <- ClassToken
-  / ConstToken
-  / EnumToken
-  / ExportToken
-  / ExtendsToken
-  / ImportToken
-  / SuperToken
+#FutureReservedWord
+#  <- ClassToken
+#  / ConstToken
+#  / EnumToken
+#  / ExportToken
+#  / ExtendsToken
+#  / ImportToken
+#  / SuperToken
 
 Literal
   <- NullLiteral
@@ -175,9 +187,11 @@ NumericLiteral #"number"
   / DecimalLiteral !(IdentifierStart / DecimalDigit)
 
 DecimalLiteral
-  <- DecimalIntegerLiteral "." DecimalDigit* ExponentPart?
+  <- <
+  DecimalIntegerLiteral "." DecimalDigit* ExponentPart?
   / "." DecimalDigit+ ExponentPart?
   / DecimalIntegerLiteral ExponentPart?
+  >
 
 DecimalIntegerLiteral
   <- "0"
@@ -199,14 +213,14 @@ SignedInteger
   <- [+-]? DecimalDigit+
 
 HexIntegerLiteral
-  <- "0x"i HexDigit+
+  <- <"0x"i HexDigit+>
 
 HexDigit
   <- [0-9a-f]i
 
 StringLiteral #"string"
-  <- '"' DoubleStringCharacter* '"'
-  / "'" SingleStringCharacter* "'"
+  <- <'"' DoubleStringCharacter* '"'>
+  / <"'" SingleStringCharacter* "'">
 
 DoubleStringCharacter
   <- !('"' / "\\" / LineTerminator) SourceCharacter
@@ -258,7 +272,7 @@ UnicodeEscapeSequence
   <- "u" $(HexDigit HexDigit HexDigit HexDigit)
 
 RegularExpressionLiteral #"regular expression"
-  <- "/" RegularExpressionBody "/" RegularExpressionFlags
+  <- <"/" RegularExpressionBody "/" RegularExpressionFlags>
 
 RegularExpressionBody
   <- RegularExpressionFirstChar RegularExpressionChar*
@@ -350,31 +364,31 @@ Zs <- [\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]
 BreakToken      <- "break"      !IdentifierPart
 CaseToken       <- "case"       !IdentifierPart
 CatchToken      <- "catch"      !IdentifierPart
-ClassToken      <- "class"      !IdentifierPart
-ConstToken      <- "const"      !IdentifierPart
+#ClassToken      <- "class"      !IdentifierPart
+#ConstToken      <- "const"      !IdentifierPart
 ContinueToken   <- "continue"   !IdentifierPart
 DebuggerToken   <- "debugger"   !IdentifierPart
 DefaultToken    <- "default"    !IdentifierPart
 DeleteToken     <- "delete"     !IdentifierPart
 DoToken         <- "do"         !IdentifierPart
 ElseToken       <- "else"       !IdentifierPart
-EnumToken       <- "enum"       !IdentifierPart
-ExportToken     <- "export"     !IdentifierPart
-ExtendsToken    <- "extends"    !IdentifierPart
+#EnumToken       <- "enum"       !IdentifierPart
+#ExportToken     <- "export"     !IdentifierPart
+#ExtendsToken    <- "extends"    !IdentifierPart
 FalseToken      <- "false"      !IdentifierPart
 FinallyToken    <- "finally"    !IdentifierPart
 ForToken        <- "for"        !IdentifierPart
 FunctionToken   <- "function"   !IdentifierPart
 GetToken        <- "get"        !IdentifierPart
 IfToken         <- "if"         !IdentifierPart
-ImportToken     <- "import"     !IdentifierPart
+#ImportToken     <- "import"     !IdentifierPart
 InstanceofToken <- "instanceof" !IdentifierPart
 InToken         <- "in"         !IdentifierPart
 NewToken        <- "new"        !IdentifierPart
 NullToken       <- "null"       !IdentifierPart
 ReturnToken     <- "return"     !IdentifierPart
 SetToken        <- "set"        !IdentifierPart
-SuperToken      <- "super"      !IdentifierPart
+#SuperToken      <- "super"      !IdentifierPart
 SwitchToken     <- "switch"     !IdentifierPart
 ThisToken       <- "this"       !IdentifierPart
 ThrowToken      <- "throw"      !IdentifierPart
