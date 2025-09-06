@@ -1,0 +1,11 @@
+CreateFunc <- Header Body Language ';'
+Header <- 'CREATE'i 'FUNCTION'i (!'RETURNS'i .)+ 'RETURNS'i (!'AS'i .)+ 'AS'i
+Body <- DollarQuotedString
+Language <- 'LANGUAGE'i (!';' .)+
+DollarQuotedString <- $(StartTag Content EndTag)
+StartTag <- <'$' $Tag<Separator> '$'>
+EndTag <- <'$' $Tag '$'>
+Separator <- (!'$' .)*
+Content <- $((!EndTag .)*)
+
+%whitespace <- [ \t\r\n]*

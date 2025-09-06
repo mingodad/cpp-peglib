@@ -1,0 +1,6 @@
+create function square(x int4) returns int4 as
+$xyz$
+begin
+  return x * x;
+end
+$xyz$ language plpgsql;
