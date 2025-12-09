@@ -98,8 +98,13 @@ inline size_t codepoint_length(const char *s8, size_t l) {
 
 inline size_t codepoint_count(const char *s8, size_t l) {
   size_t count = 0;
-  for (size_t i = 0; i < l; i += codepoint_length(s8 + i, l - i)) {
-    count++;
+  for (size_t i = 0; i < l;) {
+    auto len = codepoint_length(s8 + i, l - i);
+    if (len == 0) {
+      // Invalid UTF-8 byte, treat as single byte to avoid infinite loop
+      len = 1;
+    }
+    i += len;    count++;
   }
   return count;
 }
@@ -4880,8 +4885,8 @@ struct AstOptimizer {
     if (opt && original->nodes.size() == 1) {
       auto child = optimize(original->nodes[0], parent);
       auto ast = std::make_shared<T>(*child, original->name.data(),
-                                     original->choice_count, original->position,
-                                     original->length, original->choice);
+                                     original->position, original->length,
+                                     original->choice_count, original->choice);
       for (auto node : ast->nodes) {
         node->parent = ast;
       }
